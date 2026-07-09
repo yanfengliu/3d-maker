@@ -18,7 +18,7 @@ Scale the approach to the task: trivial fixes → just do them; substantial work
 
 Deliberately out of scope, permanently (Blender's job): mesh sculpting, direct vertex editing, UV editing, texture painting, keyframe timeline authoring, rigged-creature generation. Color/texture are parametric. If a task seems to need one of these, the answer is a Blender round-trip, not new scope here.
 
-The approved design lives at `docs/superpowers/specs/2026-07-08-3d-maker-design.md` — read it before substantial work. Phases: 1 MVP (building + tree families, gallery, inspector, GLB export, library) → 2 props/palettes/import → 3 vehicles/kitbash → 4 AI seeding + creatures via Blender round-trip.
+The approved design lives at `docs/design/spec.md` — read it before substantial work. Phases: 1 MVP (building + tree families, gallery, inspector, GLB export, library) → 2 props/palettes/import → 3 vehicles/kitbash → 4 AI seeding + creatures via Blender round-trip.
 
 ## Stack and layout
 
@@ -107,7 +107,7 @@ Whenever `package.json` dependency surface changes: re-resolve the lockfile with
 
 Read before changing the relevant system:
 
-- `docs/superpowers/specs/2026-07-08-3d-maker-design.md` — approved design: goals, non-goals, architecture, phasing.
+- `docs/design/spec.md` — approved design: goals, non-goals, architecture, phasing.
 - `PROGRESS.md` — current status and next steps.
 - `docs/architecture/architecture.md` (once it exists) — code boundaries and data flow.
 
