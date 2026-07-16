@@ -1,0 +1,32 @@
+{
+  "name": "3d-maker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Evolution studio and model studio for breeding and examining voxel game assets.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src scripts --max-warnings 0",
+    "test": "vitest run",
+    "audit:runtime": "npm audit --omit=dev --audit-level=high",
+    "audit:full": "npm audit --audit-level=high",
+    "verify": "npm run test && npm run typecheck && npm run lint && npm run build"
+  },
+  "dependencies": {
+    "three": "^0.185.1",
+    "voxel": "file:../voxel"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.14.1",
+    "@types/three": "^0.185.0",
+    "eslint": "^10.7.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.63.0",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
+  }
+}
