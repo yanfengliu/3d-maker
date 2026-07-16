@@ -23,6 +23,13 @@ function largeModel(): VoxelGenomeV1 {
   return genome;
 }
 
+/** The model chunk, asserted rather than assumed so a miss says why. */
+function chunkVoxels(snapshot: ReturnType<typeof buildSnapshot>): number[] {
+  const chunk = snapshot.chunks[0];
+  if (!chunk) throw new Error('expected the snapshot to carry the model chunk');
+  return Array.from(chunk.voxels);
+}
+
 function model(): VoxelGenomeV1 {
   let genome = addPaletteColor(
     createEmptyGenome({ id: 'test:cube', size: [3, 3, 3] }),
@@ -54,12 +61,12 @@ describe('building a genome into a voxel snapshot', () => {
     // is ~65,000 chances to be caught.
     const genome = largeModel();
     const first = buildSnapshot(genome, { revision: 1 });
-    const expected = Array.from(first.chunks[0]!.voxels);
+    const expected = chunkVoxels(first);
     expect(expected.filter((slot) => slot !== 0).length).toBeGreaterThan(1_000);
 
     for (let attempt = 0; attempt < 16; attempt += 1) {
       const repeat = buildSnapshot(genome, { revision: 1 });
-      expect(Array.from(repeat.chunks[0]!.voxels), `build ${String(attempt)}`).toEqual(expected);
+      expect(chunkVoxels(repeat), `build ${String(attempt)}`).toEqual(expected);
       expect(repeat, `build ${String(attempt)}`).toEqual(first);
     }
   });
@@ -68,9 +75,7 @@ describe('building a genome into a voxel snapshot', () => {
     const before = buildSnapshot(model(), { revision: 1 });
     const after = buildSnapshot(setVoxel(model(), 2, 2, 2, 1), { revision: 2 });
 
-    expect(Array.from(before.chunks[0]!.voxels)).not.toEqual(
-      Array.from(after.chunks[0]!.voxels),
-    );
+    expect(chunkVoxels(before)).not.toEqual(chunkVoxels(after));
     const world = new RenderWorld();
     expect(world.acceptSnapshot(before).status).toBe('accepted');
     expect(world.acceptSnapshot(after).status).toBe('accepted');
@@ -84,7 +89,7 @@ describe('building a genome into a voxel snapshot', () => {
     const after = buildSnapshot(recoloured, { revision: 2 });
 
     // A recolour is one palette edit, not a rewrite of every cell.
-    expect(Array.from(after.chunks[0]!.voxels)).toEqual(Array.from(before.chunks[0]!.voxels));
+    expect(chunkVoxels(after)).toEqual(chunkVoxels(before));
     expect(after.resources[0]).toMatchObject({
       kind: 'palette',
       entries: [
