@@ -42,7 +42,9 @@ The rule that follows: **the UI may not do anything the harness cannot.** If a h
 
 Both surfaces therefore read one core. The UI never renders through its own path.
 
-`townscaper/src/model-studio/` is the prior art to copy rather than reinvent. It already proves the pattern: `window.harborformModelStudio` for catalog, camera, variation, and selected-part state, plus `advanceTime(ms)` for deterministic animation. Its gap is that its editing is indirect — it emits an evolution brief for an agent to apply, rather than editing. Here the genome is the edit.
+The renderer-neutral `@voxel/model-studio-ui` package in `../voxel/tools/studio/shared-ui` is the required workbench rather than prior art to copy. It owns the exact top, shelf, stage, player, and inspector regions; the Examine, Build, Edit, Motion, and Notes tabs; keyboard and ARIA behavior; scoped visual tokens; lifecycle disposal; and the shared shell baseline. This app supplies its gallery/genome stage and pane contents through that package without copying Townscaper's template or outer CSS. `townscaper/src/model-studio/` remains the proof that a game-specific renderer and harness can mount the shared shell: `window.harborformModelStudio` exposes catalog, camera, variation, recipe, and selected-part state, while `advanceTime(ms)` controls deterministic animation. Its editing is indirect — it emits an evolution brief for an agent to apply — whereas here the genome is the edit.
+
+Every catalog model must also expose a zero-to-finished construction recipe and a derived list of standard parts. A recipe may call other recipes as sub-recipes; shared shapes or processes belong in those reusable recipes instead of being described again per model. The genome remains the source of variation, while the recipe records the deterministic construction steps and provenance needed to rebuild, inspect, and improve the result from an empty model.
 
 ## What the studio must prove about itself
 
@@ -57,9 +59,9 @@ These are ported from `voxel`'s `scripts/inspect-frames.mjs`, where each is prov
 
 ## Order of work
 
-1. Scaffold: `package.json`, strict TypeScript, Vite, Vitest, `voxel` linked from `../voxel`.
+1. Scaffold: `package.json`, strict TypeScript, Vite, Vitest, `voxel` linked from `../voxel`, and `@voxel/model-studio-ui` linked from `../voxel/tools/studio/shared-ui` with its shared stylesheet and browser contract.
 2. `core`: a voxel genome — palette, occupancy, and harmonic motion params — plus `build(genome)` producing a `voxel` snapshot.
 3. `core`: editing as pure functions over genome data.
 4. `core`: the frame sweep and its guards.
 5. Harness: load, edit, sample, assert — headless, no DOM.
-6. UI over that same core.
+6. UI over that same core, mounted into the shared five-region/five-tab Model Studio shell rather than a local workbench copy.
