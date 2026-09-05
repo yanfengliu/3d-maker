@@ -8,7 +8,7 @@ Deliberately out of scope, permanently (Blender's job): mesh sculpting, direct v
 
 Stack: Vite + TypeScript (strict) + Vitest, rendering through the sibling `voxel` engine (which keeps Three.js as its own peer); desktop browser only; single primary canvas; the first screen is the working gallery, not a landing page. The model studio extends this scope with examination and genome editing, and its agent harness is a first-class surface rather than a debug hook: the UI may not do anything the harness cannot. See [model studio](docs/design/model-studio.md). Phases: 1 MVP (building + tree families, gallery, inspector, GLB export, library) → 2 props/palettes/import → 3 vehicles/kitbash → 4 AI seeding + creatures via Blender round-trip. Status: approved design only — the app is not yet scaffolded (no `package.json` or `src/` yet).
 
-<!-- FLEET-CANON:BEGIN sha=e2cb4ac06499 generated from ../fleet/FLEET.md by `npm run sync-canon` — do not edit inside this block; this repo's own rules go in docs/policies/local-rules.md -->
+<!-- FLEET-CANON:BEGIN sha=181e6b6bfe78 generated from ../fleet/FLEET.md by `npm run sync-canon` — do not edit inside this block; this repo's own rules go in docs/policies/local-rules.md -->
 ## Fleet constitution
 
 ### Fleet Orchestration Policy
@@ -58,6 +58,18 @@ Workers hand off outcomes, changes/revisions, checks and results, risks, blocker
 After two failures for the same reason, reassess rather than repeat. Unless another budget is specified, cap automatic repair at five substantive attempts, then report evidence, blockers, and next steps.
 
 Keep updates brief and decision-relevant. Clearly distinguish implemented, verified, reviewed, integrated, and blocked work. Stop when acceptance criteria and material findings are resolved; do not invent follow-up work. Report partial completion and unavailable verification honestly.
+
+#### Final acceptance gate
+
+The integration owner is accountable for final acceptance. Before reporting completion:
+
+- Check every acceptance criterion against the final integrated revision, using actual changes and verification evidence—not worker summaries alone.
+- Run relevant automated checks and exercise affected end-to-end behavior. Check cross-task interactions, not just each task in isolation.
+- For substantial or high-risk work, obtain an independent read-only review of the integrated changes, including integration fixes. If unavailable, explicitly report the missing review rather than implying it occurred.
+- Resolve material findings, rerun affected checks, and obtain focused re-review where fixes invalidate earlier review.
+- Report the verified revision, checks and results, review status, and any failed, skipped, or unavailable checks. Mark unmet criteria as incomplete.
+
+Do not declare the result fully verified while material findings or required checks remain unresolved. Respect the repair budget and report blockers.
 
 ### Fleet conventions
 
