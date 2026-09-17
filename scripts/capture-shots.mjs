@@ -7,7 +7,10 @@
 // sequential runs flaky. CDP gives an exact "the page says it is ready" point.
 //
 // Usage: node scripts/capture-shots.mjs
-// env: SHOT_BASE, SHOT_OUT, SHOT_W, SHOT_H, SHOT_LIST as `view:color,...`
+// env: SHOT_BASE, SHOT_OUT, SHOT_W, SHOT_H, SHOT_LIST as `view:color,...`,
+//      SHOT_PAGE as the page path under the base (default `iphone.html`).
+//      The index page ignores view and color, so a library capture is
+//      `SHOT_PAGE=index.html SHOT_LIST=hero:cosmic-orange`.
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -20,6 +23,9 @@ const OUT = resolve(process.env['SHOT_OUT'] ?? '.shots');
 const WIDTH = Number(process.env['SHOT_W'] ?? 1200);
 const HEIGHT = Number(process.env['SHOT_H'] ?? 900);
 const SHOTS = (process.env['SHOT_LIST'] ?? 'hero:cosmic-orange').split(',');
+// The page path is the only thing that differs between shooting the viewer and
+// shooting the index; the default keeps every existing caller on the viewer.
+const PAGE = process.env['SHOT_PAGE'] ?? 'iphone.html';
 const READY_TIMEOUT_MS = 30000;
 
 async function waitForEndpoint(port) {
@@ -133,7 +139,7 @@ try {
     const suffix = extra.length > 0 ? `&${extra.join('&')}` : '';
     problems.length = 0;
     await send('Page.navigate', {
-      url: `${BASE}/iphone.html?shot=1&view=${view}&color=${color}${suffix}`,
+      url: `${BASE}/${PAGE}?shot=1&view=${view}&color=${color}${suffix}`,
     });
 
     let ready = false;

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3d-maker — procedural 3D models</title>
+    <style>
+      /* The same studio look as the viewer's overlay: a dark gradient room, a
+         glass card, and the one accent colour the model itself carries. */
+      :root {
+        color-scheme: dark;
+        --text: #f2f3f5;
+        --muted: #9aa0ac;
+        --faint: #767c88;
+        --line: rgba(255, 255, 255, 0.09);
+        --glass: linear-gradient(160deg, rgba(24, 26, 32, 0.86), rgba(12, 13, 17, 0.78));
+        --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(1100px 620px at 8% -12%, rgba(199, 91, 57, 0.16), transparent 62%),
+          linear-gradient(160deg, #14161c 0%, #0b0d12 46%, #07080b 100%) #0b0d12;
+        background-attachment: fixed;
+        color: var(--text);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 46px 24px 40px;
+      }
+
+      .page-header {
+        margin-bottom: 30px;
+      }
+
+      .page-title {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .page-subtitle {
+        margin: 8px 0 0;
+        font-size: 13.5px;
+        color: var(--muted);
+        letter-spacing: 0.01em;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--glass);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+        color: inherit;
+        text-decoration: none;
+        outline: none;
+        transition: transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color 180ms ease;
+      }
+
+      .card:hover {
+        transform: translate3d(0, -2px, 0);
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+
+      .card:focus-visible {
+        outline: 2px solid var(--accent, #c75b39);
+        outline-offset: 3px;
+      }
+
+      .card-poster {
+        display: block;
+        width: calc(100% - 28px);
+        margin: 14px 14px 0;
+        aspect-ratio: 16 / 10;
+        object-fit: cover;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0e1015;
+      }
+
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding: 14px 18px 0;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .card-subtitle {
+        margin: 5px 0 0;
+        font-size: 11.5px;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+      }
+
+      .card-desc {
+        margin: 10px 0 0;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: var(--faint);
+      }
+
+      .card-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: auto;
+        padding-top: 16px;
+      }
+
+      .card-swatch {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--accent, #c75b39);
+      }
+
+      .card-open {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent, #c75b39);
+        letter-spacing: 0.02em;
+      }
+
+      .empty {
+        margin: 0;
+        font-size: 13px;
+        color: var(--faint);
+      }
+
+      .page-footer {
+        margin-top: 34px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        font-size: 11px;
+        color: var(--faint);
+        letter-spacing: 0.02em;
+      }
+
+      /* Motion is limited to one short lift on the cards. A reduced-motion
+         preference drops it, and a scripted capture drops it for the first
+         presented frame so the card never lands mid-entrance. */
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          transition: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .card {
+          animation: card-in 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+        }
+      }
+
+      .shot .card {
+        animation: none !important;
+        transition: none !important;
+      }
+
+      @keyframes card-in {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 10px, 0);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" class="page"></main>
+    <script type="module" src="/src/index/main.ts"></script>
+  </body>
+</html>
