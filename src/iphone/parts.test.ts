@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,21 +7,13 @@ import {
   BOTTOM_BORES,
   BUTTONS,
   CAMERA_PLANE,
-  FLASH,
-  FLASH_CAVITY_RADIUS,
   GLASS_FRONT_Z,
   LENS_RING_PROUD,
   LENSES,
-  LIDAR,
-  LIDAR_CAVITY_RADIUS,
   PLATEAU,
-  PLATEAU_CAVITY_RADIUS,
-  PLATEAU_MIC,
-  PLATEAU_MIC_CAVITY_RADIUS,
   RAIL,
   TOP_BORE,
 } from './dims.js';
-import type { PhoneMaterials } from './materials.js';
 import {
   buildAntennas,
   buildBackPanel,
@@ -34,8 +25,18 @@ import {
   buildTop,
   PANEL_FACE_Z,
   PANEL_INNER_Z,
-  SEAM_PROUD,
 } from './parts.js';
+import {
+  ATTACHED_SLACK,
+  expectOnRail,
+  materials,
+  outerFace,
+  railProfile,
+  railReach,
+  required,
+  VERTEX_SLACK,
+  worldBox,
+} from './test-helpers.js';
 
 /**
  * The edge contract, measured rather than restated.
@@ -69,137 +70,12 @@ import {
  * own subtree but *not* the groups above it, so a lens ring measured without
  * `worldBox` reports its local coordinates and passes whatever its group's
  * transform does.
+ *
+ * The port's own gates — the through-cut, the Y planes and the tongue's
+ * sightline — live in `port.test.ts`, and the plateau's roll and openings in
+ * `plateau.test.ts`. The measurements all three files take are in
+ * `test-helpers.ts`.
  */
-
-/** The rail outline's distance from a point: `RAIL.radius` on the flat of an
- *  edge, more around the corners. */
-function railReach(x: number, y: number): number {
-  const dx = Math.max(Math.abs(x) - RAIL.centreX, 0);
-  const dy = Math.max(Math.abs(y) - RAIL.centreY, 0);
-  return Math.hypot(dx, dy);
-}
-
-interface RailProfile {
-  /** How far the furthest vertex reaches *past* the rail outline. */
-  readonly overhang: number;
-  /** How far the nearest vertex stops *short* of it. */
-  readonly closest: number;
-}
-
-/** Measures every vertex of an assembly in body space, which is the space
- *  `RAIL` is written in. */
-function railProfile(object: THREE.Object3D): RailProfile {
-  object.updateWorldMatrix(true, true);
-  const point = new THREE.Vector3();
-  let overhang = -Infinity;
-  let closest = Infinity;
-  object.traverse((node) => {
-    if (!(node instanceof THREE.Mesh)) return;
-    const attribute: unknown = (node.geometry as THREE.BufferGeometry).getAttribute('position');
-    if (!(attribute instanceof THREE.BufferAttribute)) return;
-    for (let index = 0; index < attribute.count; index += 1) {
-      point.fromBufferAttribute(attribute, index).applyMatrix4(node.matrixWorld);
-      const reach = railReach(point.x, point.y) - RAIL.radius;
-      overhang = Math.max(overhang, reach);
-      closest = Math.min(closest, reach);
-    }
-  });
-  return { overhang, closest };
-}
-
-/**
- * How far an edge part may sit off the rail in either direction: out, where it
- * floats with nothing behind it, or in, where it is buried and invisible. The
- * antenna ribbon is a surface lying on the rail rather than a solid seated in
- * it, and its documented stand-off is 0.02 mm, so a few hundredths is the most
- * either direction can be out.
- */
-const ATTACHED_SLACK = 0.05;
-
-/**
- * How much a measured vertex may sit past a bound it meets exactly. Two things
- * contribute, and neither is the model: vertex positions are stored as 32-bit
- * floats, so a 36 mm coordinate lands up to ~4 µm from its decimal value, and
- * the extruded corner arc is a polygon whose offset facets can poke a
- * ten-thousandth of a millimetre past the ideal circle. Both are three orders
- * of magnitude below the 0.36 mm drift this gate exists to catch.
- */
-const VERTEX_SLACK = 0.01;
-
-/**
- * Stand-ins for the real materials: the parts only ever store the instance,
- * and the real set needs a canvas and a WebGL context a node test has not got.
- * An object literal rather than a Proxy, so a part asking for a key the
- * interface does not have is a compile error here instead of a silent fallback.
- */
-function stubMaterials(): PhoneMaterials {
-  const basic = new THREE.MeshBasicMaterial();
-  const physical = basic as unknown as THREE.MeshPhysicalMaterial;
-  return {
-    aluminum: physical,
-    backGlass: physical,
-    tongue: physical,
-    frontGlass: physical,
-    screen: physical,
-    island: physical,
-    lensRing: physical,
-    lensPupil: physical,
-    lensGlass: physical,
-    aperture: physical,
-    flash: physical,
-    darkGlass: physical,
-    sapphire: physical,
-    button: physical,
-    seam: basic as unknown as THREE.MeshStandardMaterial,
-    antenna: basic as unknown as THREE.MeshStandardMaterial,
-    bore: basic as unknown as THREE.MeshStandardMaterial,
-    logo: physical,
-    magsafe: physical,
-    glow: basic as unknown as THREE.SpriteMaterial,
-  };
-}
-
-const materials = stubMaterials();
-
-function required(parent: THREE.Object3D, name: string): THREE.Object3D {
-  const found = parent.getObjectByName(name);
-  if (found === undefined) throw new Error(`the built model has no part named "${name}"`);
-  return found;
-}
-
-/**
- * A world-space box over a refreshed ancestor chain. `Box3.setFromObject`
- * updates the object's own subtree but not the groups above it, and a part's
- * placement lives on its group — so measuring a lens ring without this reads
- * its local coordinates and passes whatever the group's transform does.
- */
-function worldBox(object: THREE.Object3D): THREE.Box3 {
-  object.updateWorldMatrix(true, true);
-  return new THREE.Box3().setFromObject(object);
-}
-
-/** How far a part's outward face stands from the body's centre line, on the
- *  edge `edge` names: +1 is the right (+X) edge, -1 the left. */
-function outerFace(box: THREE.Box3, edge: number): number {
-  return edge > 0 ? box.max.x : -box.min.x;
-}
-
-/** Asserts one edge part's two-sided contract: its outermost point lands on the
- *  rail plus the stand-off that part documents, within `ATTACHED_SLACK` either
- *  way. Too far out is a part floating off the phone (which is what the rail
- *  table being 0.36 mm wide produced); too far in is a part buried in the
- *  frame, which is just as wrong and just as invisible. */
-function expectOnRail(part: THREE.Object3D, label: string, proud: number): void {
-  const { overhang, closest } = railProfile(part);
-  expect(
-    overhang,
-    `${label} stands ${overhang.toFixed(4)} mm past the rail; its documented stand-off is ${String(proud)} mm`,
-  ).toBeLessThanOrEqual(proud + VERTEX_SLACK);
-  expect(
-    overhang,
-    `${label} stops ${(-overhang).toFixed(4)} mm short of the rail, buried in the body (nearest vertex ${closest.toFixed(4)} mm short)`,
-  ).toBeGreaterThanOrEqual(-ATTACHED_SLACK);
-}
 
 describe('the edge contract against the built geometry', () => {
   it('puts the frame’s own silhouette exactly on RAIL', () => {
@@ -214,13 +90,29 @@ describe('the edge contract against the built geometry', () => {
     expect(frame.min.y).toBeCloseTo(-RAIL.y, 3);
   });
 
-  it('seats every control pill in the rail and stands it its documented proud', () => {
+  it('seats every control pill in its documented plane, proud or recessed', () => {
     const controls = buildControls(materials);
     for (const button of BUTTONS) {
       const pill = required(controls, button.label);
       const seam = required(controls, `${button.label}-seam`);
-      expectOnRail(pill, button.label, button.proud);
-      expectOnRail(seam, `${button.label}-seam`, SEAM_PROUD);
+      // Signed stand-off, so a face set *into* the rail is measured the same
+      // way as one standing off it: positive is the part floating, negative is
+      // the part buried. Camera Control's two faces are negative on purpose —
+      // a strip level with the rail is a recess, not a pill.
+      for (const [part, proud, label] of [
+        [pill, button.proud, button.label],
+        [seam, button.seamProud, `${button.label}-seam`],
+      ] as const) {
+        const { overhang } = railProfile(part);
+        expect(
+          overhang,
+          `${label} stands ${overhang.toFixed(4)} mm off the rail; its documented stand-off is ${String(proud)} mm`,
+        ).toBeLessThanOrEqual(proud + VERTEX_SLACK);
+        expect(
+          overhang,
+          `${label} stops ${(-overhang).toFixed(4)} mm short of the rail, buried in the body`,
+        ).toBeGreaterThanOrEqual(proud - ATTACHED_SLACK);
+      }
       // `proud` means the pill's outer face is the rail plus that, exactly.
       expect(outerFace(worldBox(pill), button.edge)).toBeCloseTo(RAIL.x + button.proud, 3);
       // The seam sits behind the pill and is larger than it, so what shows is
@@ -229,7 +121,11 @@ describe('the edge contract against the built geometry', () => {
       expect(
         outerFace(worldBox(seam), button.edge),
         `${button.label}: the seam is not behind the pill`,
-      ).toBeCloseTo(RAIL.x + SEAM_PROUD, 3);
+      ).toBeCloseTo(RAIL.x + button.seamProud, 3);
+      expect(
+        button.seamProud,
+        `${button.label}: the seam's plane is level with the pill's own — a coplanar pair`,
+      ).not.toBeCloseTo(button.proud, 5);
     }
   });
 
@@ -257,10 +153,27 @@ describe('the edge contract against the built geometry', () => {
   });
 
   it('keeps the port cavity and its tongue inside the body', () => {
+    // Re-expressed: the bound here is a literal, not the implementation's own
+    // `PORT_POCKET.liner.thickness`. A bound built from the constant the part is
+    // placed with cannot fail — the old one was `floorThickness + VERTEX_SLACK`,
+    // so any thickness at all passed, and a 0.5 mm lip under the phone would
+    // have gone green.
+    //
+    // 0.03 mm is derived from the model's other flush surfaces instead: a bore
+    // mouth stands `BORE_PROUD` (0.02) off the rail and is the only edge part
+    // allowed to cross the outline at all, so the port's own liner may add the
+    // same order of magnitude plus the measured vertex slack. The floor's edges
+    // sit `drop + thickness` below the rail and the tongue's root inside the
+    // floor, so both land under this bound by construction; a lip an order of
+    // magnitude larger — the mutation this catches — does not.
+    const LINER_OVERHANG_BOUND = 0.03;
     const bottom = buildBottom(materials);
-    for (const name of ['port-cavity', 'port-tongue']) {
+    for (const name of ['port-cavity', 'port-tongue', 'port-shell', 'port-cavity-ceiling']) {
       const profile = railProfile(required(bottom, name));
-      expect(profile.overhang, `${name} crosses the silhouette`).toBeLessThanOrEqual(VERTEX_SLACK);
+      expect(
+        profile.overhang,
+        `${name} reaches ${profile.overhang.toFixed(4)} mm past the rail — a lip under the phone`,
+      ).toBeLessThanOrEqual(LINER_OVERHANG_BOUND);
     }
   });
 
@@ -279,14 +192,19 @@ describe('the edge contract against the built geometry', () => {
 
 describe('the documented Z planes', () => {
   it('builds the camera plateau between the planes dims.ts documents', () => {
-    // The bug this gate exists for: `slabGeometry` takes the slab's largest Z
-    // and grows towards -Z, so a back-facing part must hand it its *inner*
-    // plane. Passing `zOuter` put the whole bar — and every lens in it —
-    // 2.095 mm behind where dims.ts said it was.
-    const plateau = required(buildPlateau(materials), 'plateau-plate');
-    const box = worldBox(plateau);
-    expect(box.min.z).toBeCloseTo(PLATEAU.zOuter, 3);
-    expect(box.max.z).toBeCloseTo(PLATEAU.zInner, 3);
+    // The bug this gate exists for: a back-facing slab takes its *largest* Z
+    // and grows towards -Z, so passing `zOuter` put the whole bar — and every
+    // lens in it — 2.095 mm behind where dims.ts said it was. The plateau is no
+    // longer a slab, so this measures both halves of the roll instead: the
+    // shell, which spans the bar's whole thickness, and the flat face cap,
+    // which is the plane the optics sit on.
+    const plateau = buildPlateau(materials);
+    const shell = worldBox(required(plateau, 'plateau-shell'));
+    expect(shell.min.z).toBeCloseTo(PLATEAU.zOuter, 3);
+    expect(shell.max.z).toBeCloseTo(PLATEAU.zInner, 3);
+    const cap = worldBox(required(plateau, 'plateau-plate'));
+    expect(cap.min.z).toBeCloseTo(PLATEAU.zOuter, 3);
+    expect(cap.max.z).toBeCloseTo(PLATEAU.zOuter, 3);
     expect(CAMERA_PLANE).toBe(PLATEAU.zOuter);
   });
 
@@ -316,61 +234,30 @@ describe('the documented Z planes', () => {
   });
 });
 
-describe('the plateau’s openings', () => {
-  it('lines each cavity with a window at least as wide as the hole, recessed behind its bezel', () => {
-    // A bore through the plateau with nothing wide enough behind it shows the
-    // frame's bright aluminum back face down the cavity — the defect class the
-    // lens barrels exist to prevent, and the one this test caught on its first
-    // run: a 0.67 mm mic window inside a 0.75 mm hole. Each row is the hole's
-    // radius, how far inside that hole the part lining it may sit (the barrel
-    // is a hair inside on purpose, so the plateau's own bore wall is never the
-    // surface you see), and the bezel that has to stand proud of it. A window
-    // level with or in front of its bezel is a disc lying on the plateau, which
-    // is how the flash came out blown flat instead of sitting in its cavity.
-    const plateau = buildPlateau(materials);
-    const windows: ReadonlyArray<readonly [string, number, number, string]> = [
-      ['lens-barrel', PLATEAU_CAVITY_RADIUS, 0.05, 'lens-ring'],
-      ['flash-led', FLASH_CAVITY_RADIUS, 0.02, 'flash-collar'],
-      ['lidar-glass', LIDAR_CAVITY_RADIUS, 0.02, 'lidar-bezel'],
-      ['mic-hole', PLATEAU_MIC_CAVITY_RADIUS, 0.02, 'mic-bezel'],
-    ];
-    for (const [name, cavity, slack, bezel] of windows) {
-      const box = worldBox(required(plateau, name));
-      const radius = Math.max(box.max.x - box.min.x, box.max.y - box.min.y) / 2;
+/**
+ * The bottom edge's bore layout.
+ *
+ * The defect is a count nobody could see in a render: six speaker bores right
+ * of the port and four mic bores left, a pair of counts the reference photo
+ * does not support — the real phone's netzwelt hands-on headline counts five on
+ * the speaker side ("die fünf Löcher unten rechts"), and the pre-release CAD
+ * leak has the mic side mirrored from it. Both lists are now five, on the same
+ * 3 mm pitch from the same first bore, and mirrored about the port.
+ */
+describe('the bottom edge’s bores', () => {
+  it('counts five speaker bores and five microphones, mirrored about the port', () => {
+    expect(BOTTOM_BORES.speakers).toHaveLength(5);
+    expect(BOTTOM_BORES.mics).toHaveLength(5);
+    // Mirrored, entry for entry: the same pitch and the same first offset.
+    BOTTOM_BORES.speakers.forEach((x, index) => {
       expect(
-        radius,
-        `${name} is narrower than the ${cavity.toFixed(2)} mm hole it lines`,
-      ).toBeGreaterThanOrEqual(cavity - slack - VERTEX_SLACK);
-      expect(
-        box.min.z,
-        `${name} is not recessed behind its ${bezel}: it stands proud of the plateau`,
-      ).toBeGreaterThan(worldBox(required(plateau, bezel)).min.z);
-    }
-  });
-
-  it('cuts a real opening in the plateau for every optic', () => {
-    const plate = required(buildPlateau(materials), 'plateau-plate');
-    if (!(plate instanceof THREE.Mesh)) throw new Error('the plateau plate is not a mesh');
-    const shapes = (plate.geometry as THREE.ExtrudeGeometry).parameters.shapes;
-    const shape = Array.isArray(shapes) ? shapes[0] : shapes;
-    if (shape === undefined) throw new Error('the plateau plate has no shape');
-    expect(shape.holes).toHaveLength(LENSES.length + 3);
-    for (const opening of [
-      ...LENSES.map((lens) => ({ x: lens.x, y: lens.y })),
-      { x: FLASH.x, y: FLASH.y },
-      { x: LIDAR.x, y: LIDAR.y },
-      { x: PLATEAU_MIC.x, y: PLATEAU_MIC.y },
-    ]) {
-      const cut = shape.holes.some((hole) => {
-        // The centre of the cut, not the average of its sampled points: a
-        // closed arc's point list carries its start point three times over, and
-        // a centroid pulled 1.26 mm off centre by that repeat misses the optic
-        // it is meant to find.
-        const points = hole.getPoints(8).map((point) => new THREE.Vector3(point.x, point.y, 0));
-        const centre = new THREE.Box3().setFromPoints(points).getCenter(new THREE.Vector3());
-        return Math.hypot(centre.x - opening.x, centre.y - opening.y) < 0.02;
-      });
-      expect(cut, `no bore is cut at (${String(opening.x)}, ${String(opening.y)})`).toBe(true);
-    }
+        BOTTOM_BORES.mics[index],
+        `bore ${String(index)} is at ${String(x)} on the speaker side but ${String(BOTTOM_BORES.mics[index])} on the mic side`,
+      ).toBeCloseTo(-x, 6);
+    });
+    // And the parts the numbers describe: one mouth per entry, on each side.
+    const bottom = buildBottom(materials);
+    expect(bottom.children.filter((child) => child.name === 'speaker')).toHaveLength(5);
+    expect(bottom.children.filter((child) => child.name === 'mic-bottom')).toHaveLength(5);
   });
 });

@@ -12,11 +12,12 @@ import {
   sapphireColor,
   type ColorKey,
 } from './palette.js';
+import { brushedNormalMap, glowTexture } from './textures.js';
 
 /**
  * Every material in the phone model, plus the procedural maps that give the
  * surfaces their micro-detail. Nothing here is fetched: the brushed-metal and
- * lens-flare textures are drawn into canvases at module scope.
+ * lens-flare textures are drawn into canvases at module scope in `textures.ts`.
  *
  * Colour is the only thing the dropdown changes, and it changes on these
  * shared instance colours only — no geometry is rebuilt, ever. The finishes
@@ -70,83 +71,74 @@ export interface PhoneMaterials {
   readonly glow: THREE.SpriteMaterial;
 }
 
-/** Fine horizontal streaks; anisotropy needs a rotated map to read as
- *  brushing. A per-row value keeps the pattern as fine as the texture
- *  resolution, which is what stops it aliasing into visible banding on a face
- *  that is large on screen. */
-function brushedNormalMap(): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext('2d');
-  if (context !== null) {
-    const image = context.createImageData(size, size);
-    // Deterministic hash: same streaks on every load, no Math.random.
-    for (let y = 0; y < size; y += 1) {
-      const hashed = Math.sin(y * 127.1 + 311.7) * 43758.5453;
-      const value = 128 + (hashed - Math.floor(hashed) - 0.5) * 10;
-      for (let x = 0; x < size; x += 1) {
-        const index = (y * size + x) * 4;
-        image.data[index] = value;
-        image.data[index + 1] = 128;
-        image.data[index + 2] = 255;
-        image.data[index + 3] = 255;
-      }
-    }
-    context.putImageData(image, 0, 0);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1, 2);
-  return texture;
-}
-
-/** Soft round falloff used as a lens hotspot. */
-function glowTexture(): THREE.CanvasTexture {
-  const size = 128;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext('2d');
-  if (context !== null) {
-    const gradient = context.createRadialGradient(
-      size / 2,
-      size / 2,
-      0,
-      size / 2,
-      size / 2,
-      size / 2,
-    );
-    gradient.addColorStop(0, 'rgba(255,255,255,0.85)');
-    gradient.addColorStop(0.35, 'rgba(200,225,255,0.35)');
-    gradient.addColorStop(1, 'rgba(120,150,255,0)');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, size, size);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
 export function createMaterials(): PhoneMaterials {
   const way = COLORWAYS[DEFAULT_COLOR];
   // One brushed map, shared by the rail and the buttons so the pills cannot
   // drift away from the frame's finish.
   const brushed = brushedNormalMap();
 
+  // The frame is anodized aluminum with a brushed grain, and the grain is
+  // carried by `normalMap` alone (anisotropy is 0; see below).
+  //
+  // The values below were picked against a pixel read-back of this round's own
+  // render: the `back` view at 1:1 through the CDP harness, sampling the rail
+  // band's and the panel's pixels and comparing their linear luminance. No
+  // artifact of that is kept in the repo — `.shots/` is ignored scratch and the
+  // read-back tooling is not tracked — so the ratios live in this comment and
+  // nothing here can be re-derived from the tree. The measure is relative
+  // luminance, rail band over panel on the same frame. The references are
+  // gsmr-040 (orange 0.73x), the colour-lineup photo (silver 0.87x) and
+  // gsmr-019 (blue 0.47x).
+  //
+  // `anisotropy` stays 0. At 0.55 it drew a hard black band along the plateau's
+  // rolled shoulder, where the real part shows a soft dark-to-bright gradient:
+  // the stripe's darkest row was rgb(0,0,0) beside a 175-luma highlight —
+  // contrast 175:1, a black line however the surface is lit. Every non-zero
+  // value tried (0.55, 0.4, 0.25, 0.12, 0.1) reproduced it, so this is not a
+  // setting to tune down, it is on or off: it survived every other candidate,
+  // including `roughness` 0.6, the studio shell repainted, the normal map
+  // removed and the shadow map off, so it is the anisotropy term specifically.
+  //
+  // Dropping it cost the frame most of its brightness, because that lobe had
+  // been smearing the studio's softboxes across the rail and the plateau. With
+  // it gone a 0.9-metal frame mirrors only the shell *between* those softboxes:
+  // the Cosmic Orange frame rendered rgb(70,18,7) against its own panel's
+  // rgb(201,122,90), a brown body on a salmon back. Anodized aluminum is not a
+  // bare mirror — its oxide layer scatters, which is why the real part stays
+  // bright and matte — so the frame is mostly scattering now, at
+  // `metalness: 0.15` with `envMapIntensity: 2.6`. Against those references the
+  // rail/panel ratio moved 0.07x -> 0.69x (orange, reference 0.73x), 0.15x ->
+  // 0.91x (silver, 0.87x) and 0.03x -> 0.38x (blue, 0.47x): within 0.05 of the
+  // reference on orange and silver, and 0.09 under it — 19% — on blue. So two
+  // of the three land where the reference does and blue is still short of it.
+  //
+  // What the two comparison attempts show, and what they do not. Both moved
+  // `metalness` and `envMapIntensity` together, so they cannot say which one
+  // caused the difference — only that a more metallic, brighter frame came out
+  // duller (0.45 metalness at `envMapIntensity` 3.0: 0.43x) than a less
+  // metallic, dimmer one (0.30 at 1.7: 0.56x). That both arms read that way
+  // points at the reflection of the softbox *gaps*, which is what more metal and
+  // a brighter environment make more of, rather than at more environment as
+  // such. It does not establish metalness as the lever, and nothing else here
+  // does either. The shipped pair is not one of those attempts and does not
+  // follow from them: it is 0.15 at 2.6, chosen by sampling the ladder's own
+  // orange ratio against the reference.
+  //
+  // What this costs: a flat face renders flat, so the plateau is one tone edge
+  // to edge where the reference has a soft gradient, and the antenna straps'
+  // step over the rail narrows from +64 luma to +11. Both are this studio's own
+  // uniformity — the panel has always rendered that way — and the strap still
+  // separates, so neither was chased further.
   const aluminum = new THREE.MeshPhysicalMaterial({
     color: way.aluminum,
-    metalness: 0.9,
+    metalness: 0.15,
     roughness: way.roughness,
     clearcoat: way.clearcoat,
     clearcoatRoughness: 0.28,
-    anisotropy: 0.55,
-    anisotropyRotation: Math.PI / 2,
+    anisotropy: 0,
     normalMap: brushed,
     normalScale: new THREE.Vector2(0.12, 0.12),
-    envMapIntensity: 1.2,
+    envMapIntensity: 2.6,
   });
 
   // Matte Ceramic Shield panel: the frame's own hue, lifted about a tenth in

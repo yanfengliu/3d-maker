@@ -58,14 +58,26 @@ interface SlabOptions {
   readonly bevel: number;
   readonly centreX?: number;
   readonly centreY?: number;
-  /** A cut-out crossing the bottom edge: the USB-C port opening. `edge` is the
-   *  local Y of the shape's bottom edge, so the hole is positioned relative to
-   *  it rather than to the shape's centre. */
+  /** A notch cut across the shape's bottom edge: the USB-C port opening.
+   *
+   *  The four numbers are the notch's own extents in the shape's coordinates,
+   *  not the hole's centre: `baseY` is the Y the notch's **own** bottom edge
+   *  sits on and it must lie below the shape's bottom edge, so the part of the
+   *  hole that crosses the edge is discarded and what is cut is a notch
+   *  `width` wide by `height` deep, reaching from `baseY` up to
+   *  `baseY + height`.
+   *
+   *  This option used to take a `depth` documented as the hole's depth and
+   *  passed as the hole's *Y radius*: the housing's call site handed it the
+   *  mouth's 3.2 mm height and what it cut was a 6.4 mm tall half-pill, which
+   *  measured 10.48 mm across the rail face instead of the documented 8.4 mm
+   *  mouth. The names here are the geometry's, so a call site that means "the
+   *  mouth's height" now passes a height. */
   readonly slot?: {
     readonly width: number;
-    readonly depth: number;
+    readonly height: number;
     readonly radius: number;
-    readonly edge: number;
+    readonly baseY: number;
   };
   /** Circular bores cut clean through the slab. Without these the slab is a
    *  solid block, and a lens assembly placed on it is embedded in aluminum
@@ -109,14 +121,16 @@ export function slabGeometry(options: SlabOptions): THREE.ExtrudeGeometry {
   if (options.slot !== undefined) {
     // Only the top part of the hole crosses the shape; the rest runs out
     // through the bottom edge and is discarded by the triangulator, which is
-    // what turns a rounded rectangle into an edge notch.
+    // what turns a rounded rectangle into an edge notch. `roundedHole` centres
+    // the rectangle on the Y it is given, so the notch's own centre is half its
+    // height above `baseY`.
     shape.holes.push(
       roundedHole(
         options.slot.width,
-        options.slot.depth,
+        options.slot.height,
         options.slot.radius,
         options.centreX ?? 0,
-        options.slot.edge + options.slot.depth / 2,
+        options.slot.baseY + options.slot.height / 2,
       ),
     );
   }
@@ -338,16 +352,25 @@ export function profileLathe(
   return geometry;
 }
 
+/** Share of the ring's band that is flat crown. The real ring carries a wide
+ *  land and then breaks to a short polished chamfer at the rim; the single
+ *  slope this profile used to have left no land at all, and a ring with no flat
+ *  in it reads as a cone rather than as a machined mount. */
+export const RING_FLAT_SHARE = 0.64;
+
 /**
  * A polished ring about the Z axis: a lathe profile that runs from the bore
  * radius out to `outerRadius` and down `neck`, closed by an inner wall so it
  * never reads as a paper-thin washer.
  *
- * The crown slopes down towards the rim rather than sitting flat, because the
- * flat version faced exactly along the lens axis and reflected nothing but the
- * dark backdrop — a polished ring that reads as a black hole. The slope lands
- * on an outer wall `neck` tall, which defaults to a third of the height. The
- * outward normals are verified rather than assumed: the lathe's winding
+ * The crown is a flat land across `RING_FLAT_SHARE` of the band, then a short
+ * chamfer down to the rim, and then the outer wall. The land is what catches
+ * the key light as a flat annulus around the glass; the chamfer is the bright
+ * polished edge where the ring turns over. A single slope from bore to rim —
+ * which is what this profile held until now — has no land and no edge, and from
+ * a back view it reads as a shallow cone.
+ *
+ * The outward normals are verified rather than assumed: the lathe's winding
  * depends on how the profile is traversed, and a ring with inward normals
  * renders black.
  */
@@ -360,9 +383,13 @@ export function ringGeometry(
 ): THREE.LatheGeometry {
   const crown = height / 2;
   const rim = -height / 2 + Math.min(Math.max(neck, 0.05), height * 0.9);
+  const band = outerRadius - boreRadius;
+  const landRadius = boreRadius + band * RING_FLAT_SHARE;
+  const rimRadius = Math.min(landRadius + (crown - rim), outerRadius);
   const profile = [
     new THREE.Vector2(boreRadius, crown),
-    new THREE.Vector2(outerRadius, rim),
+    new THREE.Vector2(landRadius, crown),
+    new THREE.Vector2(rimRadius, rim),
     new THREE.Vector2(outerRadius, -height / 2),
     new THREE.Vector2(boreRadius, -height / 2),
     new THREE.Vector2(boreRadius, crown),

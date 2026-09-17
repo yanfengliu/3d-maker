@@ -112,7 +112,7 @@ Do not declare the result fully verified while material findings or required che
 
 Node 24 (`.nvmrc`; CI reads it via `node-version-file`). All of these are authoritative, and all green before any commit that touches code:
 
-- `npm test` — vitest. 18 tests: 12 in `src/iphone/parts.test.ts`, 6 in `src/index/models.test.ts`.
+- `npm test` — vitest. 29 tests: 23 in `src/iphone/parts.test.ts`, 6 in `src/index/models.test.ts`.
 - `npm run typecheck` — `tsc --noEmit`, strict.
 - `npm run lint` — eslint with `--max-warnings 0`, so zero warnings, not merely zero errors.
 - `npm run build` — `tsc --noEmit` then `vite build`; emits both pages into `dist/`.
@@ -129,6 +129,8 @@ Read `docs/design/spec.md` before substantial work — it is the showcase spec: 
 - **The screenshot contract is what the capture tooling depends on.** Every viewer page honors `?shot=1`: no auto-rotate and no entrance animation, the exact preset camera on the first presented frame, and `window.__shotReady = true` only after at least 5 rendered frames. Where the page has them, `?view=` and `?color=` select the presets. `?noui=1` hides the viewer chrome so a poster captures the model alone. A new viewer page either honors this contract or `scripts/capture-shots.mjs` cannot capture it.
 - The renderer is created with `preserveDrawingBuffer: true`. Without it headless Chrome captures a blank canvas, so the whole poster pipeline silently produces empty images.
 - **Visual work is verified visually, never assumed from a passing test.** Capture through `scripts/shoot-iphone.ps1` or `scripts/capture-shots.mjs` and look at the PNG yourself at native resolution. `SHOT_PAGE` picks the page (`iphone.html` by default, `index.html` for the index), `SHOT_LIST` the `view:color[:extra]` shots, `SHOT_W`/`SHOT_H` the viewport. A green unit test says nothing about what the pixels do.
+- **Claiming fidelity to a real object requires a feature-by-feature audit, not an overall read.** The eight presets are a starting frame, not the sweep: `scripts/sweep-iphone.mjs` continues from any preset and orbits/zooms by dispatching trusted mouse input through the page's real OrbitControls — arbitrary angles and macro range through the real input path, never by assigning a camera pose. Audit each feature against reference photos at 1:1 crops: chirality (a mirrored part reads fine until you compare it), profiles and edge breaks, counts (bores, bands), silhouettes, materials. Six rounds of "it reads like an iPhone" shipped a mirrored Apple logo, a machined plateau edge where the real bump is a forged roll, and a USB-C port that pierced the whole body; every one of those was visible in a 1:1 crop and invisible in the overall read.
+- **A geometry change's author renders and inspects their own work before handing it off.** Gates cannot see z-fighting between exactly coplanar faces, a self-intersecting outline, a cap facing the wrong way, or a part swept around the wrong footprint — a round-6 plateau build passed 22 green tests while rendering black gashes. Unit tests bound the numbers; only a frame shows the surface.
 - **No runtime network assets.** Every model is procedural and every texture, environment, and glyph is embedded or generated in code — no HDRIs, fonts, images, or meshes fetched at runtime. That is what keeps the pages self-contained under the GitHub Pages base path.
 - Files under 500 LOC — extract helpers or split. 2-space indentation.
 

@@ -1,61 +1,61 @@
 import * as THREE from 'three';
 
-import { addMesh, backPlateGeometry, blockGeometry, boreGeometry, contourPatchGeometry, slabGeometry } from './geometry.js';
+import { addMesh, backPlateGeometry, contourPatchGeometry, slabGeometry } from './geometry.js';
 import {
   ANTENNA,
-  BACK_PANEL,
   BODY,
-  BORE_PROUD,
-  BOTTOM_BORES,
   BUTTONS,
-  FLASH,
-  FLASH_CAVITY_RADIUS,
   GLASS_BEVEL,
   GLASS_FRONT_Z,
   ISLAND,
-  LENSES,
-  LIDAR,
-  LIDAR_CAVITY_RADIUS,
   LOGO_CENTRE_Y,
   LOGO_HEIGHT,
   MAGSAFE,
-  PLATEAU,
-  PLATEAU_CAVITY_RADIUS,
-  PLATEAU_MIC,
-  PLATEAU_MIC_CAVITY_RADIUS,
+  PORT_CUT_INSET,
+  PORT_CUT_RADIUS,
   RAIL,
   TOP_BORE,
   USB_C,
 } from './dims.js';
-import { buildFlash, buildLidar, buildLenses, buildPlateauMic } from './lens.js';
 import { appleLogoGeometry } from './logo.js';
+import { buildBackPanel, PANEL_FACE_Z } from './plateau.js';
+import { boreMouth } from './port.js';
 import type { PhoneMaterials } from './materials.js';
+
+// The plateau, the back panel and the bottom edge live in their own modules,
+// because each is shaped by something this file cannot describe — the panel's
+// top edge by the plateau's roll, the port by the housing's through-cut — and
+// because their arguments are longer than this file's line budget. Re-exported
+// so `phone.ts` and the test files keep their existing import paths.
+export { buildPlateau, PANEL_INNER_Z } from './plateau.js';
+export { buildBottom } from './port.js';
+export { buildBackPanel, PANEL_FACE_Z };
 
 /**
  * One builder per external surface of the phone. `phone.ts` assembles them;
- * this file owns the millimetre layout of the panel, the controls, the ports
- * and the camera plateau.
+ * this file owns the frame, the front, the back's furniture and the controls.
  *
  * The rule every edge part here obeys: it must reach `RAIL` without crossing
  * it. Edge features are either placed on the rail's own surface (flush bore
  * mouths, antenna ribbons, button pills seated in the metal) or set back inside
- * it (port cavities), because a part that crosses the silhouette stops reading
- * as a detail and starts reading as a modelling artefact — and a part that
- * stops short of it reads as a decal floating beside the phone. Both halves of
- * that rule are asserted against the built geometry in `parts.test.ts`.
+ * it, because a part that crosses the silhouette stops reading as a detail and
+ * starts reading as a modelling artefact — and a part that stops short of it
+ * reads as a decal floating beside the phone. Both halves of that rule are
+ * asserted against the built geometry in `parts.test.ts`.
  */
 
-/** How far the button pills stand off the rail, and how deep the seam behind
- *  them is. The seam is a thin dark bar sitting `SEAM_PROUD` off the rail and
- *  larger than the pill, so it reads as the shadowed gap at the button's base
- *  rather than as a darker button.
+/** How far a button pill stands off the rail, and the plane its seam sits on:
+ *  `BUTTONS[].proud` and `BUTTONS[].seamProud` in `dims.ts`, because the seam
+ *  has to stay behind its own pill and Camera Control's two faces are set into
+ *  the rail rather than standing off it. The seam is a thin dark bar larger
+ *  than the pill, so it reads as the shadowed gap at the button's base rather
+ *  than as a darker button.
  *
- *  It has its own stand-off, and that is load-bearing: the seam used to take
- *  the pill's outer plane as its own, which made a near-black face exactly
- *  coplanar with the pill's outer face. Two coplanar faces fight for the same
- *  depth samples, and the pill lost often enough to read as a black, speckled
- *  pill in every profile shot. */
-export const SEAM_PROUD = 0.06;
+ *  The seam having its own stand-off is load-bearing: it used to take the
+ *  pill's outer plane as its own, which made a near-black face exactly coplanar
+ *  with the pill's outer face. Two coplanar faces fight for the same depth
+ *  samples, and the pill lost often enough to read as a black, speckled pill in
+ *  every profile shot. */
 const SEAM_MARGIN = 0.3;
 /** How far a pill's extrusion runs back past the rail. Without it the pill's
  *  inner cap lands exactly on the wall, which is one more coplanar pair. */
@@ -71,20 +71,27 @@ const LOGO_EMBED = 0.05;
  *  at glancing angles, never as a drawn circle. */
 const MAGSAFE_PROUD = 0.02;
 
-/** The back panel's planes: it butts the frame's back face and stands
- *  `BACK_PANEL.thickness` outside it, which is what the plane table in
- *  `dims.ts` calls z = -4.375 … -4.975. */
-export const PANEL_INNER_Z = -BODY.halfDepth;
-export const PANEL_FACE_Z = PANEL_INNER_Z - BACK_PANEL.thickness;
-
-/** Anodized unibody with the USB-C opening cut as a real hole through the
- *  bottom edge, which is what makes the port read as an opening.
+/** Anodized unibody with the USB-C opening cut through the bottom edge. The cut
+ *  is the port's *mouth* — a real hole in the rail's chamfer, which is the only
+ *  way the recess reads as an opening rather than as a decal — but a cut through
+ *  a slab is a through-hole by construction, so it also opens on the front and
+ *  back faces. `port.ts`'s `port-shell` fills its cross-section; without that,
+ *  this one cut puts a dark slot in all three silhouettes.
  *
  *  The shape handed to `slabGeometry` is the outline the chamfer is grown
  *  *from*, so it is pre-shrunk by `BODY.bevel` on every side and the slab's
  *  middle — its widest layer — lands exactly on `RAIL`. A hole only opens an
- *  edge if part of it crosses that edge, so the cut-out is centred on the
- *  shape's own bottom line. */
+ *  edge if part of it crosses that edge, and the shape's own bottom line is
+ *  `BODY.bevel` above the rail: posed on that line, the hole reaches the rail
+ *  in the middle of the slab and stops `BODY.bevel` short of it at the frame's
+ *  two faces, which cuts a shallow V — measured, 6.7 mm wide and 1 mm deep
+ *  instead of the mouth's 8.4 x 3.2. `PORT_CUT_INSET` poses the hole's bottom
+ *  edge just above the rail instead, and `USB_C.height` above that is its top,
+ *  so what it cuts is one flat-bottomed rectangle at the rail's own face. Its
+ *  corners are `PORT_CUT_RADIUS`, for the reason `dims.ts` measures: a hole wide
+ *  enough to hold the mouth's own `USB_C.radius` corners reaches below the
+ *  rail, and the frame's own silhouette gate reads that as the frame crossing
+ *  it. */
 export function buildHousing(materials: PhoneMaterials): THREE.Mesh {
   const mesh = new THREE.Mesh(
     slabGeometry({
@@ -96,9 +103,15 @@ export function buildHousing(materials: PhoneMaterials): THREE.Mesh {
       bevel: BODY.bevel,
       slot: {
         width: USB_C.width,
-        depth: USB_C.height,
-        radius: USB_C.radius,
-        edge: -BODY.height / 2 + BODY.bevel,
+        // The cut is posed `PORT_CUT_INSET` above the rail's bottom face and
+        // reaches `USB_C.height` above it, which is what makes the mouth a flat
+        // rectangle rather than the V a hole landing on the shape's own bottom
+        // line cuts. Its corners are `PORT_CUT_RADIUS` for the reason `dims.ts`
+        // measures: a hole wide enough to hold the mouth's own 1.1 mm corners
+        // cannot stay inside the shape's outline.
+        height: USB_C.height - PORT_CUT_INSET,
+        radius: PORT_CUT_RADIUS,
+        baseY: -RAIL.y + PORT_CUT_INSET,
       },
     }),
     materials.aluminum,
@@ -184,42 +197,12 @@ export function buildFront(materials: PhoneMaterials): THREE.Group {
 }
 
 /**
- * The matte Ceramic Shield panel on its own. It is split out of `buildBack`
- * because it is the back's structural surface — the plane the logo and the
- * MagSafe ring are measured from, and one of the documented Z planes — while
- * the logo needs an SVG parse and therefore a DOM. `parts.test.ts` measures
- * this mesh; it cannot reach anything that calls `buildBack`.
+ * Matte Ceramic Shield back panel, Apple logo inlay, MagSafe ring. The panel
+ * itself is `plateau.ts`'s — it is split out of this file because it is the
+ * back's structural surface, the one `plateau.test.ts` (its top edge) and the
+ * plane gate above (its Z planes) measure without needing the logo's SVG parse,
+ * and because its top edge follows the plateau's roll.
  */
-export function buildBackPanel(materials: PhoneMaterials): THREE.Mesh {
-  // One large rounded-rect panel: it starts a small gap below the plateau and
-  // runs to 12 mm above the body's bottom edge, inset 4.5 mm on each side.
-  const top = PLATEAU.centreY - PLATEAU.height / 2 - BACK_PANEL.gap;
-  const bottom = -BODY.height / 2 + BACK_PANEL.bottomReveal;
-  const centreY = (top + bottom) / 2;
-  const width = BODY.width - BACK_PANEL.sideInset * 2;
-  // The panel is the outermost back surface: its inner face lies on the
-  // frame's back face and its outer face `PANEL_FACE_Z` outside it. The panel
-  // faces -Z, so the plane `slabGeometry` wants is the *inner* one; handing it
-  // the outer plane grew the panel away from the frame instead, which is what
-  // left it floating 0.6 mm off the body with a dark gap around its edge.
-  return addMesh(
-    new THREE.Group(),
-    slabGeometry({
-      width,
-      height: top - bottom,
-      radius: BACK_PANEL.radius,
-      maxZ: PANEL_INNER_Z,
-      thickness: BACK_PANEL.thickness,
-      bevel: GLASS_BEVEL,
-      centreY,
-    }),
-    materials.backGlass,
-    'back-panel',
-    'backGlass',
-  );
-}
-
-/** Matte Ceramic Shield back panel, Apple logo inlay, MagSafe ring. */
 export function buildBack(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
   group.name = 'back';
@@ -256,56 +239,6 @@ export function buildBack(materials: PhoneMaterials): THREE.Group {
   return group;
 }
 
-/** Full-width camera plateau carrying the lenses and the sensor cluster.
- *
- *  The bar is a back-facing slab, so `slabGeometry` gets its *inner* plane:
- *  `maxZ: PLATEAU.zInner` puts its outer face on `PLATEAU.zOuter` at -6.375,
- *  1.4 mm outside the back panel, with a 0.095 mm overlap into the frame so it
- *  reads fused to the body. Handing it `zOuter` — which is what an earlier
- *  round did — put the whole bar 2.095 mm behind that, detached in profile and
- *  with the lens stack buried inside the frame. See the plane table in
- *  `dims.ts`. */
-export function buildPlateau(materials: PhoneMaterials): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'plateau';
-
-  // The outline the chamfer grows from is the rail's outline inset by the
-  // chamfer on every side, so the slab's widest layer lands exactly on `RAIL`
-  // and the bar reads continuous with the body instead of clipped onto it.
-  const outlineCentreY = RAIL.y - PLATEAU.bevel - PLATEAU.height / 2;
-
-  addMesh(
-    group,
-    slabGeometry({
-      width: 2 * (RAIL.x - PLATEAU.bevel),
-      height: PLATEAU.height,
-      radius: RAIL.radius - PLATEAU.bevel,
-      maxZ: PLATEAU.zInner,
-      thickness: PLATEAU.zInner - PLATEAU.zOuter,
-      bevel: PLATEAU.bevel,
-      centreY: outlineCentreY,
-      // Real openings for the optics: a lens sits *in* the plateau, not on a
-      // solid block of aluminum.
-      bores: [
-        ...LENSES.map((lens) => ({ x: lens.x, y: lens.y, radius: PLATEAU_CAVITY_RADIUS })),
-        { x: FLASH.x, y: FLASH.y, radius: FLASH_CAVITY_RADIUS },
-        { x: LIDAR.x, y: LIDAR.y, radius: LIDAR_CAVITY_RADIUS },
-        { x: PLATEAU_MIC.x, y: PLATEAU_MIC.y, radius: PLATEAU_MIC_CAVITY_RADIUS },
-      ],
-    }),
-    materials.aluminum,
-    'plateau-plate',
-    'aluminum',
-  );
-
-  group.add(buildLenses(materials));
-  group.add(buildFlash(materials));
-  group.add(buildLidar(materials));
-  group.add(buildPlateauMic(materials));
-
-  return group;
-}
-
 /**
  * Side controls. Every pill is proud anodized metal — the frame's own finish —
  * with a thin dark seam at its base: the physical left edge (-X) carries
@@ -327,7 +260,7 @@ export function buildControls(materials: PhoneMaterials): THREE.Group {
     // smaller stand-off plane — sharing the pill's is what made two faces
     // coplanar and the pills render black and speckled.
     const outerX = button.edge * (RAIL.x + button.proud);
-    const seamX = button.edge * (RAIL.x + SEAM_PROUD);
+    const seamX = button.edge * (RAIL.x + button.seamProud);
 
     // The seam is larger than the pill and stands far less proud, so only the
     // sliver around the pill's base shows.
@@ -339,7 +272,7 @@ export function buildControls(materials: PhoneMaterials): THREE.Group {
         pillRadius,
         button.edge,
         seamX,
-        SEAM_PROUD + EMBED,
+        button.seamProud + EMBED,
         button.centreY,
       ),
       materials.seam,
@@ -411,64 +344,6 @@ function pillGeometry(
   geometry.translate(outerX + edge * -bevel, 0, 0);
   geometry.computeVertexNormals();
   return geometry;
-}
-
-/**
- * A dark disc lying on an end edge, its face flush with the rail: the mouth of
- * a bore. `direction` is the outward sign along Y, so the disc is pushed out
- * by `BORE_PROUD` and no further — a fraction of a pixel, and nothing that can
- * cross the silhouette the way a tube through the edge did.
- */
-function boreMouth(radius: number, x: number, direction: 1 | -1): THREE.BufferGeometry {
-  const thickness = 0.12;
-  const geometry = boreGeometry(radius, thickness, 16);
-  geometry.translate(x, direction * (RAIL.y + BORE_PROUD - thickness / 2), 0);
-  return geometry;
-}
-
-/** USB-C opening with a real cavity and tongue, six speaker bores to its right
- *  and four microphone bores to its left. No SIM tray: US eSIM.
- *
- *  The frame's slot cut leaves the port open at the bottom edge; the cavity
- *  below sits a millimetre inside that opening, so the rim the cut leaves is
- *  the outermost thing at the port — flush with the rail — and the port reads
- *  as a recess rather than as a tab stuck to the bottom. */
-export function buildBottom(materials: PhoneMaterials): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'bottom';
-  const edge = -RAIL.y;
-  const halfWidth = USB_C.width / 2;
-
-  // A dark shell set inside the frame's cut-out, wider than the opening so no
-  // seam shows at its sides.
-  addMesh(
-    group,
-    blockGeometry([-halfWidth - 0.8, edge + 1.0, -4.2], [halfWidth + 0.8, edge + 4.0, 4.2], 0.4),
-    materials.bore,
-    'port-cavity',
-    'bore',
-    false,
-  );
-  // The connector tongue: the one lighter surface inside the port. It is
-  // polished steel rather than dark like the cavity around it, because the
-  // whole port is read from a low angle where only a *bright* surface inside it
-  // separates "dark cavity with a metal tongue" from "dark hole".
-  addMesh(
-    group,
-    blockGeometry([-3.3, edge + 1.05, -1.9], [3.3, edge + 1.95, 1.9], 0.2),
-    materials.tongue,
-    'port-tongue',
-    'tongue',
-    false,
-  );
-
-  for (const x of BOTTOM_BORES.speakers) {
-    addMesh(group, boreMouth(BOTTOM_BORES.radius, x, -1), materials.bore, 'speaker', 'bore', false);
-  }
-  for (const x of BOTTOM_BORES.mics) {
-    addMesh(group, boreMouth(BOTTOM_BORES.radius, x, -1), materials.bore, 'mic-bottom', 'bore', false);
-  }
-  return group;
 }
 
 /** Top edge: clean except one microphone pinhole, offset to the physical
