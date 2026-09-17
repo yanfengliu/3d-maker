@@ -41,10 +41,19 @@ const RING_SINK = 0.3;
 const GLASS_DROP = 0.65;
 /** Crown of the glass dome above the element's own base plane. */
 const GLASS_RISE = 0.45;
-/** The dark element inside the barrel. */
-const GLASS_RADIUS = 4.15;
-/** The brighter pupil at the very centre: ~4.6 mm across. */
-const PUPIL_RADIUS = 2.3;
+/** The dark element inside the barrel: nearly the whole ring's bore, so the
+ *  glass fills ~0.77 of the ring the way the real element does. At 4.15 it was
+ *  a small disc at the bottom of a wide barrel, which is what made each lens
+ *  read as a hole rather than as glass in a mount. */
+const GLASS_RADIUS = 5.15;
+/** The ring's bore, a hair outside the glass so the element seats in it. */
+const RING_BORE = 5.3;
+/** How far the glass's skirt reaches back from its own rim. Only far enough to
+ *  close the cap against a grazing view: the barrel's shoulder is at 5.6 and
+ *  z ≈ −1.7, and a skirt run the whole sphere deep punches through it. */
+const GLASS_SKIRT = 0.6;
+/** The brighter pupil at the very centre: ~5.2 mm across. */
+const PUPIL_RADIUS = 2.6;
 /** How far the pupil's dome floats above the glass dome's surface. */
 const PUPIL_LIFT = 0.05;
 /** The barrel's mouth: a hair inside the hole cut through the plateau, so the
@@ -89,10 +98,12 @@ function buildLens(materials: PhoneMaterials): THREE.Group {
 
   // The ring: an open tube, so the bore is real metal all the way down. Its
   // lip rises around the glass and its crown slopes down to the plateau, which
-  // is the land of bright metal that makes the lens read as a lens.
+  // is the land of bright metal that makes the lens read as a lens. The bore is
+  // 5.3, not the 5.6 it was: it closed onto the element, and that is what lets
+  // the glass fill the ring instead of leaving a wide bright shelf around it.
   addMesh(
     group,
-    ringGeometry(LENS_RADIUS, 5.6, LENS_RING_PROUD + RING_SINK, 0.55, 96),
+    ringGeometry(LENS_RADIUS, RING_BORE, LENS_RING_PROUD + RING_SINK, 0.55, 96),
     materials.lensRing,
     'lens-ring',
     'lensRing',
@@ -143,7 +154,7 @@ function buildLens(materials: PhoneMaterials): THREE.Group {
   // which oblique views showed in place of the glass.
   addMesh(
     group,
-    domeGeometry(GLASS_RADIUS, GLASS_RISE, glassBase, 48, 0.6),
+    domeGeometry(GLASS_RADIUS, GLASS_RISE, glassBase, 56, GLASS_SKIRT),
     materials.lensGlass,
     'lens-glass',
     'lensGlass',
@@ -174,66 +185,79 @@ function buildLens(materials: PhoneMaterials): THREE.Group {
   );
 
   // A faint hotspot sprite tied to the lens centre, so a back view has an
-  // eye-catch even when the key light is off-axis.
+  // eye-catch even when the key light is off-axis. The square is 6.5 mm on a
+  // side, and a sprite's falloff dies at half of that — 3.25 mm, inside the
+  // element's own 5.15 mm radius. The 7.5 it used to be spread the same wash
+  // to 3.75 mm, which lifted more of the glass around the pupil than the
+  // catchlight needs.
   const glow = new THREE.Sprite(materials.glow);
   glow.name = 'lens-glow';
-  glow.scale.set(7.5, 7.5, 1);
+  glow.scale.set(6.5, 6.5, 1);
   glow.position.set(0, 0, glassCrown + 0.6);
   group.add(glow);
 
   return group;
 }
 
-/** LED flash: a matte pale window recessed into a polished collar.
+/** LED flash: a matte pale window under a hairline tinted surround.
  *
- *  The window is 0.1 mm wider than its own cavity so the disc seats inside the
- *  collar's bore rather than over it, and its face sits 0.32 mm below the
- *  collar's crown: the flash is read *in* the plateau, the way the LiDAR is,
- *  not as a disc laid on top of it. */
+ *  The surround used to be a 0.75 mm collar of polished chrome standing 0.56 mm
+ *  off the plateau, which is not a part the real phone has: Apple's close-up
+ *  shows a matte pale window seated almost flush, ringed by a line no wider than
+ *  the lens rings' lip and tinted with the finish like the rest of the plateau
+ *  furniture. It keeps the ring material at 0.45 mm wide — three fifths of that
+ *  collar — and 0.42 mm tall, seated on the plateau face rather than hovering
+ *  0.14 mm over it as the first pass at this size did.
+ *
+ *  The window is 2.43 mm where its cavity is 2.35, so the disc seats inside the
+ *  surround's 2.45 mm bore rather than over it, and its face sits 0.24 mm below
+ *  the surround's crown: the flash is read *in* the plateau, the way the LiDAR
+ *  is, not as a disc laid on top of it. The dark torus that used to sit on the
+ *  window is gone: it drew a dark circle on a window that has to read matte
+ *  pale, which is the opposite of the part. */
 export function buildFlash(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
   group.name = 'flash';
 
+  // Half the collar's 0.42 mm height: the base lands on the plateau's face
+  // instead of hovering over it.
   addMesh(
     group,
-    ringGeometry(3.2, 2.45, 0.62, 0.22, 64),
+    ringGeometry(2.9, 2.45, 0.42, 0.2, 64),
     materials.lensRing,
     'flash-collar',
     'lensRing',
     false,
-  ).position.z = 0.25;
+  ).position.z = 0.21;
   addMesh(
     group,
-    lensDisc(FLASH.radius - 0.05, 0.24, 0.12),
+    lensDisc(FLASH.radius - 0.07, 0.2, 0.08),
     materials.flash,
     'flash-led',
     'flash',
     false,
   );
-  addMesh(
-    group,
-    new THREE.TorusGeometry(FLASH.radius - 0.32, 0.11, 10, 64),
-    materials.aperture,
-    'flash-definition',
-    'aperture',
-    false,
-  ).position.z = 0.2;
   return onPlateau(group, FLASH.x, FLASH.y);
 }
 
-/** LiDAR: a dark glossy scanner window under a polished bezel. */
+/** LiDAR: a dark glossy scanner window under a thin dark surround.
+ *
+ *  The surround is not chrome — it is the shadow line between the dark window
+ *  and the plateau, so it carries the barrel's own material (`aperture`) rather
+ *  than the lens rings'. A polished bezel around the dark glass drew a bright
+ *  circle exactly where the photo shows a dark edge. */
 export function buildLidar(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
   group.name = 'lidar';
 
   addMesh(
     group,
-    ringGeometry(4.5, 3.85, 0.5, 0.16, 64),
-    materials.lensRing,
+    ringGeometry(4.15, 3.85, 0.3, 0.14, 64),
+    materials.aperture,
     'lidar-bezel',
-    'lensRing',
+    'aperture',
     false,
-  ).position.z = 0.2;
+  ).position.z = 0.15;
   addMesh(
     group,
     lensDisc(LIDAR.radius, 0.2, 0.14),
@@ -245,19 +269,21 @@ export function buildLidar(materials: PhoneMaterials): THREE.Group {
   return onPlateau(group, LIDAR.x, LIDAR.y);
 }
 
-/** Mic pinhole between the flash and the LiDAR, in its own polished bezel. */
+/** Mic pinhole between the flash and the LiDAR: a plain dark hole, not a
+ *  chromed aperture. Field photos show a bare pinhole; the polished bezel it
+ *  used to carry is invisible at this size and merely added a bright speck. */
 export function buildPlateauMic(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
   group.name = 'plateau-mic';
 
   addMesh(
     group,
-    ringGeometry(1.25, 0.78, 0.4, 0.12, 40),
-    materials.lensRing,
+    ringGeometry(1.05, 0.78, 0.25, 0.12, 40),
+    materials.aperture,
     'mic-bezel',
-    'lensRing',
+    'aperture',
     false,
-  ).position.z = 0.18;
+  ).position.z = 0.12;
   addMesh(
     group,
     lensDisc(PLATEAU_MIC_CAVITY_RADIUS + 0.07, 0.3, 0.08),

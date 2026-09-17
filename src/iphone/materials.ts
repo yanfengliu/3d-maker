@@ -1,64 +1,31 @@
 import * as THREE from 'three';
 
+import {
+  antennaColor,
+  COLORWAYS,
+  DEFAULT_COLOR,
+  logoColor,
+  magsafeColor,
+  panelColor,
+  ringColor,
+  ringRoughness,
+  sapphireColor,
+  type ColorKey,
+} from './palette.js';
+
 /**
  * Every material in the phone model, plus the procedural maps that give the
  * surfaces their micro-detail. Nothing here is fetched: the brushed-metal and
  * lens-flare textures are drawn into canvases at module scope.
  *
  * Colour is the only thing the dropdown changes, and it changes on these
- * shared instance colours only — no geometry is rebuilt, ever.
+ * shared instance colours only — no geometry is rebuilt, ever. The finishes
+ * themselves, and the tones derived from them, live in `palette.ts`; this file
+ * is the materials those tones are set on.
  */
 
-export type ColorKey = 'cosmic-orange' | 'deep-blue' | 'silver';
-
-export const COLOR_KEYS: readonly ColorKey[] = ['cosmic-orange', 'deep-blue', 'silver'];
-
-export const DEFAULT_COLOR: ColorKey = 'cosmic-orange';
-
-export interface Colorway {
-  /** Shown in the dropdown. */
-  readonly label: string;
-  /** Anodized unibody tint. */
-  readonly aluminum: number;
-  /** Ceramic Shield back-panel tint, always a touch lighter than the frame. */
-  readonly glass: number;
-  /** Frame roughness: the anodized sheen is part of the colourway. */
-  readonly roughness: number;
-  /** Frame clearcoat: the Cosmic Orange depth treatment. */
-  readonly clearcoat: number;
-}
-
-export const COLORWAYS: Record<ColorKey, Colorway> = {
-  // Vivid warm orange with an anodized sheen: slightly smoother than the other
-  // two and carrying a little clearcoat, which is what stops it reading flat.
-  'cosmic-orange': {
-    label: 'Cosmic Orange',
-    aluminum: 0xcf6238,
-    glass: 0xe07a52,
-    roughness: 0.34,
-    clearcoat: 0.25,
-  },
-  // Rich, dark navy. The light, grey-blue this used to be read as washed out.
-  'deep-blue': {
-    label: 'Deep Blue',
-    aluminum: 0x323e57,
-    glass: 0x455472,
-    roughness: 0.36,
-    clearcoat: 0.18,
-  },
-  // Cool light silver, not beige: a neutral frame under a near-white panel.
-  silver: {
-    label: 'Silver',
-    aluminum: 0xdcdde0,
-    glass: 0xf0f1f3,
-    roughness: 0.33,
-    clearcoat: 0.12,
-  },
-};
-
-export function isColorKey(value: string | null | undefined): value is ColorKey {
-  return value === 'cosmic-orange' || value === 'deep-blue' || value === 'silver';
-}
+export type { ColorKey, Colorway } from './palette.js';
+export { COLOR_KEYS, DEFAULT_COLOR, COLORWAYS, isColorKey } from './palette.js';
 
 export interface PhoneMaterials {
   /** Anodized 7000-series unibody and camera plateau. */
@@ -91,11 +58,11 @@ export interface PhoneMaterials {
   readonly button: THREE.MeshPhysicalMaterial;
   /** The thin shadowed gap where a button leaves the frame. */
   readonly seam: THREE.MeshStandardMaterial;
-  /** Antenna lines: matte, one tonal step down from the rail. */
+  /** Antenna lines: the rail's own hue, a measured step lighter and muted. */
   readonly antenna: THREE.MeshStandardMaterial;
   /** USB-C shell and speaker/mic bores: opaque black, no reflections. */
   readonly bore: THREE.MeshStandardMaterial;
-  /** Polished Apple logo inlay. */
+  /** Satin Apple logo inlay. */
   readonly logo: THREE.MeshPhysicalMaterial;
   /** MagSafe ring: a tonal whisper in the panel, not a chrome wire. */
   readonly magsafe: THREE.MeshPhysicalMaterial;
@@ -182,15 +149,18 @@ export function createMaterials(): PhoneMaterials {
     envMapIntensity: 1.2,
   });
 
-  // Matte Ceramic Shield panel: the same hue family as the frame, only a
-  // little lighter. No clearcoat — the real panel is the soft-touch finish.
+  // Matte Ceramic Shield panel: the frame's own hue, lifted about a tenth in
+  // lightness with a little of the saturation eased out — frosted glass over
+  // the same dye lot. Its clearcoat is a faint sheen over the frost rather than
+  // a polish: 0.14 at 0.42 clearcoat roughness, which keeps the panel matte
+  // while it still catches the studio.
   const backGlass = new THREE.MeshPhysicalMaterial({
-    color: way.glass,
+    color: panelColor(way),
     metalness: 0.05,
-    roughness: 0.35,
-    clearcoat: 0.18,
-    clearcoatRoughness: 0.4,
-    envMapIntensity: 0.95,
+    roughness: 0.38,
+    clearcoat: 0.14,
+    clearcoatRoughness: 0.42,
+    envMapIntensity: 0.9,
   });
 
   // The port's tongue. It is steel, and it has to be *light*: it is the only
@@ -207,80 +177,105 @@ export function createMaterials(): PhoneMaterials {
   // Cover glass over an unlit OLED: near-black, glossy, and *smooth*. The
   // display used to carry a coarse procedural map that dithered into a
   // staircase across the panel; both layers are plain now.
+  //
+  // Lifted off pure black. The near-black pair this carried was a void in a
+  // straight-on front view: with no diffuse term to catch the studio there is
+  // nothing for the clearcoat to sit *on*, and the whole face rendered as a flat
+  // black rectangle. Both layers now carry a real dark-grey albedo and the
+  // cover glass a strong enough environment response that the softboxes read
+  // as a sheen sliding across it. The lift is deliberately confined to the
+  // darkness end — the face must still read as a phone that is switched off.
   const frontGlass = new THREE.MeshPhysicalMaterial({
-    color: 0x090a0d,
+    color: 0x10131a,
     metalness: 0,
-    roughness: 0.05,
+    roughness: 0.055,
     clearcoat: 1,
     clearcoatRoughness: 0.04,
-    envMapIntensity: 1.15,
+    envMapIntensity: 1.9,
     ior: 1.52,
   });
 
   const screen = new THREE.MeshPhysicalMaterial({
-    color: 0x010103,
+    color: 0x0b0e14,
     metalness: 0,
-    roughness: 0.05,
+    roughness: 0.06,
     clearcoat: 1,
-    clearcoatRoughness: 0.04,
-    envMapIntensity: 0.55,
+    clearcoatRoughness: 0.05,
+    envMapIntensity: 1.2,
   });
 
   // Dynamic Island. Near-black would be correct for a dark screen but then the
   // pill is indistinguishable from the display behind it, so it carries a
   // faint grey lift and a strong clearcoat — enough to catch a highlight and
-  // read as a separate glossy part.
+  // read as a separate glossy part. Its albedo is a hair *above* the OLED's and
+  // its environment response stronger (1.7 against 1.2), so the sheen that
+  // picks the pill out is its own reflection rather than the display behind it;
+  // both stay dark enough that the face reads as a switched-off screen.
   const island = new THREE.MeshPhysicalMaterial({
-    color: 0x1c2028,
-    metalness: 0.15,
+    color: 0x15181f,
+    metalness: 0.12,
     roughness: 0.08,
     clearcoat: 1,
     clearcoatRoughness: 0.03,
-    envMapIntensity: 1.9,
+    envMapIntensity: 1.7,
   });
 
-  // The polished barrel: a bright polished-metal ring. It deliberately is NOT
-  // tinted to the frame — an anodized-orange ring on an anodized-orange
-  // plateau reads as one flat surface, and the lens disappears into it.
+  // The polished barrel: polished metal *tinted to the finish*, which is what
+  // Apple's close-up shows — the ring around each lens is clearly orange on
+  // Cosmic Orange and blue on Deep Blue, not bare chrome. A neutral ring is
+  // wrong twice over: it reads as chrome on the two colourways, and on a
+  // tinted plateau a matching tint still separates from the matte aluminum
+  // because the polished surface is brighter and more saturated than the dye.
+  //
+  // The roughness is per finish, and that is what keeps silver's rings bright.
+  // Silver's tint carries no lift, so a 0.22 mirror on it reflected the dark
+  // studio wall and read as charcoal with a bright rim; at 0.35 the softbox
+  // spreads across the ring face instead.
   const lensRing = new THREE.MeshPhysicalMaterial({
-    color: 0xc9ccd2,
+    color: ringColor(way, DEFAULT_COLOR),
     metalness: 1,
-    roughness: 0.24,
-    envMapIntensity: 1.8,
+    roughness: ringRoughness(DEFAULT_COLOR),
+    envMapIntensity: 1.6,
   });
 
-  // The bright pupil is the eye-catch: small, near-black blue, proud of the
+  // The pupil is the eye-catch: small, brighter near-black blue, proud of the
   // glass so a tight highlight lands on it.
   const lensPupil = new THREE.MeshPhysicalMaterial({
-    color: 0x1b3350,
+    color: 0x16283f,
     metalness: 0.2,
     roughness: 0.07,
     clearcoat: 1,
     clearcoatRoughness: 0.03,
-    envMapIntensity: 1.6,
+    envMapIntensity: 1.7,
   });
 
   // Camera glass, and it has to read as glass: a very dark blue-black element
-  // with a clearcoat and a trace of iridescence. The previous element mirrored
-  // the studio back at full strength and came out as a slate-grey coin, so its
-  // environment response is deliberately most of the way down — the depth is
-  // carried by the dark barrel behind it, not by a bright reflection.
+  // with a clearcoat and a trace of iridescence. The element before this round
+  // had its environment response almost switched off (0.28) to stop it
+  // mirroring the studio back as a slate-grey coin, and the cure was worse than
+  // the disease — a lens with no reflection at all is a black void, which is
+  // exactly how the close-up read. The reflection is back up, the albedo is
+  // deep blue-black rather than neutral, and the iridescent coating carries the
+  // blue sheen the real element shows at an angle.
   const lensGlass = new THREE.MeshPhysicalMaterial({
-    color: 0x05070c,
+    color: 0x05070d,
     metalness: 0.0,
-    roughness: 0.04,
+    roughness: 0.08,
     clearcoat: 1,
-    clearcoatRoughness: 0.02,
-    iridescence: 0.35,
+    clearcoatRoughness: 0.03,
+    iridescence: 0.45,
     iridescenceIOR: 1.35,
-    iridescenceThicknessRange: [140, 440],
-    envMapIntensity: 0.28,
+    iridescenceThicknessRange: [140, 460],
+    envMapIntensity: 1.15,
     ior: 1.6,
   });
 
   // Inside the barrel: dark gunmetal, not the pale grey that flattened the
   // lenses into grey coins. Double sided because the barrel is an open tube and
-  // the camera looks into it.
+  // the camera looks into it. Also the plateau's thin dark surrounds — the
+  // LiDAR bezel and the mic pinhole — which is why it has no clearcoat: a
+  // hairline ring with a highlight on it draws a bright circle instead of a
+  // shadow line.
   const aperture = new THREE.MeshPhysicalMaterial({
     color: 0x1b1f27,
     metalness: 0.65,
@@ -293,14 +288,15 @@ export function createMaterials(): PhoneMaterials {
   // to carry `emissive: 0xfff2d6` at 0.85, which under ACES tone mapping came
   // out as a pure white blown disc in every view — brighter than the studio's
   // own softboxes. The real part is a window you look *at*: pale, matte, and
-  // shaded by the collar around it.
+  // very slightly cool. The warm cream it held until this round is what made
+  // it read as a lit lamp against the orange plateau.
   const flash = new THREE.MeshPhysicalMaterial({
-    color: 0xd9d2c2,
-    metalness: 0.05,
-    roughness: 0.58,
-    clearcoat: 0.25,
-    clearcoatRoughness: 0.45,
-    envMapIntensity: 0.6,
+    color: 0xe9ebee,
+    metalness: 0,
+    roughness: 0.6,
+    clearcoat: 0.12,
+    clearcoatRoughness: 0.5,
+    envMapIntensity: 0.55,
   });
 
   const darkGlass = new THREE.MeshPhysicalMaterial({
@@ -312,13 +308,20 @@ export function createMaterials(): PhoneMaterials {
     envMapIntensity: 1.6,
   });
 
+  // Camera Control's cover: a *dark shade of the finish*, not a black hole.
+  // Measured at 0.20, 0.30 and 0.32 of the frame's relative luminance (Deep
+  // Blue, Silver, Cosmic Orange in `palette.ts`'s `SAPPHIRE` rows) — dark
+  // enough to read as a deep glossy strip, light enough that the studio sheen
+  // and the frame's own hue both survive on it. HSL lightness is not the
+  // measure here: the same rows sit at 0.40 to 0.62 of it, a ratio that says
+  // nothing about how dark the strip reads.
   const sapphire = new THREE.MeshPhysicalMaterial({
-    color: 0x14161c,
-    metalness: 0.3,
-    roughness: 0.06,
+    color: sapphireColor(DEFAULT_COLOR),
+    metalness: 0.28,
+    roughness: 0.15,
     clearcoat: 1,
-    clearcoatRoughness: 0.03,
-    envMapIntensity: 1.5,
+    clearcoatRoughness: 0.05,
+    envMapIntensity: 1.7,
   });
 
   // The pills are the same anodized metal as the rail, dyed in the same bath.
@@ -333,22 +336,22 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.85,
   });
 
-  // Antenna bands: the same dye lot as the frame, one clear tonal step down.
+  // Antenna bands: the frame's own hue, a hair lighter and muted — the polymer
+  // straps Apple's photos show as a slightly paler line crossing the rail, not
+  // a cream ribbon.
   //
   // This is tuned against measurement, not against a feeling, because two
   // rounds shipped bands that were present on the model and invisible in every
-  // view. At 0.9 of the rail's colour with the rail's own metalness they
-  // mirrored the studio identically. A matte pale strap is worse: a metal rail
-  // *reflects* the softboxes and blows to white along an edge, so anything
-  // within a shade of that albedo blows out with it — measured, a 0.45-albedo
-  // matte strap landed within 4 of 255 of the rail in the top view, which is
-  // invisible again. This finish keeps some metalness so it mirrors a *darker*
-  // part of the studio than the flat wall beside it, and sits 21 to 55 of 255
-  // off that wall depending on the view.
+  // view. The colour is a measured step off the rail rather than a fraction of
+  // it; the metalness is what keeps the strap legible, because a metal rail
+  // *reflects* the softboxes and blows to white along an edge, so a strap
+  // within a shade of that albedo blows out with it. This finish mirrors a
+  // *darker* part of the studio than the flat wall beside it, and so reads
+  // against the rail instead of dissolving into it.
   const antenna = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(way.aluminum).multiplyScalar(0.55),
-    metalness: 0.7,
-    roughness: 0.45,
+    color: antennaColor(way),
+    metalness: 0.62,
+    roughness: 0.42,
     side: THREE.DoubleSide,
   });
 
@@ -359,24 +362,34 @@ export function createMaterials(): PhoneMaterials {
     side: THREE.DoubleSide,
   });
 
-  // The inlay is polished, so it is *darker* than the matte panel it sits in —
+  // The inlay is satin, so it is *darker* than the matte panel it sits in —
   // that tonal step is what makes it read, not its shape alone. Tying it to the
-  // frame colour alone leaves it brighter than a light panel, where it
-  // vanishes.
+  // frame colour by a scalar is what it used to do, and one scalar cannot serve
+  // three panels: 0.45 of the orange rail landed near-black, 0.45 of the silver
+  // rail was still a light grey, and the logo came out as an inlay on one
+  // colourway and a smudge on another. These rows are solved instead to half
+  // the panel's relative luminance — measured 0.496 to 0.501 of it across the
+  // three finishes — a step that stays tonal on all of them, satin rather than
+  // mirror.
   const logo = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(way.aluminum).multiplyScalar(0.45),
-    metalness: 0.6,
-    roughness: 0.14,
-    envMapIntensity: 1.5,
+    color: logoColor(DEFAULT_COLOR),
+    metalness: 0.45,
+    roughness: 0.3,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.35,
+    envMapIntensity: 1.1,
   });
 
-  // MagSafe: the panel's own hue, a hair lighter and a hair smoother. It has
-  // to be barely there — a chrome wire is the wrong part.
+  // MagSafe: the panel's own colour exactly, and a hair smoother. It has to be
+  // invisible in a straight-on back view — a chrome wire is the wrong part, and
+  // so was every lift it carried, the last a 0.02 step in HSL lightness that
+  // still drew a visible circle on the panel. Colour cannot separate the part
+  // at all now; the roughness alone does, and only at a glancing angle.
   const magsafe = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(way.glass).multiplyScalar(1.09),
-    metalness: 0.15,
-    roughness: 0.26,
-    envMapIntensity: 0.85,
+    color: magsafeColor(way),
+    metalness: 0.05,
+    roughness: 0.34,
+    envMapIntensity: 0.9,
   });
 
   const glow = new THREE.SpriteMaterial({
@@ -415,20 +428,33 @@ export function createMaterials(): PhoneMaterials {
 /**
  * Repaints the colour-bearing materials in place. The brushed normal map is
  * shared by every colourway, so switching only nudges a handful of colours and
- * the two finish scalars that differ between them.
+ * the three finish scalars that differ between them: the frame's roughness and
+ * clearcoat, and the polished ring's roughness.
+ *
+ * The optics are in this list deliberately: the polished ring, the Camera
+ * Control sapphire, the logo and the MagSafe ring are all tints of the finish,
+ * and a colourway switch that repainted only the frame and the panel would
+ * leave an orange lens ring on a Deep Blue phone.
  */
 export function applyColorway(materials: PhoneMaterials, key: ColorKey): void {
   const way = COLORWAYS[key];
   materials.aluminum.color.setHex(way.aluminum);
   materials.aluminum.roughness = way.roughness;
   materials.aluminum.clearcoat = way.clearcoat;
-  materials.backGlass.color.setHex(way.glass);
+  materials.backGlass.color.copy(panelColor(way));
   // The pills carry the frame's finish exactly: same colour, same sheen.
   materials.button.color.setHex(way.aluminum);
   materials.button.roughness = way.roughness;
   materials.button.clearcoat = way.clearcoat;
-  // Antenna lines are the same dye lot, one tonal step down.
-  materials.antenna.color.setHex(way.aluminum).multiplyScalar(0.55);
-  materials.logo.color.setHex(way.aluminum).multiplyScalar(0.45);
-  materials.magsafe.color.setHex(way.glass).multiplyScalar(1.09);
+  // Antenna straps are the same dye lot, a step lighter and muted.
+  materials.antenna.color.copy(antennaColor(way));
+  // Polished optics: the ring's tint and polish, and Camera Control's dark
+  // sapphire.
+  materials.lensRing.color.copy(ringColor(way, key));
+  materials.lensRing.roughness = ringRoughness(key);
+  materials.sapphire.color.copy(sapphireColor(key));
+  materials.logo.color.copy(logoColor(key));
+  materials.magsafe.color.copy(magsafeColor(way));
 }
+
+

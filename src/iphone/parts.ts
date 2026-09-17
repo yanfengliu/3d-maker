@@ -64,8 +64,12 @@ const EMBED = 0.1;
  *  outline never shows a gap against the glass. */
 const LOGO_EMBED = 0.05;
 /** How far the MagSafe ring's outer surface stands proud of the panel; the
- *  rest of its tube is buried. */
-const MAGSAFE_PROUD = 0.12;
+ *  rest of its tube is buried. At 0.12 the ring's own edge caught the key light
+ *  and drew a visible circle on a straight-on back view, which is the one thing
+ *  the part must never do — the real ring is a magnetic layer *under* the
+ *  frosted glass. At 0.02 the ring reads only as a faint roughness variation
+ *  at glancing angles, never as a drawn circle. */
+const MAGSAFE_PROUD = 0.02;
 
 /** The back panel's planes: it butts the frame's back face and stands
  *  `BACK_PANEL.thickness` outside it, which is what the plane table in

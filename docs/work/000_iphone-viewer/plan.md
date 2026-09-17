@@ -1,6 +1,29 @@
 # 000 — iPhone 17 Pro viewer
 
-Status: round 4 landed and accepted (orchestrator-verified via the 24-shot matrix at native resolution + CDP dropdown probe; npm run verify green); committed to main. Workers: DeepSeek V4.1 Flash (`deepseek-official`/`deepseek-flash`) via durable `subagent` with explicit provider/model (policy enabled in `~/.dsh/settings.yaml` as `subagent-model-selection`). Orchestrator: kimi-k3.
+Status: round 5 in flight. Slice 1 (camera-cluster X retune) landed on main as 28e6629, gates green. Slice 2 (finish overhaul: materials.ts + lens.ts + MagSafe/logo subtlety in parts.ts) handed off with all gates green and ACCEPTED after orchestrator inspection of the w5b matrix (24 shots at native resolution vs Apple's refs): 10 of 11 fixes confirmed — tinted rings, 0.77 glass fill, hairline flash collar, dark LiDAR/mic surrounds, panel/logo/sapphire/antenna tones, lens glass alive (the "black void" cause was lensGlass envMapIntensity 0.28). The slice-2 worker escalated adding src/iphone/palette.ts (500-LOC rule forced the extraction; public surface re-exported unchanged) — accepted. Two residual nudges went to a slice-3 worker (subagent 872db1d3): MagSafe ring still traceable straight-on, silver lens rings reading near-black in the dark studio. Also noted for later housekeeping (not this round): parts.ts is 519 lines, over the 500 convention on HEAD already. Note: the first monolithic 12-defect brief (subagent 90413bb2) stalled ~25 min with zero writes and was interrupted; the work was re-sliced into small per-file assignments, which landed slice 1 in minutes. Round 4 landed and accepted (orchestrator-verified via the 24-shot matrix at native resolution + CDP dropdown probe; npm run verify green); committed to main. Workers: DeepSeek V4.1 Flash (`deepseek-official`/`deepseek-flash`) via durable `subagent` with explicit provider/model (policy enabled in `~/.dsh/settings.yaml` as `subagent-model-selection`). Orchestrator: kimi-k3.
+
+## Round 5 brief (coordinator diagnosis from the w5 matrix vs Apple's official photos)
+
+Goal: picture-perfect against the real device. Reference set: `.shots/ref/` (Apple newsroom: cosmic-orange hero, color lineup, camera close-up, forged-plateau poster). Round-5 matrix: `.shots/w5/` (24 shots). Defects sent to the worker, ranked by visual impact:
+
+1. Lens rings render neutral chrome on every finish — real rings are polished metal tinted with the finish (obviously orange on Cosmic Orange).
+2. Lens glass too small (0.61 of ring Ø vs real ~0.77) and reads as a black void — grow glass to Ø~10.3, keep convex deep blue-black gloss + pupil.
+3. Flash reads as a white button with a thick chrome collar — real: matte pale bluish-white window, hairline finish-tinted surround.
+4. LiDAR chrome bezel — real: dark glossy glass, thin dark surround.
+5. Mic pinhole chrome bezel — real: plain dark pinhole.
+6. Lens triangle geometry from the lineup photo: main/UW column body x 23.5→22, telephoto 7.35→2.6, flash column −26.5→−25.4.
+7. Back panel too pale vs frame (salmon on orange) — panel = finish hue, only modestly lighter, frosted.
+8. Apple logo too dark — real: tonal satin apple ~10–15% darker than the panel.
+9. MagSafe ring reads as a drawn circle — real: invisible in Apple's photos; reduce to a whisper.
+10. Camera Control reads as a black hole — real: glossy dark frame-hued strip.
+11. Front face is a void — real: glossy near-black glass with a visible sheen; lift from #000, clearcoat + envMapIntensity.
+12. Antenna bands too pale/cream — real: finish hue, slightly desaturated.
+
+Constraints carried into the worker brief: mesh names/material keys and the cavity-window/bezel semantics parts.test.ts asserts are fixed; dims x values are safe to change (tests read the constants). Coordinator acceptance: re-shoot 24, inspect at native resolution vs refs, then independent read-only review, `npm run verify`, devlog, merge to main.
+
+## Round 5 review (independent, kimi-k3, read-only)
+
+Verdict: CHANGES REQUIRED — comments only. Code verified correct: the reviewer re-derived every palette value against three.js (panel/sapphire/logo hexes and luminance ratios exact), confirmed applyColorway repaints every finish-dependent material (incl. lensRing roughness), confirmed the parts.test.ts contract holds, and ran the gates green itself. Findings: 8 falsified comments (lens.ts flash doc numbers; materials.ts sapphire/logo/island/antenna/logo/backGlass docs contradicting palette.ts's measured values; palette.ts Colorway.glass claiming a UI consumer that does not exist — ui.ts has its own SWATCH record), 1 geometry nit (flash collar base floats 0.14 mm over the plateau), 3 misleading nits. Sent back to the slice-3 worker (872db1d3) as a bounded comment-correction + collar-reseat pass. Coordinator will re-verify gates and shoot a grazing-angle flash check before committing.
 
 ## Round 4 brief (from the round-3 worker handoff + orchestrator review)
 
