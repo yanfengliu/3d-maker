@@ -97,26 +97,30 @@ export const LENS_RADIUS = 6.75;
 export const LENS_RING_PROUD = 2.2;
 
 /**
- * The three-lens triangle, all of it inside the plateau's +X (back-view left)
- * half. Read from the back that is the *left* column: Main top-left and Ultra
- * Wide bottom-left share `x`, and the Telephoto sits right-middle, on the
- * column nearer the plateau's centre. `dims.ts`'s opening note is the axis
- * convention this depends on — mirror the pair to the middle and the triangle
- * comes out left-handed, which is what the previous round shipped.
+ * The three-lens triangle: the Main / Ultra Wide column on the plateau's +X
+ * (back-view left) half, the Telephoto right-middle, nearer the plateau's
+ * centre. Read from the back that is the *left* column: Main top-left and Ultra
+ * Wide bottom-left share `x`, and the Telephoto sits to their right, near
+ * enough the middle that its ring reaches across the plateau's centre line.
+ * Both `x` values are Apple's straight-on back photo: the column at ≈ 0.20 of
+ * the body width from the image's left edge (body x ≈ 22) and the Telephoto at
+ * ≈ 0.46 (body x ≈ 2.6). `dims.ts`'s opening note is the axis convention this
+ * depends on — mirror the pair to the middle and the triangle comes out
+ * left-handed, which is what the previous round shipped.
  */
 export const LENSES = [
-  { name: 'main', x: 23.5, y: 67 },
-  { name: 'ultrawide', x: 23.5, y: 46 },
-  { name: 'telephoto', x: 7.35, y: 56.5 },
+  { name: 'main', x: 22, y: 67 },
+  { name: 'ultrawide', x: 22, y: 46 },
+  { name: 'telephoto', x: 2.6, y: 56.5 },
 ] as const;
 
 /**
  * The plateau's -X (back-view right) half: LED flash upper, LiDAR lower, mic
  * pinhole between them, all on one vertical axis.
  */
-export const FLASH = { x: -26.5, y: 65.5, radius: 2.5 } as const;
-export const LIDAR = { x: -26.5, y: 48, radius: 4 } as const;
-export const PLATEAU_MIC = { x: -26.5, y: 56, radius: 0.6 } as const;
+export const FLASH = { x: -25.4, y: 65.5, radius: 2.5 } as const;
+export const LIDAR = { x: -25.4, y: 48, radius: 4 } as const;
+export const PLATEAU_MIC = { x: -25.4, y: 56, radius: 0.6 } as const;
 
 /** The plateau's outer face: where the lens rings and windows sit. */
 export const CAMERA_PLANE = PLATEAU.zOuter;
