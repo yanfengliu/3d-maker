@@ -1,6 +1,6 @@
 # 000 — iPhone 17 Pro viewer
 
-Status: round 6 in flight — structural realism audit + fixes. Round 5 landed on main (28e6629 dims + 5243534 finishes), pushed, Pages deploy green. Housekeeping carried forward: parts.ts is 519 lines vs the 500 convention — worth a dedicated split slice next time the file is touched.
+Status: round 6 landed on main as d387b0e, pushed, Pages deploy green (run 35271975968). All three user-reported defects fixed and recorded in `docs/learning/defect-register.md` with gates; the audit found nine more defects, all fixed; the inspection gap is closed by `scripts/sweep-iphone.mjs` plus the two `AGENTS.md` rules (feature-by-feature fidelity audit; a geometry author renders their own work). 32 tests in 5 files, typecheck, lint zero warnings, build. Open items, none blocking: the Deep Blue rail/panel luminance ratio is 0.38 against a 0.47 reference (orange and silver are inside the ±0.05 tolerance — materials.ts records it), the plateau's flat face renders as one tone where the reference has a falloff (needs an environment change, not made), the USB-C mouth's corner radius is 0.24 mm rather than the intended 1.1 (documented with the derivation), and the tongue is established by ray rather than by eye because the page's own camera limits cannot frame it at readable scale. Round 5 landed on main (28e6629 dims + 5243534 finishes), pushed, Pages deploy green. Housekeeping carried forward: parts.ts is 519 lines vs the 500 convention — worth a dedicated split slice next time the file is touched.
 
 ## Round 6 — why
 
