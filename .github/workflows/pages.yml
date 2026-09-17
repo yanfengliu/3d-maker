@@ -27,12 +27,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # `npx vite build` rather than `npm run build`, which also runs tsc: the
-      # `voxel` dependency is a `file:../voxel` sibling that a fresh runner has
-      # no way to resolve (npm ci leaves only a dangling link), and this page's
-      # bundle imports three alone, so no typecheck is needed here — the full
-      # gate runs locally via `npm run verify` before every commit.
-      - run: npx vite build
+      # `npm run build` rather than `npx vite build`: the `voxel` dependency that
+      # forced the shortcut is gone, so the deploy once again builds through the
+      # full local gate (tsc --noEmit, then vite build) on a fresh runner.
+      - run: npm run build
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:

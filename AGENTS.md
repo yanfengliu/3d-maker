@@ -2,11 +2,13 @@
 
 ## What this is
 
-A dev-time evolution studio for breeding game assets — not a game and not a general 3D editor. Procedural generators define object families (building, tree, rock, …); a gallery of live variants lets the user select survivors and breed the next generation; winners export as GLB for the sibling three.js games (`city`, `townscaper`, `town_3d`).
+A 3D model showcase: procedural three.js models, each one its own Vite page, behind an `index.html` model registry. `src/index/models.ts` is the single source for that registry — a new model is a new entry there, plus a rollup input for its own page in `vite.config.ts`, plus a poster under `public/posters/`. Every push to main deploys the built site to GitHub Pages.
 
-Deliberately out of scope, permanently (Blender's job): mesh sculpting, direct vertex editing, UV editing, texture painting, keyframe timeline authoring, rigged-creature generation. Color/texture are parametric. If a task seems to need one of these, the answer is a Blender round-trip, not new scope here.
+The two pages are the whole product: `index.html` (the model index, `src/index/`) and `iphone.html` (the iPhone 17 Pro viewer, `src/iphone/`). Each model is built procedurally in code at its real dimensions, from one shared three.js stack; nothing is imported from an asset file.
 
-Stack: Vite + TypeScript (strict) + Vitest, rendering through the sibling `voxel` engine (which keeps Three.js as its own peer); desktop browser only; single primary canvas; the first screen is the working gallery, not a landing page. The model studio extends this scope with examination and genome editing, and its agent harness is a first-class surface rather than a debug hook: the UI may not do anything the harness cannot. See [model studio](docs/design/model-studio.md). Phases: 1 MVP (building + tree families, gallery, inspector, GLB export, library) → 2 props/palettes/import → 3 vehicles/kitbash → 4 AI seeding + creatures via Blender round-trip. Status: approved design only — the app is not yet scaffolded (no `package.json` or `src/` yet).
+The evolution-studio / voxel direction is abandoned (owner directive, 2026-09-16). No genome breeding, no variant gallery, no GLB export pipeline, and no dependency on the sibling `voxel` engine. `src/core/` was the evolution engine and was removed with that direction.
+
+Stack: Vite + TypeScript (strict) + Vitest. three.js is the only runtime dependency. Desktop browser first; the index is the landing page, and a viewer page is what a visitor opens from it.
 
 <!-- FLEET-CANON:BEGIN sha=95bcbcb491dd generated from ../fleet/FLEET.md by `npm run sync-canon` — do not edit inside this block; this repo's own rules go in docs/policies/local-rules.md -->
 ## Fleet constitution
@@ -108,25 +110,28 @@ Do not declare the result fully verified while material findings or required che
 
 ## Gates
 
-None exist yet (no `package.json`). Once the app is scaffolded these are authoritative, all green before any code commit: `npm test` (vitest) · `npm run typecheck` (tsc --noEmit) · `npm run lint` (eslint, zero warnings) · `npm run build`; run the smallest relevant check while iterating. Dependency audit gate: `npm audit --audit-level=high` (full tree and `--omit=dev`).
+Node 24 (`.nvmrc`; CI reads it via `node-version-file`). All of these are authoritative, and all green before any commit that touches code:
+
+- `npm test` — vitest. 18 tests: 12 in `src/iphone/parts.test.ts`, 6 in `src/index/models.test.ts`.
+- `npm run typecheck` — `tsc --noEmit`, strict.
+- `npm run lint` — eslint with `--max-warnings 0`, so zero warnings, not merely zero errors.
+- `npm run build` — `tsc --noEmit` then `vite build`; emits both pages into `dist/`.
+- `npm run verify` — the four above in one command. Use it before reporting anything green.
+
+Run the smallest relevant check while iterating. Dependency audit gate, re-run on every dependency change: `npm audit --audit-level=high` and `npm audit --omit=dev --audit-level=high` — both must report `found 0 vulnerabilities`.
 
 ## Session start
 
-Read `docs/design/spec.md` before substantial work — it is the approved design: goals, non-goals, architecture, phasing.
+Read `docs/design/spec.md` before substantial work — it is the showcase spec: the two pages and their query contracts, the registry-driven index, the capture and deploy pipeline, and how to add a model end to end.
 
 ## Invariants & boundaries
 
-- **Determinism (the load-bearing rule of this repo): same genome → identical mesh, always.** All randomness flows from the genome's seed through `core/rng.ts`; never `Math.random()`, `Date.now()`, or iteration-order-dependent logic in `core/`. Keep a debug guard that builds a genome twice and compares vertex counts/bounds — it catches stray nondeterminism early.
-- Layer boundary: `src/core/` is a pure library (genome types/serialization, seeded RNG, mutation/crossover/lineage, one generator file per family) with no DOM, no UI, no storage, and three.js as its only dependency; `src/app/` (gallery, inspector, io, library, ui) obtains meshes only by calling generators — never builds family geometry itself. Genomes are the single source of truth everywhere; meshes are disposable derived artifacts.
-- The param schema is the single source of truth per family: it drives inspector controls, mutation bounds, and validation; invalid genomes are impossible by construction (mutation/crossover/UI all clamp to the schema), not caught downstream. No magic numbers — family tuning lives in the schema (ranges/defaults/mutation widths) or `core/` constants, never inline in build functions.
-- GLB pipeline: every export embeds the genome JSON in glTF `extras`; re-importing a genome-bearing GLB resumes evolution; imported GLBs without genomes are view-only by design, not an error. Genomes carry a `version` field — schema changes require an explicit migration or a "needs migration" surface, never silent misrendering. Exporter acceptance check: the exported GLB loads and renders in a sibling game via its existing `GLTFLoader` path.
-- The gallery uses ONE WebGL renderer with scissored viewports — never one context per tile (browsers cap contexts). Dispose Three.js geometries/materials/textures when a tile rebuilds or a generation is discarded; treat "renderer memory stable across 20 generations" as a testable expectation. A generator that throws renders as an error tile with a reroll button — one broken variant must never kill a generation.
-- TDD for core behavior: write the failing contract test first — determinism hash, mutation bounds and locks, crossover validity, genome JSON round-trip, fuzz-build each family over a few hundred seeds — then implement.
-- Expose `window.render_game_to_text()` (family, generation number, per-tile genome summaries, selection, library count) and `window.advanceTime(ms)`; the names stay canonical across sibling repos so shared playtest tooling works. Init Three.js with `preserveDrawingBuffer: true` so screenshots capture WebGL.
-- Do not ship a visual feature without verifying it in a browser screenshot. Before calling a milestone complete, drive the studio in a real browser and verify: breed a generation; select survivors and breed again; temperature control changes mutation strength; inspector sliders/locks/color pickers rebuild the focused tile; save to library and reload from it; export GLB (and load it in a sibling game); import behaves for both genome-bearing and foreign GLBs; error tile + reroll on a throwing generator.
-- Locally high-risk (escalates to multi-cli-review): genome-format versioning/migrations, library persistence, and the GLB export contract.
+- **The screenshot contract is what the capture tooling depends on.** Every viewer page honors `?shot=1`: no auto-rotate and no entrance animation, the exact preset camera on the first presented frame, and `window.__shotReady = true` only after at least 5 rendered frames. Where the page has them, `?view=` and `?color=` select the presets. `?noui=1` hides the viewer chrome so a poster captures the model alone. A new viewer page either honors this contract or `scripts/capture-shots.mjs` cannot capture it.
+- The renderer is created with `preserveDrawingBuffer: true`. Without it headless Chrome captures a blank canvas, so the whole poster pipeline silently produces empty images.
+- **Visual work is verified visually, never assumed from a passing test.** Capture through `scripts/shoot-iphone.ps1` or `scripts/capture-shots.mjs` and look at the PNG yourself at native resolution. `SHOT_PAGE` picks the page (`iphone.html` by default, `index.html` for the index), `SHOT_LIST` the `view:color[:extra]` shots, `SHOT_W`/`SHOT_H` the viewport. A green unit test says nothing about what the pixels do.
+- **No runtime network assets.** Every model is procedural and every texture, environment, and glyph is embedded or generated in code — no HDRIs, fonts, images, or meshes fetched at runtime. That is what keeps the pages self-contained under the GitHub Pages base path.
 - Files under 500 LOC — extract helpers or split. 2-space indentation.
 
 ## Conventions
 
-- `docs/design/spec.md` is the approved design; update it and any other affected doc in the same task when genome format, export format, architecture, public debug API, or test expectations change.
+- The docs that change with a model addition land in the same task: the registry entry in `src/index/models.ts`, the poster under `public/posters/`, the model list in `docs/design/spec.md`, and a dated line in `docs/devlog/summary.md`.

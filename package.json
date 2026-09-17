@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Evolution studio and model studio for breeding and examining voxel game assets.",
+  "description": "A showcase of procedural 3D models, rendered live in three.js.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -16,8 +16,7 @@
     "verify": "npm run test && npm run typecheck && npm run lint && npm run build"
   },
   "dependencies": {
-    "three": "^0.185.1",
-    "voxel": "file:../voxel"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

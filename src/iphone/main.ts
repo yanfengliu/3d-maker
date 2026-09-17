@@ -16,6 +16,8 @@ import { applyView, DEFAULT_VIEW, isViewKey, type ViewKey } from './views.js';
  *   view   hero | front | back | left | right | top | bottom | camera-closeup
  *   shot   1 disables auto-rotate and the UI entrance, and pins the camera to
  *          the named preset, then sets window.__shotReady after 5 frames
+ *   noui   1, together with shot=1, hides the overlay panel so a poster
+ *          captures the model alone; without shot=1 it does nothing
  *
  * Unknown values fall back to the defaults instead of throwing, so a typo in a
  * shoot script produces a default frame rather than a blank page.
@@ -42,6 +44,8 @@ const params = new URLSearchParams(window.location.search);
 const shotMode = params.get('shot') === '1';
 const requestedColor = params.get('color');
 const requestedView = params.get('view');
+/** Poster mode: shot mode with the overlay panel hidden. */
+const hideUi = shotMode && params.get('noui') === '1';
 
 const initialColor: ColorKey = isColorKey(requestedColor) ? requestedColor : DEFAULT_COLOR;
 const initialView: ViewKey = isViewKey(requestedView) ? requestedView : DEFAULT_VIEW;
@@ -75,6 +79,12 @@ class Viewer {
     this.ui = createUi(document.getElementById('ui') ?? document.body, this.color, this.view, (key) => {
       this.setColor(key);
     });
+    // Additive to the shot contract: only with shot=1, and only ever hides the
+    // panel host — `body`, the createUi fallback, is never hidden.
+    if (hideUi) {
+      const uiRoot = document.getElementById('ui');
+      if (uiRoot !== null) uiRoot.style.display = 'none';
+    }
 
     // Damping gives the orbit a settling tail; in shot mode the first frame
     // must already be the final pose, so it is stepped synchronously first.
