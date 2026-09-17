@@ -1,0 +1,41 @@
+name: deploy pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # `npx vite build` rather than `npm run build`, which also runs tsc: the
+      # `voxel` dependency is a `file:../voxel` sibling that a fresh runner has
+      # no way to resolve (npm ci leaves only a dangling link), and this page's
+      # bundle imports three alone, so no typecheck is needed here — the full
+      # gate runs locally via `npm run verify` before every commit.
+      - run: npx vite build
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
