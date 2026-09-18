@@ -308,6 +308,114 @@ export function outerFace(box: THREE.Box3, edge: number): number {
   return edge > 0 ? box.max.x : -box.min.x;
 }
 
+export interface SeamBand {
+  /** How far the seam's silhouette reaches outside the pill's at its narrowest
+   *  — the flats of both rounded rectangles — and at its widest, the 45-degree
+   *  corners, where the seam's corner arc is centred `SEAM_MARGIN` further out
+   *  rather than grown by it. */
+  readonly min: number;
+  readonly max: number;
+}
+
+/** A part's vertices projected onto the plane a profile view looks through:
+ *  (y, z), the two axes a camera on the X axis sees. */
+function silhouette(part: THREE.Object3D): THREE.Vector2[] {
+  part.updateWorldMatrix(true, true);
+  const points: THREE.Vector2[] = [];
+  const point = new THREE.Vector3();
+  part.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) return;
+    const geometry: unknown = node.geometry;
+    if (!(geometry instanceof THREE.BufferGeometry)) return;
+    const attribute: unknown = geometry.getAttribute('position');
+    if (!(attribute instanceof THREE.BufferAttribute)) return;
+    for (let index = 0; index < attribute.count; index += 1) {
+      point.fromBufferAttribute(attribute, index).applyMatrix4(node.matrixWorld);
+      points.push(new THREE.Vector2(point.y, point.z));
+    }
+  });
+  return points;
+}
+
+/**
+ * How far the seam's dark reaches outside the pill it sits behind, measured
+ * around the pill's whole silhouette rather than along one axis.
+ *
+ * This is the extent that decides how the button reads, and it is not the
+ * margin alone: the seam's outline stands `SEAM_MARGIN` outside the pill's
+ * *cap*, and each part's bevel bulges its silhouette further out — 0.12 on a
+ * pill, 0.075 on a seam — so the band that shows is the margin plus the seam's
+ * bevel less the pill's. Both outlines are convex, so the distance between
+ * their projections along a direction is exactly the difference of their
+ * support functions: 36 directions around the (y, z) plane measure it without a
+ * camera or a pixel, and the extremes fall on the flats and the corners.
+ */
+export function seamBand(pill: THREE.Object3D, seam: THREE.Object3D): SeamBand {
+  const directions = 36;
+  const pillPoints = silhouette(pill);
+  const seamPoints = silhouette(seam);
+  let min = Infinity;
+  let max = -Infinity;
+  for (let step = 0; step < directions; step += 1) {
+    const angle = (step * 2 * Math.PI) / directions;
+    const cy = Math.cos(angle);
+    const cz = Math.sin(angle);
+    let pillReach = -Infinity;
+    let seamReach = -Infinity;
+    for (const point of pillPoints) pillReach = Math.max(pillReach, point.x * cy + point.y * cz);
+    for (const point of seamPoints) seamReach = Math.max(seamReach, point.x * cy + point.y * cz);
+    min = Math.min(min, seamReach - pillReach);
+    max = Math.max(max, seamReach - pillReach);
+  }
+  return { min, max };
+}
+
+/**
+ * The seam's two-sided contract, asserted on the built pills.
+ *
+ * Too wide is the defect this gate exists for: at a margin of 0.3 the `left`
+ * profile four wheel notches in renders a 1-2 px near-black ring — luma 9 to 18
+ * against the pill face's 101, `.shots/z1/m0_3/cosmic-orange_buttons.png`,
+ * where the real gap is a shadow. The reference's own base line measures 82-105
+ * luma against 144-174 beside it (`.shots/ref/gsmr-040.jpg`), and the band that
+ * produced that ring measures 0.2550 to 0.3776 mm on the built parts.
+ *
+ * Too narrow is the opposite failure, and it is not hypothetical: the same
+ * frame at a margin of 0.08 renders no dark at all and the pills read as bare
+ * metal — as does the A/B frame with the seam plate hidden, which every button
+ * has vanished from.
+ *
+ * Its bound: this measures the geometry a profile view looks through, so it
+ * cannot see the seam's *luma* — a near-black seam one pixel wide and a
+ * mid-grey one render differently through the same band — and the material's
+ * colour is `materials.ts`'s, not this file's.
+ */
+export function expectSeamBand(label: string, pill: THREE.Object3D, seam: THREE.Object3D): void {
+  /** Measured 0.2063 worst (Camera Control, whose pill bevel is thinner) and
+   *  0.1663 on the four pills, against 0.4176 at the margin of 0.3 this gate
+   *  was written for. */
+  const max = 0.21;
+  /** Measured 0.1050 narrowest, against 0.035 at a margin of 0.08 and -0.025 —
+   *  the seam inside the pill's own silhouette — at 0.02. */
+  const min = 0.08;
+  /** Measured 1.584 on the pills and 1.423 on Camera Control. A seam showing
+   *  along one edge only would be a large ratio however narrow its other side. */
+  const spread = 1.7;
+  const band = seamBand(pill, seam);
+  expect(
+    band.min,
+    `${label}: the seam's dark shows a ${band.min.toFixed(4)} mm band at its narrowest — under the ${String(min)} mm a visible gap needs, so the pill reads as bare metal with no break at its base`,
+  ).toBeGreaterThanOrEqual(min);
+  expect(
+    band.max,
+    `${label}: the seam's dark reaches ${band.max.toFixed(4)} mm outside the pill's silhouette at its widest — a ring standing around the pill rather than the gap at its base`,
+  ).toBeLessThanOrEqual(max);
+  expect(
+    band.max / band.min,
+    `${label}: the seam's band runs ${band.min.toFixed(4)} to ${band.max.toFixed(4)} mm around the pill, a spread of ${(band.max / band.min).toFixed(3)} — a seam showing on one side of its pill and not the others`,
+  ).toBeLessThanOrEqual(spread);
+}
+
 /** Asserts one edge part's two-sided contract: its outermost point lands on the
  *  rail plus the stand-off that part documents, within `ATTACHED_SLACK` either
  *  way. Too far out is a part floating off the phone (which is what the rail

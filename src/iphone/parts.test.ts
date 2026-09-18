@@ -32,6 +32,7 @@ import {
 import {
   ATTACHED_SLACK,
   expectOnRail,
+  expectSeamBand,
   materials,
   outerFace,
   panelFootprint,
@@ -122,14 +123,11 @@ describe('the edge contract against the built geometry', () => {
       // The seam sits behind the pill and is larger than it, so what shows is
       // the dark sliver around the pill's base. Two faces on one plane is what
       // made the pills render black and speckled.
-      expect(
-        outerFace(worldBox(seam), button.edge),
-        `${button.label}: the seam is not behind the pill`,
-      ).toBeCloseTo(RAIL.x + button.seamProud, 3);
-      expect(
-        button.seamProud,
-        `${button.label}: the seam's plane is level with the pill's own — a coplanar pair`,
-      ).not.toBeCloseTo(button.proud, 5);
+      expect(outerFace(worldBox(seam), button.edge), `${button.label}: the seam is not behind the pill`).toBeCloseTo(RAIL.x + button.seamProud, 3);
+      expect(button.seamProud, `${button.label}: the seam's plane is level with the pill's own — a coplanar pair`).not.toBeCloseTo(button.proud, 5);
+      // How wide that sliver actually is, around the pill's whole silhouette:
+      // `expectSeamBand` carries the two bounds and the frames they came from.
+      expectSeamBand(button.label, pill, seam);
     }
   });
 

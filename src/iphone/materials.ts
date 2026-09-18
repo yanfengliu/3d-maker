@@ -28,15 +28,13 @@ import { brushedNormalMap, glowTexture } from './textures.js';
  * is the materials those tones are set on.
  *
  * No material here carries an `envMapIntensity`, and the level is not in this
- * file. While `scene.environment` is set and the material has no `envMap` of its
+ * file: while `scene.environment` is set and the material has no `envMap` of its
  * own, the renderer overwrites that uniform with `scene.environmentIntensity` on
  * every standard material, every frame (three 0.185, `WebGLRenderer.js` line
  * 2694, guarded by `material.envMap === null && scene.environment !== null`), so
- * `scene.ts`'s one value is the only brightness control that is read. The
- * per-material values that used to sit here were never read — the `back` frame
- * is byte-identical at a material `envMapIntensity` of 0, 1, 2 and 8 — so they
- * are removed rather than kept as dead numbers. A material that grows its own
- * `envMap` needs one back: that is the only thing that makes the uniform live.
+ * `scene.ts`'s one value is the only brightness control that is read. The values
+ * that sat here were never read — the `back` frame is byte-identical at 0, 1, 2
+ * and 8 — and a material that grows its own `envMap` needs one back.
  *
  * `specularIntensity` is the other lever these materials carry, and it is a
  * live one: three sets `specularF90 = specularIntensity` for a dielectric as
@@ -98,6 +96,13 @@ export interface PhoneMaterials {
   readonly glow: THREE.SpriteMaterial;
 }
 
+/** How far the pills' seam's albedo sits below the frame's it is cut into, in
+ *  linear luminance: 0.2594 is the shade of the finish that renders the
+ *  reference's own 0.494-0.572 base shadow. It is a shade of the *finish* and
+ *  not one grey — `optics.test.ts`'s `BUTTON_SEAM` carries the cross-finish
+ *  ladder, and why one grey cannot be the same step below all three frames. */
+const SEAM_SHADE = 0.2594;
+
 export function createMaterials(): PhoneMaterials {
   const way = COLORWAYS[DEFAULT_COLOR];
   // One brushed map, shared by the rail and the buttons so the pills cannot
@@ -110,42 +115,38 @@ export function createMaterials(): PhoneMaterials {
   // `metalness: 0.7` is the one value here that is a claim about the material
   // rather than a fit to a photograph. A bare mirror at 0.9 was wrong because
   // anodizing grows an oxide layer that scatters, and a dielectric at 0.15 was
-  // wrong the other way — no aluminum there at all, the frame's brightness
-  // bought by lighting a nearly-diffuse surface with a dark studio. Both
-  // shipped in earlier rounds. Anodized aluminum is a metal whose oxide
-  // scatters, so the frame sits high with a rough lobe; 0.7 is inside that
-  // range and is where all three finishes' ratios land.
+  // wrong the other way — no aluminum there at all, the frame's brightness bought
+  // by lighting a nearly-diffuse surface with a dark studio; both shipped in
+  // earlier rounds. Anodized aluminum is a metal whose oxide scatters, so the
+  // frame sits high with a rough lobe, and 0.7 is inside that range and is where
+  // all three finishes' ratios land.
   //
   // The ratios are the `back` view's rail band over its panel band, in relative
-  // luminance, through the CDP read-back in `.shots/k2/` (ignored scratch, not
-  // tracked), against gsmr-040 (orange 0.73), the colour-lineup photo (silver
-  // 0.87) and gsmr-019 (blue 0.47): measured 0.741, 0.518 and 0.863 — all three
-  // inside the 0.05 tolerance, the widest Deep Blue at +0.048.
+  // luminance, through the CDP read-back in `.shots/k2/` (ignored scratch),
+  // against gsmr-040 (orange 0.73), the colour-lineup photo (silver 0.87) and
+  // gsmr-019 (blue 0.47): measured 0.741, 0.518, 0.863 — inside ±0.05, worst +0.048.
   //
   // The per-finish `roughness` is a real lever: at this metalness the frame
-  // reflects a bright, structured environment, so a rougher lobe averages more
-  // of the dim floor and a smoother one holds more of the bright panels. For
-  // silver it is no longer the level control at all — its roughness is set by
-  // what makes its rail look like metal, and its *tint* carries the ratio.
-  // `palette.ts` has that ladder.
+  // reflects a bright, structured environment, so a rougher lobe averages more of
+  // the dim floor and a smoother one holds more of the bright panels. For silver
+  // it is no longer the level control — its roughness is set by what makes its
+  // rail look like metal, and its *tint* carries the ratio (`palette.ts`).
   //
   // `anisotropy` stays 0. At 0.55 it drew a hard black band along the plateau's
   // rolled shoulder, where the real part shows a soft dark-to-bright gradient:
   // rgb(0,0,0) beside a 175-luma highlight, a 175:1 line however the surface is
   // lit. Every non-zero value tried (0.55, 0.4, 0.25, 0.12, 0.1) reproduced it
   // and it survived every other candidate — `roughness` 0.6, the studio shell
-  // repainted, the normal map removed, the shadow map off — so it is the
-  // anisotropy term specifically and it is on or off, not a value to tune down.
-  // Re-checked after the environment change: five grazing close-up frames
-  // across the three finishes, 15 columns each from y 60 to 900 at 2 px steps,
-  // every column scanned for its longest run at luma 3 or below — 0 px on all
-  // five, and the darkest luma the scan found anywhere is 5.
+  // repainted, the normal map removed, the shadow map off — so it is on or off,
+  // not a value to tune down. Re-checked after the environment change: five
+  // grazing close-up frames across the three finishes, 15 columns each from y 60
+  // to 900 at 2 px steps, every column scanned for its longest run at luma 3 or
+  // below — 0 px on all five, darkest 5.
   //
-  // What this still costs: the plateau's flat face renders as one tone. That is
-  // geometry, not a material setting — a flat plane with one normal sees the
-  // same environment and the same lights, and the column across it is constant
-  // to within 1 luma out of 255. The reference's falloff there is its own
-  // softbox being close and the face being very slightly domed.
+  // What this still costs: the plateau's flat face renders as one tone, and that
+  // is geometry, not a material — a flat plane sees the same environment and
+  // lights, so the column across it is constant to within 1 luma of 255. The
+  // reference's falloff there is its own close softbox and a slightly domed face.
   const aluminum = new THREE.MeshPhysicalMaterial({
     color: way.aluminum,
     metalness: 0.7,
@@ -182,30 +183,28 @@ export function createMaterials(): PhoneMaterials {
     anisotropy: 0.3,
   });
 
-  // Cover glass over an unlit OLED: near-black, glossy, and *smooth*. The
-  // display used to carry a coarse procedural map that dithered into a
-  // staircase across the panel; both layers are plain now.
+  // Cover glass over an unlit OLED: near-black, glossy, and *smooth*. The display
+  // used to carry a coarse procedural map that dithered into a staircase across
+  // the panel; both layers are plain now.
   //
   // The albedos came down with the environment — 0x10131a to 0x060709 on the
   // cover glass, 0x0b0e14 to 0x05070a on the OLED — because at the old pair the
-  // screen measured 105 luma through the read-back (rgb 105,105,108 at x
-  // 500..700, y 300..500 of the front view) against the old build's 1.
+  // screen measured 105 luma through the read-back (rgb 105,105,108 at x 500..700,
+  // y 300..500 of the front view) against the old build's 1.
   //
   // That was not enough on its own, and the reason is geometric rather than
-  // chromatic. A flat mirror shows one direction of the room, and this face is
-  // flat: at the `front` preset's 1702 mm stand-off the 141 mm cover glass
-  // sweeps its reflection through 2.4 degrees vertically and 1.2 horizontally,
-  // so a wall-sized source inside those two degrees returns one value for the
-  // whole face — 103 luma with its minimum and maximum *equal*, a grey slab no
-  // albedo can rescue, because a dielectric returns only its Fresnel fraction
-  // of what it mirrors (0.043 on the base layer at this `ior` plus 0.04 on the
-  // clearcoat). The fix is in `scene.ts`: the wall in front of the camera is
-  // now two small cards whose edges fall inside those two degrees. On the same
-  // rect: mean 64, second percentile 44, median 51, maximum 110.
+  // chromatic: a flat mirror shows one direction of the room, and at the `front`
+  // preset's 1702 mm stand-off the 141 mm cover glass sweeps its reflection
+  // through 2.4 degrees vertically and 1.2 horizontally, so a wall-sized source
+  // inside those two degrees returns one value for the whole face — 103 luma with
+  // its minimum and maximum *equal*, a grey slab no albedo can rescue, because a
+  // dielectric returns only its Fresnel fraction of what it mirrors (0.043 on the
+  // base layer at this `ior` plus 0.04 on the clearcoat). `scene.ts` fixed it: the
+  // wall in front of the camera is now two small cards whose edges fall inside
+  // those degrees — on the same rect, mean 64, p02 44, median 51, maximum 110.
   //
-  // Nothing here is a lever for that, and this material no longer carries an
-  // `envMapIntensity`: the level it returns is the scene's one value (see the
-  // header), so no number on this surface sets it.
+  // Nothing here is a lever for that, and this material carries no
+  // `envMapIntensity`: its level is the scene's one value (see the header).
   const frontGlass = new THREE.MeshPhysicalMaterial({
     color: 0x060709,
     metalness: 0,
@@ -223,11 +222,10 @@ export function createMaterials(): PhoneMaterials {
     clearcoatRoughness: 0.05,
   });
 
-  // Dynamic Island. Near-black would be correct for a dark screen but then the
-  // pill is indistinguishable from the display behind it, so it carries a
-  // faint grey lift and a strong clearcoat — enough to catch a highlight and
-  // read as a separate glossy part. Its albedo is a hair *above* the OLED's —
-  // 0x15181f against 0x05070a — and its clearcoat is narrower, 0.03 against 0.05.
+  // Dynamic Island. Near-black would be correct for a dark screen, but the pill
+  // is then indistinguishable from the display behind it: a faint grey lift and
+  // a strong clearcoat catch a highlight and read as a separate part — albedo
+  // 0x15181f against the OLED's 0x05070a, clearcoat 0.03 against its 0.05.
   const island = new THREE.MeshPhysicalMaterial({
     color: 0x15181f,
     metalness: 0.12,
@@ -238,12 +236,11 @@ export function createMaterials(): PhoneMaterials {
 
   // The polished barrel: polished metal *tinted to the finish*, which is what
   // Apple's close-up shows — the ring around each lens is clearly orange on
-  // Cosmic Orange and blue on Deep Blue, not bare chrome. A neutral ring is
-  // wrong twice over: it reads as chrome on the two colourways, and on a tinted
-  // plateau a matching tint still separates from the matte aluminum because the
-  // polished surface is brighter and more saturated than the dye. The per-finish
-  // roughness is the whole glint control; `palette.ts`'s `RING_POLISH` carries
-  // the measurement.
+  // Cosmic Orange and blue on Deep Blue, not bare chrome. A neutral ring is wrong
+  // twice over: it reads as chrome on the two colourways, and on a tinted plateau
+  // a matching tint still separates from the matte aluminum because the polished
+  // surface is brighter and more saturated than the dye. `palette.ts`'s
+  // `RING_POLISH` carries the roughness and its measurement.
   const lensRing = new THREE.MeshPhysicalMaterial({
     color: ringColor(way, DEFAULT_COLOR),
     metalness: 1,
@@ -251,13 +248,12 @@ export function createMaterials(): PhoneMaterials {
   });
 
   // The pupil is the eye-catch: small, brighter near-black blue, proud of the
-  // glass so a tight highlight lands on it. It was also the thin bright
-  // crescent along the rim of every lens's glass this round, and which surface
-  // that was is measured, not reasoned: painting this material red moved the
-  // crescent's own pixels from rgb(86,90,99) to rgb(111,91,97) while the glass
-  // inside it and the ring outside it did not move, so the liner is the pupil's
-  // own rim — a cap 5 degrees off its crown normal, whose edge reflects a
-  // different direction of the studio than its centre does.
+  // glass so a tight highlight lands on it. It was also the thin bright crescent
+  // along the rim of every lens's glass this round, and which surface that was is
+  // measured, not reasoned: painting this material red moved the crescent's own
+  // pixels from rgb(86,90,99) to rgb(111,91,97) while the glass inside it and the
+  // ring outside it did not move, so the liner is the pupil's own rim — a cap 5
+  // degrees off its crown normal, reflecting a different direction of the studio.
   //
   // Roughness spreads that slowly, measured on the close-up's 26x6 px band at
   // the pupil's lower rim: p95 169 (max 171) at clearcoat 1 and roughness 0.07;
@@ -286,10 +282,9 @@ export function createMaterials(): PhoneMaterials {
   // Roughness is a weak lever on a grazing term — 169 luma at roughness 0.08
   // under a clearcoat, 133 at 0.3, 147 at 0.55 with none, 143 at 0.9 — because
   // Fresnel at grazing is what it is. `specularIntensity` 0.3 scales both ends
-  // of that term and lands it at 102 luma, inside the 88-119 the reference's
-  // own rim step measures on the close-up, with the dome unchanged at 35 luma.
-  // Its own `envMapIntensity` was once cut to 0.28 for the same reason, and was
-  // never read (see the header).
+  // of that term and lands it at 102 luma, inside the 88-119 the reference's own
+  // rim step measures on the close-up, with the dome unchanged at 35 luma. Its
+  // own `envMapIntensity` was once cut to 0.28 for the same reason, and unread.
   const lensGlass = new THREE.MeshPhysicalMaterial({
     color: 0x05070d,
     metalness: 0.0,
@@ -302,11 +297,10 @@ export function createMaterials(): PhoneMaterials {
     ior: 1.6,
   });
 
-  // Inside the barrel: dark gunmetal, not the pale grey that flattened the
-  // lenses into grey coins. Double sided, because the barrel is an open tube the
-  // camera looks into. Also the plateau's thin dark surrounds — the LiDAR bezel
-  // and the mic pinhole — which is why it has no clearcoat: a hairline ring with
-  // a highlight draws a bright circle instead of a shadow line.
+  // Inside the barrel: dark gunmetal, not the pale grey that flattened the lenses
+  // into grey coins. Double sided, because the barrel is an open tube the camera
+  // looks into. Also the plateau's LiDAR bezel and mic pinhole, which is why it
+  // has no clearcoat: a hairline ring with a highlight draws a bright circle.
   const aperture = new THREE.MeshPhysicalMaterial({
     color: 0x1b1f27,
     metalness: 0.65,
@@ -335,7 +329,7 @@ export function createMaterials(): PhoneMaterials {
   // against a 94.5-luma plateau around it — 0.127 of its surround. This one
   // measured 68 against a 157-luma plateau on the `back` view and 43 against
   // 150 on the close-up preset: 0.43 and 0.29 of the surface beside it, a grey
-  // disc. Clearcoat 1 at roughness 0.08 was a mirror for the whole studio on a
+  // disc — clearcoat 1 at roughness 0.08 was a mirror for the whole studio on a
   // window that should hold almost none of it.
   //
   // Coat and roughness are nearly exhausted as levers — clearcoat 1 at
@@ -370,8 +364,12 @@ export function createMaterials(): PhoneMaterials {
   // side, and the only separation a button should have is its shadowed seam.
   const button = aluminum.clone();
 
+  // The pills' base shadow, and the hairline the lens rings share (`lens.ts`): the
+  // finish's own metal in shadow at `SEAM_SHADE`, not a fixed grey, so the crevice
+  // keeps its ratio on a dark frame and a pale one. `0x0a0b0d` rendered its own face
+  // at 10 luma, 0.10 of the pill's 101.4; `optics.test.ts` carries the readings.
   const seam = new THREE.MeshStandardMaterial({
-    color: 0x0a0b0d,
+    color: new THREE.Color(way.aluminum).multiplyScalar(SEAM_SHADE),
     metalness: 0.2,
     roughness: 0.85,
   });
@@ -421,8 +419,7 @@ export function createMaterials(): PhoneMaterials {
   // part renders nothing at all — forcing its colour to 0xff0000 leaves the
   // `back`, `hero`, `left` and `top` frames byte-identical, 0 differing pixels
   // over a threshold of 6 summed channel levels — because all but the outermost
-  // sliver of its tube is buried in an opaque panel. The straight-on
-  // invisibility is the geometry's, not this material's.
+  // sliver of its tube is buried in an opaque panel: geometry, not this material.
   const magsafe = new THREE.MeshPhysicalMaterial({
     color: magsafeColor(way),
     metalness: 0.05,
@@ -486,6 +483,8 @@ export function applyColorway(materials: PhoneMaterials, key: ColorKey): void {
   materials.button.clearcoat = way.clearcoat;
   // Antenna straps are the same dye lot, a step lighter and muted.
   materials.antenna.color.copy(antennaColor(way));
+  // The seam is the finish's own metal in shadow, repainted from the frame.
+  materials.seam.color.copy(materials.aluminum.color).multiplyScalar(SEAM_SHADE);
   // Polished optics: the ring's tint and polish, and Camera Control's dark
   // sapphire.
   materials.lensRing.color.copy(ringColor(way, key));
