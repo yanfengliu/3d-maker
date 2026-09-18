@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -23,6 +24,7 @@ import {
   buildHousing,
   buildPlateau,
   buildTop,
+  MMWAVE,
   PANEL_FACE_Z,
   PANEL_INNER_Z,
 } from './parts.js';
@@ -261,3 +263,173 @@ describe('the bottom edge’s bores', () => {
     expect(bottom.children.filter((child) => child.name === 'mic-bottom')).toHaveLength(5);
   });
 });
+
+/**
+ * The US 5G mmWave antenna window on the top edge.
+ *
+ * The defect: the model is the US variant — its non-goals say "no SIM tray (US
+ * eSIM)" — and US units carry a mmWave antenna window on the top edge, which is
+ * the surface the `top` preset frames. The part was simply absent: the top edge
+ * carried `TOP_BORE` and nothing else. No test could see that, because nothing
+ * measured which features belong on which surface; this gate pins the class of
+ * the part — where it is, how big, and what it must clear — rather than the
+ * instance.
+ *
+ * The fractions and the margins are *re-derived from the reference photo* here,
+ * not read back off `MMWAVE`. A bound built from the same constant as the thing
+ * it checks cannot fail, so the pixels are restated as literals with their
+ * provenance, and `MMWAVE` has to agree with them: the window is 267 px of the
+ * body's 663 in `.shots/ref/mmwave-1.jpg` (0.40 of `BODY.width`), and 42 px of
+ * the 71 px top-edge face (0.59 of `BODY.depth`). Editing the constant to move
+ * or resize the window takes this gate red rather than redefining the check.
+ *
+ * Bounds, named so the gate fails past them rather than at them: `CENTRE_TOL`
+ * is 0.5 mm of the reference's 663 px / 71.9 mm scale — under 0.7 % of the body
+ * width, which is the placement the photo shows; `FRACTION_TOL` is 8 % of the
+ * fraction, twice the difference between the reference's own 0.402 and the
+ * 0.40 documented, so a re-measure of the same photo stays green while a change
+ * to the window's size does not; `FIT` is the 0.01 mm of vertex slack the other
+ * edge gates use; `MARGIN_MIN` is 1 mm, an eighth of the frame's depth, because
+ * the inlay has to sit *inside* the face rather than spanning it, and the
+ * reference shows roughly 1.7 mm; and `BORE_CLEARANCE` is the top mic bore's
+ * own radius (0.6) plus 1.8 mm — four times that radius — so the window clears
+ * the bore by a real gap rather than merely not overlapping it.
+ *
+ * The rail bound is the inlay's own `MMWAVE.proud`, not zero, and that is a
+ * measurement rather than a concession: the inlay's end arcs reach their
+ * extreme Z on the body's centre line, and the frame's wall there *is* the
+ * rail, so a face standing 0.02 mm off the wall stands 0.02 mm past the rail by
+ * construction. Measured on the built part, the apex vertex at
+ * (11.88, 75.02, 2.5) reads 0.019997. Writing the bound as zero would be the
+ * gate asserting something the part cannot satisfy while claiming to test it.
+ */
+describe('the top edge’s mmWave antenna window', () => {
+  const CENTRE_TOL = 0.5;
+  const FRACTION_TOL = 0.08;
+  const FIT = 0.01;
+  const MARGIN_MIN = 1;
+  const BORE_CLEARANCE = 2.4;
+  /** How much the re-derived fraction may differ from the built one: 1 % of the
+   *  window's own width, which is four times the pixel the reference's edge is
+   *  read to. */
+  const WIDTH_PROPORTION = 0.01;
+
+  /** The reference photo's own measurements, in pixels. */
+  const REF_PHONE_PX = 663;
+  const REF_WINDOW_PX = 267;
+  const REF_FACE_PX = 71;
+  const REF_WINDOW_DEPTH_PX = 42;
+
+  /**
+   * The part, built inside each test rather than once for the file. A missing
+   * window has to fail *these* tests by name; built at the describe's own scope
+   * it throws during collection and the whole file reports "no tests", which
+   * reads as a broken suite instead of as the defect.
+   */
+  function builtWindow(): { readonly top: THREE.Group; readonly window: THREE.Object3D; readonly box: THREE.Box3 } {
+    const top = buildTop(materials);
+    const window = required(top, 'mmwave-window');
+    return { top, window, box: worldBox(window) };
+  }
+
+  it('puts the window on the top edge, centred on X within a stated tolerance', () => {
+    const { top, window, box } = builtWindow();
+    // On the edge: the same surface `mic-top` is on, not a child of the back or
+    // the front. The bore and the window are the two features `top` frames.
+    expect(required(top, 'mic-top'), 'the top edge lost its mic bore').toBeDefined();
+    const centreX = box.getCenter(new THREE.Vector3()).x;
+    // The reference's own placement, as the offset it measured: the top-edge
+    // face's own centre line runs at x 591.5 in the photo and the window's ends
+    // make its centre 590, so the window sits 1.5 px — 0.16 mm at the 663 px /
+    // 71.9 mm scale — off the body's centre line. `CENTRE_TOL` is three times
+    // that, and it is the bound rather than the exact pixel offset: the model's
+    // window is centred, and 0.16 mm is inside both the photo's own resolution
+    // and the tolerance.
+    const referenceCentre = ((590 - 591.5) * BODY.width) / REF_PHONE_PX;
+    expect(centreX, 'the window is not centred on the body').toBeCloseTo(0, 1);
+    expect(
+      Math.abs(centreX - referenceCentre),
+      `the window's centre is ${centreX.toFixed(4)} mm off the body's centre line; the reference's is ${referenceCentre.toFixed(4)}`,
+    ).toBeLessThanOrEqual(CENTRE_TOL);
+    // Its own outer face is the rail plus its documented stand-off, so it seats
+    // in the frame rather than floating over it or sinking into it. Exactly
+    // coplanar is the pair that renders speckled.
+    expect(box.max.y, 'the window is not seated on the rail').toBeCloseTo(RAIL.y + MMWAVE.proud, 3);
+    expect(MMWAVE.proud).toBeGreaterThan(0);
+    // And the part is what `dims.ts` documents it as, so the seated face and
+    // the drawn outline cannot disagree about which part this is.
+    expect(window.name).toBe('mmwave-window');
+    expect(window.userData['material']).toBe('mmwave');
+  });
+
+  it('spans the fraction of the body width the reference photo shows', () => {
+    const { box } = builtWindow();
+    const reference = REF_WINDOW_PX / REF_PHONE_PX;
+    const width = box.max.x - box.min.x;
+    expect(
+      width / BODY.width,
+      `the window is ${(width / BODY.width).toFixed(4)} of the body width; the reference's ${String(REF_WINDOW_PX)} px of ${String(REF_PHONE_PX)} is ${reference.toFixed(4)}`,
+    ).toBeCloseTo(reference, 2);
+    // The documented fraction is the reference's own, within a tolerance that
+    // is a share of the window's width rather than an absolute one.
+    expect(Math.abs(MMWAVE.widthFraction - width / BODY.width)).toBeLessThanOrEqual(
+      WIDTH_PROPORTION * (width / BODY.width),
+    );
+    expect(Math.abs(MMWAVE.widthFraction - reference)).toBeLessThanOrEqual(FRACTION_TOL * reference);
+    // Edges symmetric about the centre line, which is what "centred" means for
+    // a part whose ends are rounded.
+    expect(box.min.x).toBeCloseTo(-box.max.x, 3);
+    // Rounded ends: the corner radius is the shape's half-height, so the two
+    // ends are true semicircles. Anything smaller reads as a rounded rectangle
+    // with straight flats at the ends, which the reference does not show.
+    expect(MMWAVE.radius).toBeCloseTo(MMWAVE.height / 2, 6);
+  });
+
+  it('lies within the frame’s depth, with a margin at both ends', () => {
+    const { box } = builtWindow();
+    // The frame's own face spans -halfDepth..+halfDepth in Z. The inlay must be
+    // strictly inside that: a window reaching the chamfer would wrap the corner.
+    const halfDepth = BODY.halfDepth;
+    expect(
+      halfDepth - box.max.z,
+      `the window reaches ${(halfDepth - box.max.z).toFixed(4)} mm from the frame's front end`,
+    ).toBeGreaterThanOrEqual(MARGIN_MIN);
+    expect(
+      box.min.z + halfDepth,
+      `the window reaches ${(box.min.z + halfDepth).toFixed(4)} mm from the frame's back end`,
+    ).toBeGreaterThanOrEqual(MARGIN_MIN);
+    // And it carries the face's documented share of the depth, re-derived from
+    // the same photo: 42 px of the 71 px edge face.
+    const reference = REF_WINDOW_DEPTH_PX / REF_FACE_PX;
+    expect(
+      (box.max.z - box.min.z) / BODY.depth,
+      `the window is ${((box.max.z - box.min.z) / BODY.depth).toFixed(4)} of the body depth; the reference's ${String(REF_WINDOW_DEPTH_PX)} px of ${String(REF_FACE_PX)} is ${reference.toFixed(4)}`,
+    ).toBeCloseTo(reference, 1);
+  });
+
+  it('does not cross the rail and clears the top mic bore', () => {
+    const { window, box } = builtWindow();
+    // `MMWAVE.proud` is the bound for the reason in this block's header: the
+    // inlay is a face standing off the wall, and the wall is the rail.
+    const profile = railProfile(window);
+    expect(
+      profile.overhang,
+      `the window stands ${profile.overhang.toFixed(4)} mm past the rail; its documented stand-off is ${String(MMWAVE.proud)}`,
+    ).toBeLessThanOrEqual(MMWAVE.proud + FIT);
+    // Where it stops short of the rail, it must still be on the body: the
+    // inlay's own body runs back into the metal, so its innermost vertex is
+    // inside the wall rather than floating in front of the recess.
+    expect(
+      profile.closest,
+      `the window floats ${profile.closest.toFixed(4)} mm clear of the body`,
+    ).toBeLessThan(0);
+    // Clearance to the bore is measured between the two parts' real edges: the
+    // nearest X of the window to the bore's centre, less the bore's radius.
+    const clearance = Math.min(Math.abs(box.min.x - TOP_BORE.x), Math.abs(box.max.x - TOP_BORE.x)) - TOP_BORE.radius;
+    expect(
+      clearance,
+      `the window clears the top mic bore by ${clearance.toFixed(4)} mm`,
+    ).toBeGreaterThanOrEqual(BORE_CLEARANCE);
+  });
+});
+

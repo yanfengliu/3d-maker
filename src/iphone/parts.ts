@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
-import { addMesh, backPlateGeometry, contourPatchGeometry, slabGeometry } from './geometry.js';
+import { addMesh, backPlateGeometry, contourPatchGeometry, roundedShape, slabGeometry } from './geometry.js';
 import {
   ANTENNA,
   BODY,
+  BORE_PROUD,
   BUTTONS,
   GLASS_BEVEL,
   GLASS_FRONT_Z,
@@ -346,14 +347,113 @@ function pillGeometry(
   return geometry;
 }
 
-/** Top edge: clean except one microphone pinhole, offset to the physical
- *  left. It is a dot on the edge face — 1.2 mm across — not a bore tube, which
- *  stuck 3.7 mm out of the edge and read as a black pill from above. */
+/**
+ * The 5G mmWave antenna window on the top edge: the matte rounded-rectangle
+ * inlay US units carry and the eSIM-only units this model is documented as do
+ * not, which is why the top edge had no part for it.
+ *
+ * Every number is measured off `.shots/ref/mmwave-1.jpg` — a Cosmic Orange 17
+ * Pro shot end-on from above, so the top edge fills the frame [Phone Arena via
+ * Disway, 2025]. Measured on its pixels: the top-edge face runs x 260…923 and
+ * the window's two tonal steps sit at x 457 and x 723, so the window is 267 px
+ * of the body's 663 — **0.40 of `BODY.width`** (267 / 663 = 0.402), which
+ * `parts.test.ts` re-derives rather than trusting this comment. The window is
+ * centred: its centre lands at x 590 against the face's own 591.5, with margins
+ * of 197 px left and 200 px right.
+ *
+ * `height` is its extent along Z, across the edge's depth. The face spans y
+ * 333…404 in that image — 71 px, 7.70 mm at the 9.22 px/mm the 663 px / 71.9 mm
+ * scale gives — and the window's step to the chamfer highlight above it is at y
+ * 356 with its lower step at y 398: 42 px, **0.57 of the face's depth**. 5.0 mm
+ * is 0.57 of `BODY.depth`, and leaves 1.875 mm of the frame's face showing at
+ * each end, which is the margin the reference shows. `radius` is half the
+ * height, so the ends are true semicircles.
+ */
+export const MMWAVE = {
+  /** Window width as a fraction of `BODY.width`, measured off the reference. */
+  widthFraction: 0.4,
+  width: 0.4 * BODY.width,
+  /** Extent along Z, the edge face's own depth axis. */
+  height: 5,
+  radius: 2.5,
+  /** The corner arcs are centred on the face's Z mid-plane, the way the
+   *  reference window's are on the edge. */
+  centreZ: 0,
+  /** The inlay's outer face, off the rail: `BORE_PROUD`'s pattern, because a
+   *  face exactly coplanar with the frame's is the pair that renders speckled,
+   *  and 0.02 mm is far too little to read as a lip at any view. */
+  proud: BORE_PROUD,
+  /** How far the inlay's body runs back into the metal behind that face. Only
+   *  the proud 0.02 mm is outside the frame; the rest is buried, so no
+   *  sightline can pass under the inlay's edge. */
+  thickness: 0.5,
+} as const;
+
+/**
+ * Top edge: one microphone pinhole and the US 5G mmWave antenna window.
+ *
+ * The bore is a dot on the edge face — 1.2 mm across, not a tube, which stuck
+ * 3.7 mm out of the edge and read as a black pill from above. The window is the
+ * matte inlay `MMWAVE` measures: a rounded rectangle on the same face as the
+ * bore, so the `top` preset frames both.
+ *
+ * Its material is the `mmwave` key `materials.ts` grew for it: the reference's
+ * window is a matte insert *below* the frame, and no key that existed reached
+ * that step. The survey that settled it, measured on the built `top` frame
+ * against the frame's face on the same row: `antenna` 1.20 of it (207 against
+ * 172 luma), `magsafe` 1.16, `backGlass` 1.09, `logo` 1.05 (180 against 172)
+ * and `darkGlass` 0.28, against the reference's own 0.83. `mmwave` is a
+ * dielectric at roughness 0.82 with no clearcoat, so its face carries no
+ * highlight at all; it renders 0.833 / 0.831 / 0.836 of the frame's luma on the
+ * three finishes, where `logo` rendered 1.04 / 1.14 / 0.93 — the orange one is
+ * the defect this replaces. The reference's window measures
+ * 109 to 112 luma across its face while the frame beside it runs 104 to 165, so
+ * the flat one is as much of the requirement as the number is. The comment this
+ * replaces ended "a dark window would need its own key, and `materials.ts` is
+ * not this change's to edit" — that key now exists, and the line below names it.
+ */
 export function buildTop(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
   group.name = 'top';
   addMesh(group, boreMouth(TOP_BORE.radius, TOP_BORE.x, 1), materials.bore, 'mic-top', 'bore', false);
+  addMesh(group, mmwaveWindowGeometry(), materials.mmwave, 'mmwave-window', 'mmwave', false);
   return group;
+}
+
+/**
+ * The mmWave window's inlay: `MMWAVE`'s rounded rectangle, lying on the top
+ * edge face and proud of it by `MMWAVE.proud`.
+ *
+ * It is authored in the XY plane and turned a quarter turn about X, because
+ * `slabGeometry` extrudes along Z and this part's plane is Y — the same turn
+ * `pillGeometry` does for the side edges, and for the same reason: a part
+ * placed on the axis it was authored along stands on edge out of the phone.
+ *
+ * Two placements are measured rather than assumed. The outer face is snapped to
+ * the rail plus `MMWAVE.proud` from the geometry's own bounding box, so the
+ * part's own extent cannot change the plane it sits on; and the extrusion runs
+ * *inwards* from there, so all but that 0.02 mm is buried in the metal and no
+ * sightline can slip under the inlay's edge. The whole part sits at
+ * `MMWAVE.centreZ`, the middle of the frame's depth: the margins that leaves at
+ * each end are what keep it inside the face instead of reaching the chamfer.
+ */
+function mmwaveWindowGeometry(): THREE.BufferGeometry {
+  const geometry = new THREE.ExtrudeGeometry(roundedShape(MMWAVE.width, MMWAVE.height, MMWAVE.radius), {
+    depth: MMWAVE.thickness,
+    bevelEnabled: false,
+    curveSegments: 12,
+  });
+  // The shape is authored in (width, height) and extruded along +Z, so turn it
+  // about X: the cross-section then lies in the XZ plane and the extrusion runs
+  // along -Y — into the body, from a face that lands on the rail.
+  geometry.rotateX(Math.PI / 2);
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox;
+  if (box === null) throw new Error('the mmWave window has no bounding box');
+  // -Y is out of the phone, so the part's largest Y is the face that shows.
+  geometry.translate(0, RAIL.y + MMWAVE.proud - box.max.y, MMWAVE.centreZ - (box.min.z + box.max.z) / 2);
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 /**
@@ -392,3 +492,9 @@ export function buildAntennas(materials: PhoneMaterials): THREE.Group {
   }
   return group;
 }
+
+
+
+
+
+

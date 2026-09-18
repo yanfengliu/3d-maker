@@ -4,6 +4,18 @@ The standing list of what the gates could not see, and the gate that now covers 
 
 Format per entry: **symptom** (what a person saw) · **investigation** (what was measured) · **root cause** · **gate** (the check that covers the class, and its red proof) · **bounds** (what the gate does not cover).
 
+## 2026-09-17 — a whole feature was missing, and every gate was green (found by audit, not reported)
+
+**Symptom.** Nothing looked broken. The model is the US variant (its non-goals say "no SIM tray (US eSIM)"), and a US iPhone 17 Pro carries a **5G mmWave antenna window centred on its top edge** — a matte rounded-rectangle insert about 40 % of the body's width. The model's top edge had only the microphone bore, and the `top` view preset frames exactly that surface. Seven rounds of screenshots had looked straight at it.
+
+**Investigation.** Found by running the viewer and asking what belongs on each surface, with a reference photo in hand rather than by reading code. `.shots/ref/mmwave-1.jpg` (an end-on top-edge shot, provenance in `docs/work/000_iphone-viewer/plan.md`) measures the window at 267 px of a 663 px edge, centred, covering 42 px of the face's 71 px depth; its own insert reads 0.81 of the frame's luma on the same row and is flat across its face (p5/p50/p95 = 109/110/112) where the frame runs 104→165.
+
+**Root cause.** An invariant gate can only bound parts that exist; nothing in the suite can see an absence. The suite was strong exactly where it was pointed — 32 tests over the parts that were there — and the missing feature sat on a surface no audit had compared feature-by-feature against a reference.
+
+**Gate.** `parts.test.ts`, `describe("the top edge's mmWave antenna window")` — four tests that build the part inside each test (so a missing window fails by name rather than reporting "no tests") and **re-derive the placement from the reference photo's own pixel literals** (663/267/71/42) rather than reading the implementation's constants, so retuning the part cannot redefine the check. Red proofs, all reverted: the part removed → all four fail with `the built model has no part named "mmwave-window"`; moved 2.4 mm off centre; pulled 0.9 mm off the edge face; deepened to 8 mm (breaks the depth margin); widened 6 mm (breaks the width fraction *and* the mic-bore clearance). A fifth gate pins the insert's own material character in `materials.test.ts` (roughness floor 0.7, metalness ceiling 0.15, no clearcoat, and the albedo relationship to the frame), red-proved three ways including one that isolates the relationship pin from the hex pin.
+
+**Bounds.** It pins this one feature's presence, placement, proportions and material. The general class — a surface whose features were never enumerated — is bounded by the loop's audit: only surfaces with a reference photo get compared, and only features a person thought to look for get enumerated. The lesson is the loop's own rule in `AGENTS.md` ("claiming fidelity to a real object requires a feature-by-feature audit"), not the test.
+
 ## 2026-09-16 — edge parts measured from a rail that was 0.36 mm too wide
 
 **Symptom.** In the iPhone 17 Pro viewer every edge detail floated off the phone: the button pills hovered beside the frame with a dark gap behind them, the speaker and mic mouths sat 0.26 mm below the bottom edge as black pins, and the antenna ribbons hung 0.38 mm off the corners. In the profile shots the pills also rendered near-black and speckled with a diagonal hatch.

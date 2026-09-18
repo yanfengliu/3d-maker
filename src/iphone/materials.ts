@@ -11,6 +11,7 @@ import {
   ringRoughness,
   sapphireColor,
   type ColorKey,
+  type Colorway,
 } from './palette.js';
 import { brushedNormalMap, glowTexture } from './textures.js';
 
@@ -24,16 +25,94 @@ import { brushedNormalMap, glowTexture } from './textures.js';
  * themselves, and the tones derived from them, live in `palette.ts`; this file
  * is the materials those tones are set on.
  *
- * The `envMapIntensity` values below are inert while `scene.environment` is set
- * and the material has no `envMap` of its own: the renderer overwrites that
- * uniform with `scene.environmentIntensity` for every standard material, so
- * `scene.ts` is the only brightness control that is read. They are left as they
- * are because they are the values each surface was fitted to, and because
- * giving one material its own `envMap` turns them back on a surface at a time.
+ * No material here carries an `envMapIntensity`, and the level is not in this
+ * file. While `scene.environment` is set and the material has no `envMap` of its
+ * own, the renderer overwrites that uniform with `scene.environmentIntensity` on
+ * every standard material, every frame (three 0.185, `WebGLRenderer.js` line
+ * 2694, guarded by `material.envMap === null && scene.environment !== null`), so
+ * `scene.ts`'s one value is the only brightness control that is read. The
+ * per-material values that used to sit here were never read — the `back` frame
+ * is byte-identical at a material `envMapIntensity` of 0, 1, 2 and 8 — so they
+ * are removed rather than kept as a table of dead numbers. A material that grows
+ * its own `envMap` needs one back: that is the condition that makes the uniform
+ * live again, and it is the only thing that does.
  */
 
 export type { ColorKey, Colorway } from './palette.js';
 export { COLOR_KEYS, DEFAULT_COLOR, COLORWAYS, isColorKey } from './palette.js';
+
+/**
+ * The mmWave antenna window: the matte insert in the top edge of a US unit,
+ * and the one surface on this phone that is not metal.
+ *
+ * A polymer window seated in anodized aluminum is a dielectric, so the
+ * material is `metalness` 0, has no clearcoat, and carries a rough lobe — and
+ * that is the half of the requirement the reference's *character* asks for: no
+ * specular band anywhere on it. `.shots/ref/mmwave-1.jpg`'s own window measures
+ * 109 to 112 luma across its whole face (p5 109, p50 110, p95 112) while the
+ * frame's face beside it runs 104 to 165 — the window is the flat one, the
+ * frame is the one that catches the light. This material renders the same way:
+ * every sample of its face on the built `top` view is one value, p5 = p50 = p95
+ * at 145, 98 and 191 luma on the three finishes, where the frame's face falls
+ * from 177 luma on its flat to 149 where it turns into the chamfer.
+ *
+ * `MMWAVE_TONE` is the tone, one row per finish, solved the way `palette.ts`'s
+ * logo rows are: a hue, a saturation and an HSL lightness, with the hue always
+ * the finish's own. It cannot be one scalar of the frame's colour, because the
+ * frame's rendered brightness is a *metal reflection* and this surface is
+ * diffuse: measured on the `top` view, the orange and silver faces render at
+ * 174 and 228 luma off albedos of 0.22 and 0.49 in relative luminance, while
+ * Deep Blue's face renders at 118 off 0.048 — the studio reflected in a dark
+ * blue metal is brighter than its albedo by a factor the orange's is not. One
+ * ratio of the frame's lightness therefore lands on three different steps, so
+ * each row is solved to the same step instead.
+ *
+ * The step is the reference's own: the window reads 0.83 of the frame's luma on
+ * the same row — 110 against 136 in that photo, in the encoded 8-bit luma the
+ * window's 1.20/1.16/1.09/1.05/0.28 material survey was taken in. Measured on
+ * the built `top` view, window over the mean of the frame's face either side of
+ * it on the same rows, the rows below land 0.833 (Cosmic Orange, 145 against
+ * 174), 0.831 (Deep Blue, 98 against 118) and 0.836 (silver, 191 against 228).
+ * In relative luminance the same frames read 0.663, 0.661 and 0.670 against the
+ * photo's 0.643, so the step matches in both conventions rather than only in
+ * the one it was fitted in.
+ */
+const MMWAVE_TONE: Record<ColorKey, { readonly light: number }> = {
+  'cosmic-orange': { light: 0.402 },
+  'deep-blue': { light: 0.278 },
+  silver: { light: 0.558 },
+};
+
+/** The insert's saturation, as the share eased out of the frame's own: the
+ *  window is `s * (1 - MMWAVE_DESATURATE)`, so every finish's row is a *less*
+ *  saturated dye than the metal around it — 0.61 to 0.52 on Cosmic Orange, 0.27
+ *  to 0.23 on Deep Blue. The ease is small on purpose: the frame's own render
+ *  washes its chroma out under the studio's white specular, so most of the
+ *  window's lower chroma comes from it being the diffuse surface, not from this
+ *  number — measured, the window's mid-face chroma is 119 against the frame's
+ *  134 on orange and 45 against 43 on Deep Blue, where the photo's own window
+ *  is at parity with its frame (143 against 141). */
+const MMWAVE_DESATURATE = 0.15;
+
+/** A dielectric insert, and a rough one. `metalness` is 0 rather than small
+ *  because there is no metal in the part — a polymer window is the one place on
+ *  this phone where that costs nothing — and the roughness is what keeps a
+ *  highlight off it: at 0.82 the lobe is spread over the whole hemisphere, so
+ *  the studio returns as even light rather than as a band. No clearcoat, for
+ *  the same reason: a coat is a second, smoother mirror over the surface. */
+const MMWAVE_ROUGHNESS = 0.82;
+const MMWAVE_METALNESS = 0;
+
+/** The window's tone: the frame's own hue, at the finish's own saturation and
+ *  lightness. See `MMWAVE_TONE` for why the hue is the frame's and the other
+ *  two are not derivable from it. */
+function mmwaveColor(way: Colorway, key: ColorKey): THREE.Color {
+  const hsl = { h: 0, s: 0, l: 0 };
+  new THREE.Color(way.aluminum).getHSL(hsl, THREE.SRGBColorSpace);
+  const color = new THREE.Color();
+  color.setHSL(hsl.h, hsl.s * (1 - MMWAVE_DESATURATE), MMWAVE_TONE[key].light, THREE.SRGBColorSpace);
+  return color;
+}
 
 export interface PhoneMaterials {
   /** Anodized 7000-series unibody and camera plateau. */
@@ -72,6 +151,8 @@ export interface PhoneMaterials {
   readonly bore: THREE.MeshStandardMaterial;
   /** Satin Apple logo inlay. */
   readonly logo: THREE.MeshPhysicalMaterial;
+  /** US mmWave antenna window: a matte polymer insert in the top edge. */
+  readonly mmwave: THREE.MeshPhysicalMaterial;
   /** MagSafe ring: a tonal whisper in the panel, not a chrome wire. */
   readonly magsafe: THREE.MeshPhysicalMaterial;
   /** Sprites that soften the lens hotspots. */
@@ -140,7 +221,6 @@ export function createMaterials(): PhoneMaterials {
     anisotropy: 0,
     normalMap: brushed,
     normalScale: new THREE.Vector2(0.12, 0.12),
-    envMapIntensity: 1,
   });
 
   // Matte Ceramic Shield panel: the frame's own hue, lifted in lightness by the
@@ -154,7 +234,6 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.38,
     clearcoat: 0.14,
     clearcoatRoughness: 0.42,
-    envMapIntensity: 0.9,
   });
 
   // The port's tongue. It is steel, and it has to be *light*: it is the only
@@ -165,7 +244,6 @@ export function createMaterials(): PhoneMaterials {
     metalness: 1,
     roughness: 0.21,
     anisotropy: 0.4,
-    envMapIntensity: 1.7,
   });
 
   // Cover glass over an unlit OLED: near-black, glossy, and *smooth*. The
@@ -193,16 +271,15 @@ export function createMaterials(): PhoneMaterials {
   // cards whose edges fall inside those two degrees. Measured on the same rect:
   // mean 64, second percentile 44, median 51, maximum 110.
   //
-  // Nothing here is a lever for that; `envMapIntensity` on this material is
-  // dead like every other one (see `scene.ts`), which is why the value below is
-  // still 1.9 and still not what sets the level.
+  // Nothing here is a lever for that, and this material no longer carries an
+  // `envMapIntensity`: the level it returns is the scene's one value (see the
+  // header), so no number on this surface sets it.
   const frontGlass = new THREE.MeshPhysicalMaterial({
     color: 0x060709,
     metalness: 0,
     roughness: 0.055,
     clearcoat: 1,
     clearcoatRoughness: 0.04,
-    envMapIntensity: 1.9,
     ior: 1.52,
   });
 
@@ -212,23 +289,21 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.06,
     clearcoat: 1,
     clearcoatRoughness: 0.05,
-    envMapIntensity: 1.2,
   });
 
   // Dynamic Island. Near-black would be correct for a dark screen but then the
   // pill is indistinguishable from the display behind it, so it carries a
   // faint grey lift and a strong clearcoat — enough to catch a highlight and
-  // read as a separate glossy part. Its albedo is a hair *above* the OLED's and
-  // its environment response stronger (1.7 against 1.2), so the sheen that
-  // picks the pill out is its own reflection rather than the display behind it;
-  // both stay dark enough that the face reads as a switched-off screen.
+  // read as a separate glossy part. Its albedo is a hair *above* the OLED's —
+  // 0x15181f against 0x05070a — and its clearcoat is a shade narrower, 0.03
+  // against 0.05; both take the scene's one environment level (see the header),
+  // and both stay dark enough that the face reads as a switched-off screen.
   const island = new THREE.MeshPhysicalMaterial({
     color: 0x15181f,
     metalness: 0.12,
     roughness: 0.08,
     clearcoat: 1,
     clearcoatRoughness: 0.03,
-    envMapIntensity: 1.7,
   });
 
   // The polished barrel: polished metal *tinted to the finish*, which is what
@@ -246,7 +321,6 @@ export function createMaterials(): PhoneMaterials {
     color: ringColor(way, DEFAULT_COLOR),
     metalness: 1,
     roughness: ringRoughness(DEFAULT_COLOR),
-    envMapIntensity: 1.6,
   });
 
   // The pupil is the eye-catch: small, brighter near-black blue, proud of the
@@ -257,17 +331,15 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.07,
     clearcoat: 1,
     clearcoatRoughness: 0.03,
-    envMapIntensity: 1.7,
   });
 
   // Camera glass, and it has to read as glass: a very dark blue-black element
-  // with a clearcoat and a trace of iridescence. The element before this round
-  // had its environment response almost switched off (0.28) to stop it
-  // mirroring the studio back as a slate-grey coin, and the cure was worse than
-  // the disease — a lens with no reflection at all is a black void, which is
-  // exactly how the close-up read. The reflection is back up, the albedo is
-  // deep blue-black rather than neutral, and the iridescent coating carries the
-  // blue sheen the real element shows at an angle.
+  // with a clearcoat and a trace of iridescence. Its own `envMapIntensity` was
+  // once cut to 0.28 to stop it mirroring the studio back as a slate-grey coin,
+  // and that number was never read (see the header); what it returns is the
+  // scene's level over a deep blue-black albedo rather than a neutral one, with
+  // the iridescent coating carrying the blue sheen the real element shows at an
+  // angle.
   const lensGlass = new THREE.MeshPhysicalMaterial({
     color: 0x05070d,
     metalness: 0.0,
@@ -277,7 +349,6 @@ export function createMaterials(): PhoneMaterials {
     iridescence: 0.45,
     iridescenceIOR: 1.35,
     iridescenceThicknessRange: [140, 460],
-    envMapIntensity: 1.15,
     ior: 1.6,
   });
 
@@ -291,7 +362,6 @@ export function createMaterials(): PhoneMaterials {
     color: 0x1b1f27,
     metalness: 0.65,
     roughness: 0.34,
-    envMapIntensity: 0.4,
     side: THREE.DoubleSide,
   });
 
@@ -313,7 +383,6 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.6,
     clearcoat: 0.12,
     clearcoatRoughness: 0.5,
-    envMapIntensity: 0.55,
   });
 
   // LiDAR, the mic pinhole and the island's front camera: dark glass windows.
@@ -334,7 +403,6 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.3,
     clearcoat: 0.2,
     clearcoatRoughness: 0.12,
-    envMapIntensity: 1.6,
   });
 
   // Camera Control's cover: a *dark shade of the finish*, not a black hole.
@@ -350,7 +418,6 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.15,
     clearcoat: 1,
     clearcoatRoughness: 0.05,
-    envMapIntensity: 1.7,
   });
 
   // The pills are the same anodized metal as the rail, dyed in the same bath.
@@ -406,7 +473,16 @@ export function createMaterials(): PhoneMaterials {
     roughness: 0.3,
     clearcoat: 0.35,
     clearcoatRoughness: 0.35,
-    envMapIntensity: 1.1,
+  });
+
+  // The mmWave window, the US top-edge insert. Matte and non-metallic, and its
+  // tone is the finish's own muted and stepped down — `MMWAVE_TONE` carries the
+  // per-finish rows and the measurement behind them, the reference's 0.83 of
+  // the frame's luma on the same row being what they solve to.
+  const mmwave = new THREE.MeshPhysicalMaterial({
+    color: mmwaveColor(way, DEFAULT_COLOR),
+    metalness: MMWAVE_METALNESS,
+    roughness: MMWAVE_ROUGHNESS,
   });
 
   // MagSafe: the panel's own colour exactly, and a hair smoother — which turns
@@ -423,7 +499,6 @@ export function createMaterials(): PhoneMaterials {
     color: magsafeColor(way),
     metalness: 0.05,
     roughness: 0.34,
-    envMapIntensity: 0.9,
   });
 
   const glow = new THREE.SpriteMaterial({
@@ -454,6 +529,7 @@ export function createMaterials(): PhoneMaterials {
     antenna,
     bore,
     logo,
+    mmwave,
     magsafe,
     glow,
   };
@@ -488,6 +564,10 @@ export function applyColorway(materials: PhoneMaterials, key: ColorKey): void {
   materials.lensRing.roughness = ringRoughness(key);
   materials.sapphire.color.copy(sapphireColor(key));
   materials.logo.color.copy(logoColor(key));
+  // The mmWave window is the finish's own hue, muted and stepped down: a
+  // colourway switch has to repaint it, or a Deep Blue phone keeps an orange
+  // insert in its top edge.
+  materials.mmwave.color.copy(mmwaveColor(way, key));
   materials.magsafe.color.copy(magsafeColor(way));
 }
 

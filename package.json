@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src scripts --max-warnings 0",
     "test": "vitest run",
+    "check:finishes": "node scripts/check-finishes.mjs",
     "audit:runtime": "npm audit --omit=dev --audit-level=high",
     "audit:full": "npm audit --audit-level=high",
     "verify": "npm run test && npm run typecheck && npm run lint && npm run build"

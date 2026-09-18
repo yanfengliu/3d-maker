@@ -103,6 +103,7 @@ export function stubMaterials(): PhoneMaterials {
     antenna: basic as unknown as THREE.MeshStandardMaterial,
     bore: basic as unknown as THREE.MeshStandardMaterial,
     logo: physical,
+    mmwave: physical,
     magsafe: physical,
     glow: basic as unknown as THREE.SpriteMaterial,
   };
