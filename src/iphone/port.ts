@@ -44,11 +44,13 @@ import type { PhoneMaterials } from './materials.js';
  *
  *  The notch's numbers are `USB_C`'s, pre-compensated by `BODY.bevel`: an
  *  `ExtrudeGeometry` bevel grows the slab's *middle* layer outside the outline
- *  it is drawn from, and that middle layer is the rail plane, so a notch drawn
- *  at the documented 8.4 x 3.2 with 1.1 corners comes out 7.68 mm wide where
- *  the eye reads it. Measured on the built frame, the widest layer is the rail
- *  plane and the notch there is 8.4 mm across, 3.2 mm up from the rail, with
- *  1.1 mm corners, which is what `USB_C` documents.
+ *  it is drawn from, and that middle layer is the rail plane's band, so a notch
+ *  drawn at the documented 8.4 x 3.2 with 1.1 corners comes out 7.68 mm wide
+ *  where the eye reads it. Measured on the built frame, the rail plane is not a
+ *  layer but the band between the two chamfers, and the notch is narrowest there
+ *  — 8.4 mm across, 3.2 mm up from the rail, with 1.1 mm corners, which is what
+ *  `USB_C` documents — opening out to 9.12 mm across at the frame's own faces as
+ *  the chamfer tapers the outline back over its last 0.36 mm of depth.
  *
  *  Everything after the shape mirrors `slabGeometry` line for line — same
  *  extrusion options, same snap of the extruded depth to `BODY.depth`, same
@@ -160,18 +162,28 @@ export function boreMouth(radius: number, x: number, direction: 1 | -1): THREE.B
  *    Measured, the notch's opening at the frame's faces is 9.12 mm across
  *    against 8.4 at the rail plane, because the chamfer's bevel grows material
  *    into the notch over its last 0.36 mm of depth.
- *  - `port-mouth` is the aperture. It is a plate lying in the rail's
- *    bottom-face plane, standing `BORE_PROUD` off it, filling the notch's whole
+ *  - `port-mouth` is the aperture. It is a plate filling the notch's whole
  *    bottom-face opening — which is 8.4 mm wide and the body's 8.75 mm deep —
  *    except for its own window: `USB_C.width x USB_C.height` with
- *    `USB_C.radius` corners. That window is the rounded-rectangle opening the
- *    bottom view reads, and it is measured on the built plate by
- *    `port.test.ts`.
+ *    `USB_C.radius` corners, the rounded-rectangle opening the bottom view
+ *    reads, measured on the built plate by `aperture.test.ts`. Its face is
+ *    `PORT_INSET` *inside* the rail's bottom-face plane, not off it. Measured on
+ *    the built frame, its overhang is buried: the frame's own metal reaches
+ *    under the plate's face by 0.019997 mm on all 2114 samples — a 161 x 161
+ *    grid over the plate's 9.2 x 8.56 mm footprint — whose column meets the
+ *    frame's flat rail band, and the plate's face is above the frame's lowest
+ *    surface everywhere else except the four corner patches where the notch's
+ *    own cut has taken that band away — |x| in [4.226, 4.600], |z| in [4.120,
+ *    4.280] on a 321 x 321 grid of the plate's footprint, deepening with |z| to
+ *    0.1054 mm at x = ±4.600, z = ±4.280 — where it is the notch's filler.
+ *    `port.test.ts` gates both.
  *  - `port-mouth-plate` and `port-cavity` are the dark faces behind it: the
- *    plate 0.03 mm inside the aperture, the pocket's floor 0.07 mm behind the
- *    plate. Both are `bore`, so the window frames the recess's own walls rather
- *    than a lit aluminum surface — the bright trapezoid the previous build
- *    showed was the frame's own bottom face seen through the liner's opening.
+ *    plate 0.03 mm above the rail plane, which leaves 0.01 mm of the mouth
+ *    plate's window wall showing before the dark face takes over, and the
+ *    pocket's floor 0.07 mm behind the plate. Both are `bore`, so the window
+ *    frames the recess's own walls rather than a lit aluminum surface — the
+ *    bright trapezoid the previous build showed was the frame's own bottom face
+ *    seen through the liner's opening.
  *  - `port-tongue` is the connector: a 6.6 x 1.1 x 0.26 mm dark-steel strip on
  *    the pocket's floor, its root buried in the floor plate and its underside
  *    the only face a sightline from below meets. The previous build's tongue
@@ -231,7 +243,9 @@ export function buildBottom(materials: PhoneMaterials): THREE.Group {
   // the aperture; the dark plate is 0.2 mm larger all round, so its outline is
   // buried in the mouth plate's material rather than coincident with the
   // window's wall, and its own window (0.3 mm inside the aperture) is what the
-  // pocket is read through.
+  // pocket is read through. The mouth plate's face is set `mouth.inset` *into*
+  // the rail's plane, which is what puts its overhang inside the frame's metal
+  // instead of under the phone — see the note above.
   addMesh(
     group,
     flatPlateGeometry(
@@ -239,7 +253,7 @@ export function buildBottom(materials: PhoneMaterials): THREE.Group {
       pocket.mouth.halfDepth * 2,
       pocket.mouth.radius,
       pocket.mouth.thickness,
-      rail - pocket.mouth.standOff,
+      rail + pocket.mouth.inset,
       { width: USB_C.width, depth: USB_C.height, radius: USB_C.radius },
     ),
     materials.aluminum,

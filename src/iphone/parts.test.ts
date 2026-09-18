@@ -166,13 +166,13 @@ describe('the edge contract against the built geometry', () => {
     // 0.03 mm is derived from the model's other flush surfaces instead: a bore
     // mouth stands `BORE_PROUD` (0.02) off the rail and is the only edge part
     // allowed to cross the outline at all, so the port's own liner may add the
-    // same order of magnitude plus the measured vertex slack. The floor's edges
-    // sit `drop + thickness` below the rail and the tongue's root inside the
-    // floor, so both land under this bound by construction; a lip an order of
-    // magnitude larger — the mutation this catches — does not.
+    // same order of magnitude plus the measured vertex slack; the floor and the
+    // tongue land under it by construction, and `port-mouth` — the crossing face
+    // this walk was missing — is measured 0.019997 mm inside the rail's bottom
+    // plane now. A lip an order of magnitude larger is what this catches.
     const LINER_OVERHANG_BOUND = 0.03;
     const bottom = buildBottom(materials);
-    for (const name of ['port-cavity', 'port-tongue', 'port-shell', 'port-cavity-ceiling']) {
+    for (const name of ['port-cavity', 'port-tongue', 'port-shell', 'port-cavity-ceiling', 'port-mouth']) {
       const profile = railProfile(required(bottom, name));
       expect(
         profile.overhang,

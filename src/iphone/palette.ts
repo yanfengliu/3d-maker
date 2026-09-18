@@ -63,13 +63,20 @@ export const COLORWAYS: Record<ColorKey, Colorway> = {
   },
   // Rich, dark navy. The light, grey-blue this used to be read as washed out.
   //
-  // The roughest of the three at 0.3, up from 0.24: its rail read 0.530 of its
-  // panel against the photo's 0.47 once this round's environment was in, and a
-  // rougher lobe is the direction that brings it down.
+  // The roughest of the three at 0.42. It was 0.3, up from 0.24, to bring the
+  // rail down once round 7's environment was in; the environment's camera wall
+  // then gained the veneer that fixes the profiles' cover glass, and that took
+  // this rail down further than the panel — measured on the `back` view through
+  // the gate's own two rects, roughness 0.3 with the veneer reads 0.528 against
+  // the photo's 0.47, +0.058 and outside the ±0.05 band. A rougher lobe averages
+  // more of the dim floor, which is the direction that brings it down here.
+  // Ladder, rail band over panel band: 0.35 = 0.503, 0.38 = 0.490, 0.42 = 0.469,
+  // 0.45 = 0.457. 0.42 lands 0.001 from the reference, and the panel reads
+  // 0.1857 relative luminance at every arm, so the whole move is the rail's.
   'deep-blue': {
     label: 'Deep Blue',
     aluminum: 0x323e57,
-    roughness: 0.3,
+    roughness: 0.42,
     clearcoat: 0.18,
     panelLift: 0.1,
   },

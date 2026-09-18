@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { expect } from 'vitest';
 
 import { RAIL } from './dims.js';
-import type { PhoneMaterials } from './materials.js';
+import { applyColorway, createMaterials, type PhoneMaterials } from './materials.js';
+import type { ColorKey } from './palette.js';
 
 /**
  * The measurements the iPhone test files share: `parts.test.ts` (the edge and
@@ -13,6 +15,10 @@ import type { PhoneMaterials } from './materials.js';
  * They live here rather than in one test file because those files measure the
  * same surfaces the same way, and a copy per file would let one of them drift
  * from the others while all of them stayed green.
+ *
+ * The look's own fixtures are at the end of the file — the real material set,
+ * its relative luminance, and a reader for `scene.ts` — shared by the look's
+ * two halves, `materials.test.ts` and `optics.test.ts`, for the same reason.
  *
  * Nothing in the app imports this module — only `*.test.ts` files do — so it is
  * not reachable from either page's entry point and never reaches the bundle.
@@ -317,4 +323,63 @@ export function expectOnRail(part: THREE.Object3D, label: string, proud: number)
     overhang,
     `${label} stops ${(-overhang).toFixed(4)} mm short of the rail, buried in the body (nearest vertex ${closest.toFixed(4)} mm short)`,
   ).toBeGreaterThanOrEqual(-ATTACHED_SLACK);
+}
+
+/**
+ * `createMaterials()` builds two procedural canvas textures, so it wants a
+ * `document` a node test has not got. `textures.ts` already tolerates a null 2d
+ * context, so a canvas that returns one is enough to reach the real material
+ * values — and those are what the look's pins measure. The textures themselves
+ * are not measured; nothing in either look file turns on what they look like.
+ */
+function withCanvasStub<T>(run: () => T): T {
+  const scope = globalThis as unknown as { document?: unknown };
+  const had = 'document' in scope;
+  const previous = scope.document;
+  scope.document = {
+    createElement: (tag: string): unknown => {
+      if (tag !== 'canvas') throw new Error(`the material builders asked for a <${tag}> element`);
+      return { width: 0, height: 0, getContext: () => null };
+    },
+  };
+  try {
+    return run();
+  } finally {
+    if (had) scope.document = previous;
+    else delete scope.document;
+  }
+}
+
+/** The real materials, built and switched through the shipped path. */
+export function materialsFor(key: ColorKey): PhoneMaterials {
+  const materialSet = withCanvasStub(() => createMaterials());
+  applyColorway(materialSet, key);
+  return materialSet;
+}
+
+/**
+ * WCAG relative luminance of a built colour, 0..1 — the quantity the rail/panel
+ * ratio is taken in.
+ *
+ * The conversion names `THREE.SRGBColorSpace`, and that is load-bearing rather
+ * than decoration: `THREE.Color` stores its channels in the renderer's linear
+ * working space, so reading `r`/`g`/`b` is already linear and a linear *transfer*
+ * applied on top of them would darken every ratio. Asking for the sRGB channels
+ * by name and linearising those is the same arithmetic whichever space the store
+ * happens to hold.
+ */
+export function relativeLuminance(color: THREE.Color): number {
+  const srgb = new THREE.Color();
+  color.getRGB(srgb, THREE.SRGBColorSpace);
+  const channel = (value: number): number =>
+    value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+  return 0.2126 * channel(srgb.r) + 0.7152 * channel(srgb.g) + 0.0722 * channel(srgb.b);
+}
+
+/** One line of `scene.ts`, read because the value has no node-reachable reader:
+ *  `createStage` builds a `WebGLRenderer` and cannot run without a WebGL
+ *  context. This pins the declaration, not the live scene — the pixel gate is
+ *  what exercises the live one. */
+export function sceneSource(): string {
+  return readFileSync(new URL('./scene.ts', import.meta.url), 'utf8');
 }

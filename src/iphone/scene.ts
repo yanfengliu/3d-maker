@@ -209,6 +209,33 @@ function studioEnvironment(): THREE.CanvasTexture {
   // face now measures 44 at its second percentile and 110 at its maximum.
   // `v` is the fraction from the top of the canvas, so the pair sits above the
   // face's own mirror direction, texture v 0.578, at canvas v 0.414 and 0.4245.
+  //
+  // The profiles read the same wall from 74 degrees round, and for them the pair
+  // above is not enough. The `right` view's cover glass measured a uniform 118
+  // luma, p05 102.9 to p95 121.0 — an 18-luma spread over the 60x400 px core
+  // below — which is what one bright surface filling a mirror looks like. The
+  // wall is what does that, and the measurement is a paint-over experiment on
+  // the same pose: with the environment blacked out at `u` 0.9-1.0, `v` 0.46-0.55
+  // the core went from 118.1 to 0.0, so that band is the face's entire return,
+  // and covering `u` 0.95-0.97, `v` 0.44-0.50 likewise. It is the *dim* part of
+  // the map, too — the gradient's own mid-band, about 0.1 linear — so albedo and
+  // roughness on the glass cannot reach it, and specular is nearly spent:
+  // `specularIntensity` 0.3 on the cover glass moved that core only to 93.0,
+  // 21 %. What spreads a dark room over the face instead of one bright wall is
+  // the veneer below, at 0.075 linear across the mirror direction's whole
+  // neighbourhood, plus one source left inside it. Measured on the `right` view,
+  // 60x400 at x 660 y 150: p05 51.4, median 58.4, p95 193.1, a 141.7 spread
+  // where the delivered build had 4.9 with every pixel at 118.1, and the wider
+  // 100x520 glass band reads p05 50.4 / median 81.2 / p95 205.1, a 154.6 spread
+  // against 19.9. Dark glass with a band in it rather than a field — and the
+  // veneer alone, with no band, is the dark floor this face falls back to. The
+  // two cards keep their job on the `front` preset, where this same wall is the
+  // face's own reflection. Its floor is bounded below rather than at black:
+  // `check:finishes --graze` reads the plateau's roll for any run at luma ≤ 3,
+  // and at 0.06 this veneer put one pixel there (darkest luma 3, "the plateau's
+  // roll has a 1 px run"); at 0.075 the darkest is 4-5 and the run is 0.
+  panel(0.9, 0.45, 1.2, 0.36, [0.075, 0.075, 0.085], 1.0);
+  panel(0.96, 0.47, 0.05, 0.02, [1.0, 1.0, 1.0], 2.4);
   panel(0.75, 0.414, 0.005, 0.008, [1.0, 1.0, 1.0], 2.2);
   panel(0.7525, 0.4245, 0.0022, 0.0034, [1.0, 1.0, 1.0], 4.0);
 
@@ -235,6 +262,25 @@ function studioEnvironment(): THREE.CanvasTexture {
   // azimuths that see these walls and azimuths that do not.
   panel(0.02, 0.42, 0.16, 0.4, [0.93, 0.95, 1.0], 0.42);
   panel(0.52, 0.42, 0.16, 0.4, [0.9, 0.93, 1.0], 0.35);
+
+  // The `left` profile's cover glass mirrors the second side wall instead, and it
+  // is the one surface here with no dark neighbour at all: measured on the
+  // delivered build, 80x500 at x 680 y 150 — the glass's own span, from
+  // `window.__s` ray hits rather than from a guess — p05 139.9, median 140.9,
+  // p95 142.9, a 3.0 spread. It reads that wall and nothing else: blacking out
+  // `u` 0.5-0.75, `v` 0.3-0.6 took the same rect from 140.9 to 0.0, while
+  // blacking out the quarter above it or either quarter beside it moved it only
+  // to 110.0, which is what a uniform environment returns. So this panel goes
+  // *after* the wall it dims — an earlier version sat beside the camera wall,
+  // which `panel(0.52, 0.42, ...)` then paints over, and moved the face by 0.0
+  // luma; the ordering is the whole fix, and `materials.test.ts` pins it.
+  // Measured after: median 53.4, p05 53.3, p95 55.1 — dark glass and still a
+  // flat field, a 1.9 spread against the 3.0 it had. Local features do not give
+  // it structure, measured and not assumed: a 0.03- and a 0.1-wide bright band
+  // inside this window each left the spread at 2.1, and a band spanning the
+  // window's whole height took the face to a flat 207. The dark half of the
+  // requirement holds here and the structured half does not.
+  panel(0.6, 0.45, 0.2, 0.36, [0.08, 0.08, 0.09], 1.0);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.mapping = THREE.EquirectangularReflectionMapping;

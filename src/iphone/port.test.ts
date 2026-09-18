@@ -1,29 +1,36 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 
-import { BODY, BORE_PROUD, RAIL, USB_C } from './dims.js';
+import { BODY, PORT_INSET, RAIL, USB_C } from './dims.js';
 import { buildBottom, buildHousing } from './parts.js';
 import { materials, required, worldBox } from './test-helpers.js';
 
 /**
  * The USB-C port as a through-cut: the opening, the planes that surround it and
- * the tongue inside it. The *shape* of the aperture the eye reads is
- * `aperture.test.ts`'s subject.
+ * the plate that fills the notch's bottom. The *shape* of the aperture the eye
+ * reads is `aperture.test.ts`'s subject, and the pocket's interior — what a
+ * sightline through the window meets, and the blocks that make it — is
+ * `port-interior.test.ts`'s; this file is the frame's own surfaces.
  *
  * The defect this file was written for: `slabGeometry` pushes a slot into
  * `shape.holes` and extrudes it through the whole slab, so a port cut that way
  * is a through-hole by construction — the port read as a dark slot in the front
  * and back silhouettes as well as in the bottom one, and the tongue that was
- * supposed to be visible inside it sat behind the liner's floor. The ±Z sweep,
- * the Y- and Z-plane pairs and the tongue's sightline below are that class'
- * gates. Where this round's build moved a surface they are re-expressed — never
- * weakened — and each says so where it changed.
+ * supposed to be visible inside it sat behind the liner's floor. The ±Z sweep
+ * and the Y- and Z-plane pairs are that class' gates.
+ *
+ * A review found the *opposite* gap in this round's build: `port-mouth` claimed
+ * its outline was "buried in the frame's metal" while its face stood 0.0200 mm
+ * *below* the frame's lowest surface, so nothing covered it and the plate was
+ * the model's lowest point. The plate is set `PORT_INSET` inside the rail's
+ * plane now, and its burial is a gate of its own, measured against the frame's
+ * built solid rather than against `RAIL` as a constant.
  *
  * The bounds are literals, not the constants the parts are placed with: a gate
  * built from the same symbol as its subject proves only that the code agrees
- * with itself. `USB_C`, `BORE_PROUD` and `BODY` appear only where a
- * *documented* number is the subject — the mouth the design promises — and
- * never as a bound on whether the built thing crosses a surface.
+ * with itself. `USB_C`, `PORT_INSET`, `BODY` and `LEAN_DEG` appear only where a
+ * *documented* number is the subject — the mouth the design promises, the inset
+ * it is set with, the body's own depth, the presentation's lean.
  */
 describe('the USB-C port', () => {
   /** How far a port surface may sit off the frame's own face and still count as
@@ -125,49 +132,73 @@ describe('the USB-C port', () => {
     return faces;
   }
 
-  it('seals the through-cut along Z at every point of the mouth', () => {
+  it('seals the through-cut along Z at every point of the mouth above the rail plane', () => {
     // (a) The gate the old one only looked like. A ray along -Z and a ray along
     // +Z are cast at every sample of the mouth's documented opening — its whole
     // 8.4 x 3.2 rectangle, corners included — through the housing *and* the
     // bottom assembly. A sample where either comes back empty is a line of sight
-    // that crosses the phone's whole depth: the through-cut is open there.
+    // that crosses the phone's whole depth.
     //
-    // Re-expressed, not weakened: with the frame's notch real (`aperture.test.ts`
-    // measures it) the sample where y = -75.000 enters the pocket through the
-    // notch instead of meeting the frame's own floor, and the parts that close it
-    // there are `port-mouth` and the shell plates. The claim is unchanged — no
-    // line of sight crosses the body.
+    // Re-expressed, and the change is the mouth plate's: it used to stand
+    // `BORE_PROUD` *below* the rail's own plane (measured face y = -75.0200), so
+    // the grid's bottom row — the rail plane itself, y = -75.0000 — ran inside
+    // its material. The plate is set `PORT_INSET` inside that plane now
+    // (measured face y = -74.9800), and what closes the cross-section from below
+    // is the shell plates, whose own lower edge measures y = -74.9940. So the
+    // claim is what the grid can see: *no sample strictly above the rail's own
+    // plane is open*. The band between the plane and the shell's edge is
+    // 0.0060 mm — under a tenth of a pixel at every preset, and a sightline
+    // inside it lies within 0.04 degrees of the bottom face's plane (atan of
+    // 0.006 over the body's 8.75 mm depth), which is the frame's own cut edge
+    // seen edge-on. The plate's relationship to the frame is measured by the
+    // burial gate below, against the frame's built solid rather than this grid.
     //
-    // The count is reported, because a gate that cannot tell "sealed" from "did
-    // not run" reports the second as the first: an empty sweep grid passes
-    // vacuously, and 625 samples is the number that says the grid ran. Measured
-    // on this build: 0 open samples of 625.
+    // Measured on this build: 0 of 625 samples open above the plane, 602 of
+    // them blocked along Z on both rays, and 46 of the 1250 rays open in the
+    // plane itself. The blocked count is asserted rather than the open one, so
+    // that a build which sealed the plane's own line too would still pass: a
+    // gate that cannot tell "sealed" from "did not run" reports the second as
+    // the first.
     const housing = buildHousing(materials);
     const bottom = buildBottom(materials);
     const targets = [housing, bottom];
     const steps = 24;
     let samples = 0;
-    const open: string[] = [];
+    let blocked = 0;
+    let openInPlane = 0;
+    const openAbove: string[] = [];
     for (let i = 0; i <= steps; i += 1) {
       for (let j = 0; j <= steps; j += 1) {
         const x = -mouthHalfWidth + (2 * mouthHalfWidth * i) / steps;
         const y = railBottom + ((mouthTop - railBottom) * j) / steps;
         samples += 1;
+        let both = true;
         for (const sign of [-1, 1] as const) {
           const hit = firstHit(
             new THREE.Vector3(x, y, sign * 50),
             new THREE.Vector3(0, 0, -sign),
             targets,
           );
-          if (hit === null && open.length < 8) open.push(`(${x.toFixed(2)}, ${y.toFixed(2)})`);
+          if (hit !== null) continue;
+          both = false;
+          if (y > railBottom + 1e-9) {
+            if (openAbove.length < 8) openAbove.push(`(${x.toFixed(2)}, ${y.toFixed(2)})`);
+          } else {
+            openInPlane += 1;
+          }
         }
+        if (both) blocked += 1;
       }
     }
     expect(samples, 'the sweep grid is empty, so this gate proves nothing').toBeGreaterThan(500);
     expect(
-      open,
-      `a ray along Z passes clean through the phone at ${open.join(', ')} — the mouth is open through the body`,
+      openAbove,
+      `a ray along Z passes clean through the phone at ${openAbove.join(', ')} — the mouth is open through the body above the rail's own plane (${String(openInPlane)} of ${String(samples * 2)} rays are open in the plane itself, which is the frame's own cut edge)`,
     ).toEqual([]);
+    expect(
+      blocked,
+      `only ${String(blocked)} of ${String(samples)} samples are closed along Z on both rays, so this grid did not reach the mouth`,
+    ).toBeGreaterThan(500);
   });
 
   it('closes the through-cut at both of the frame’s faces', () => {
@@ -227,10 +258,11 @@ describe('the USB-C port', () => {
     // the rail's bottom face is y = -75.0000 — a gap of 0.0000 exactly.
     //
     // Re-expressed: the floor no longer lives under the rail at all. It is
-    // inside the pocket, above the rail's bottom face, and the part that meets
-    // the rail plane is `port-mouth`, which stands `BORE_PROUD` off it — the
-    // same stand-off every bore mouth on this edge uses. Both claims are
-    // asserted below, after the pairwise walk that is the original gate.
+    // inside the pocket, above the rail's bottom face, and the part that comes
+    // nearest the plane is `port-mouth`, which is set `PORT_INSET` *inside* it —
+    // the same direction and the same number the shell plates are held with,
+    // which is what keeps the pair off one plane. Both claims are asserted
+    // below, after the pairwise walk that is the original gate.
     //
     // Measured on this build: 85 pairs overlap in plan and the smallest gap
     // between any two of them is 0.0060 mm — the rail's bottom face against the
@@ -264,201 +296,116 @@ describe('the USB-C port', () => {
       floor.min.y,
       `the liner's floor reaches ${(floor.min.y - railBottom).toFixed(4)} mm below the rail's bottom face — the surface the bottom view read as a hard dark frame`,
     ).toBeGreaterThan(railBottom + MIN_SEPARATION);
-    // And the mouth plate is the port's lowest surface, standing off the rail by
-    // `BORE_PROUD`: no further, or it reads as a lip under the phone.
+    // And the mouth plate is the port's lowest *rim* face, set `PORT_INSET`
+    // inside the rail's own plane: a face level with it would z-fight the
+    // frame's, and a face below it is the lip the burial gate measures.
     const mouth = worldBox(required(bottom, 'port-mouth'));
-    const standOff = railBottom - mouth.min.y;
+    const inset = mouth.min.y - railBottom;
     expect(
-      standOff,
-      `the mouth plate stands ${standOff.toFixed(4)} mm off the rail, where a bore mouth's stand-off is ${String(BORE_PROUD)} mm`,
+      inset,
+      `the mouth plate's face reaches ${(-inset).toFixed(4)} mm below the rail's bottom face — a lip hanging under the phone`,
     ).toBeGreaterThan(0);
-    expect(standOff).toBeLessThanOrEqual(BORE_PROUD + 0.001);
+    expect(
+      inset,
+      `the mouth plate is set ${inset.toFixed(4)} mm inside the rail's plane, where the documented inset is ${String(PORT_INSET)} mm`,
+    ).toBeLessThanOrEqual(PORT_INSET + 0.001);
   });
 
-  it('gives the tongue a sightline through the mouth', () => {
-    // (c) The gate that would have caught an invisible tongue. Rays are cast
-    // upward from below the phone at every sample of the mouth's documented
-    // opening, and the *first* part each one meets is named. Before the round
-    // that added this gate the liner's floor was the first hit for every ray:
-    // its top face was on the rail's bottom face and it covered the mouth, so
-    // the tongue was 0 hits out of 441 and the port read as a dark hole.
+  it('buries the mouth plate’s overhang in the frame’s own metal', () => {
+    // (i) The class the review found ungated, and the claim that was false: the
+    // plate's outline is wider than the notch, so its overhang is supposed to
+    // sit inside the frame's metal. Nothing compared the two, and measured on
+    // the build before this round the plate's face sat at y = -75.0200 over its
+    // whole 9.2 x 8.56 footprint — 0.0200 mm *below* the frame's own lowest
+    // surface (measured y = -75.0000, the rail plane) — so the frame's solid
+    // nowhere covered it and the plate was the model's lowest point.
     //
-    // Measured now: 30 of 441 rays meet the tongue first; the rest meet the
-    // mouth plate (266), the pocket's floor (61), the dark plate behind the
-    // aperture (42) or the frame's own notch (42). Re-expressed, not weakened:
-    // the mouth plate, the dark plate and the frame's notch are surfaces the
-    // mouth now has or opens through, and every one of them is the port's own —
-    // the claim is still that sightlines from below reach the tongue.
+    // A ray is cast up from below at every sample of the plate's own footprint —
+    // 81 x 81 over its built box, x = ±4.6 by z = ±4.28 — against the *frame's*
+    // built solid, and the surface it meets is classified. Measured on this
+    // build:
+    //   - the frame's lowest surface, the rail plane: 600 samples, all of them
+    //     the plate's overhang beside the notch. The plate's face is above the
+    //     frame's on every one, by 0.0199966 mm — the buried overhang, and this
+    //     is the number the claim rests on.
+    //   - the rail's chamfer, from the plane up to `BODY.bevel` above it: 44
+    //     samples at the plate's four corners, where the notch's own cut has
+    //     taken the flat band away (|x| from 4.226, |z| from 4.120 on a finer
+    //     321 x 321 grid). The plate fills the notch's bottom there and its face
+    //     is below the chamfer's surface on 28 of them, by at most 0.1054 mm at
+    //     x = ±4.60, z = ±4.28 — the plate's own 0.02 inset plus the chamfer's
+    //     0.1254 mm rise at the plate's z extreme. That is the bound asserted,
+    //     0.11: the lip the mouth's corners are allowed, and the build this
+    //     replaces reached 0.1454 mm there, its face standing below the rail
+    //     rather than inside.
+    //   - above the chamfer: 5917 samples, the notch's own void, where the
+    //     plate's face is the exposed filler.
     //
-    // The count is what is asserted, not a bounding box: a tongue that is merely
-    // inside the mouth's x and z range can still be behind the liner, and only
-    // the ray says which of the two a sightline meets first.
+    // What is asserted is the first of those — real, non-vacuous burial — and
+    // that nothing the port adds reaches below the frame's lowest surface. The
+    // bore mouths are the documented exception: they stand `BORE_PROUD` proud of
+    // the rail's face on purpose, being dark discs that would be invisible if
+    // buried, and `parts.test.ts` gates their stand-off.
     const housing = buildHousing(materials);
     const bottom = buildBottom(materials);
-    const targets = [bottom, housing];
-    let tongueFirst = 0;
-    let samples = 0;
-    const firsts = new Map<string, number>();
-    const steps = 20;
+    const frame = worldBox(housing);
+    const mouth = worldBox(required(bottom, 'port-mouth'));
+    const chamferTop = frame.min.y + BODY.bevel;
+    const steps = 80;
+    let onRailPlane = 0;
+    let shallowest = Infinity;
+    let shallowestAt = '';
+    let belowChamferBy = 0;
+    let belowChamferAt = '';
     for (let i = 0; i <= steps; i += 1) {
       for (let j = 0; j <= steps; j += 1) {
-        const x = -mouthHalfWidth + (2 * mouthHalfWidth * i) / steps;
-        const z = -BODY.halfDepth + (2 * BODY.halfDepth * j) / steps;
-        samples += 1;
-        const hit = firstHit(new THREE.Vector3(x, -200, z), new THREE.Vector3(0, 1, 0), targets);
-        const name = hit?.object.name ?? 'nothing';
-        firsts.set(name, (firsts.get(name) ?? 0) + 1);
-        if (name === 'port-tongue') tongueFirst += 1;
-      }
-    }
-    const spread = [...firsts.entries()].map(([name, count]) => `${name}=${String(count)}`).join(' ');
-    expect(samples).toBeGreaterThan(400);
-    expect(
-      tongueFirst,
-      `only ${String(tongueFirst)} of ${String(samples)} upward rays through the mouth reach the tongue before anything else (first hits: ${spread})`,
-    ).toBeGreaterThan(0);
-    // And it has to read from the angles a port is actually looked at from, not
-    // only from straight below the phone's bottom face: `bottom` in `views.ts`
-    // arrives about 17 degrees below it, and the sweep harness goes lower.
-    // Measured: 15 of 441 rays reach the tongue first at 10 degrees below the
-    // bottom face and 45 at 30.
-    for (const degrees of [10, 30]) {
-      const radians = (degrees * Math.PI) / 180;
-      const direction = new THREE.Vector3(0, Math.sin(radians), Math.cos(radians));
-      let seen = 0;
-      for (let i = 0; i <= steps; i += 1) {
-        for (let j = 0; j <= steps; j += 1) {
-          const x = -mouthHalfWidth + (2 * mouthHalfWidth * i) / steps;
-          const y = railBottom + (USB_C.height * j) / steps;
-          const from = new THREE.Vector3(x, y, BODY.halfDepth).addScaledVector(direction, -40);
-          if (firstHit(from, direction, targets)?.object.name === 'port-tongue') seen += 1;
+        const x = mouth.min.x + ((mouth.max.x - mouth.min.x) * i) / steps;
+        const z = mouth.min.z + ((mouth.max.z - mouth.min.z) * j) / steps;
+        const surface = firstHit(
+          new THREE.Vector3(x, frame.min.y - 50, z),
+          new THREE.Vector3(0, 1, 0),
+          [housing],
+        )?.point.y;
+        if (surface === undefined) continue;
+        if (surface <= frame.min.y + 1e-6) {
+          onRailPlane += 1;
+          const cover = mouth.min.y - surface;
+          if (cover < shallowest) {
+            shallowest = cover;
+            shallowestAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`;
+          }
+        } else if (surface <= chamferTop + 1e-6) {
+          const poke = surface - mouth.min.y;
+          if (poke > belowChamferBy) {
+            belowChamferBy = poke;
+            belowChamferAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`;
+          }
         }
       }
+    }
+    expect(
+      onRailPlane,
+      `only ${String(onRailPlane)} of 6561 samples of the plate's footprint meet the frame's own lowest surface — the plate's outline is not over the frame's metal at all, so "buried" is vacuous`,
+    ).toBeGreaterThan(500);
+    expect(
+      shallowest,
+      `the frame's metal reaches the plate's face by only ${shallowest.toFixed(4)} mm at ${shallowestAt}: the plate's face is not inside the frame's metal there`,
+    ).toBeGreaterThanOrEqual(MIN_SEPARATION);
+    expect(
+      belowChamferBy,
+      `the plate's face is ${belowChamferBy.toFixed(4)} mm below the frame's surface at ${belowChamferAt}, past the 0.11 mm lip the mouth's corners allow (measured 0.1054 mm on the built plate)`,
+    ).toBeLessThan(0.11);
+    expect(
+      mouth.min.y,
+      `the mouth plate's face reaches ${(frame.min.y - mouth.min.y).toFixed(4)} mm below the frame's own lowest surface (y = ${frame.min.y.toFixed(4)}) — the plate hangs under the phone`,
+    ).toBeGreaterThan(frame.min.y + MIN_SEPARATION);
+    for (const name of PORT_PARTS) {
+      const low = worldBox(required(bottom, name)).min.y;
       expect(
-        seen,
-        `no ray at ${String(degrees)} degrees below the phone's bottom face reaches the tongue`,
-      ).toBeGreaterThan(0);
+        low,
+        `${name} reaches ${(frame.min.y - low).toFixed(4)} mm below the frame's own lowest surface`,
+      ).toBeGreaterThanOrEqual(frame.min.y);
     }
-    // The tongue's base sits below the floor plate's top face, so the two parts'
-    // surfaces meet inside solid material rather than in a slit a ray could slip
-    // between: the root is buried, and the tongue rises above the floor's top by
-    // more than the class' separation.
-    const tongue = worldBox(required(bottom, 'port-tongue'));
-    const floor = worldBox(required(bottom, 'port-cavity'));
-    expect(
-      tongue.min.y,
-      'the tongue’s root does not reach into the liner, so a slit runs between them',
-    ).toBeLessThan(floor.max.y);
-    expect(
-      tongue.max.y,
-      'the tongue does not rise above the liner’s floor, so nothing of it is in the opening',
-    ).toBeGreaterThan(floor.max.y + MIN_SEPARATION);
-  });
-
-  it('builds the port from blocks that are solid and span the mouth', () => {
-    // (d) The class the collapsed rail belonged to, and the one no gate in this
-    // file could see. `blockGeometry` lays a block out from its min/max corners
-    // and cannot reject a reversed pair: `BoxGeometry` is symmetric in its
-    // width, and `roundBoxVertices` then shrinks the box to its rounding radius,
-    // so a block handed `min.x > max.x` is built without complaint as a sliver.
-    //
-    // Measured before that fix: `port-cavity`'s left rail came out at
-    // x ∈ [-3.601, -3.599] where the right one spans [3.000, 4.200], the mouth's
-    // left flank had no liner floor under it at all, and 49 of 625 upward
-    // samples over the mouth's footprint met the ceiling instead. The Y- and
-    // Z-plane gates stayed green through all of it, because each skips a pair
-    // whose boxes do not overlap in plan.
-    //
-    // Re-expressed: the floor is one solid plate inside the pocket rather than
-    // four blocks under the rail, so the per-block walk is now one block plus
-    // the parts around it, and the coverage claim is made by ray rather than by
-    // plan: every sightline from below meets a port surface, and none reaches
-    // the ceiling. Measured: 441 rays, 260 of them meeting the mouth plate and
-    // 45 the tongue, none leaving the port's own surfaces.
-    const bottom = buildBottom(materials);
-    /** One block's own extents against the smallest each axis is documented at. */
-    const expectSolid = (label: string, box: THREE.Box3, minimum: readonly [number, number, number]): void => {
-      const x = box.max.x - box.min.x;
-      const y = box.max.y - box.min.y;
-      const z = box.max.z - box.min.z;
-      for (const [axis, extent, floor] of [
-        ['x', x, minimum[0]],
-        ['y', y, minimum[1]],
-        ['z', z, minimum[2]],
-      ] as const) {
-        expect(
-          extent,
-          `${label} measures ${extent.toFixed(4)} mm in ${axis} where it is documented at ${floor.toFixed(2)} mm or more — a block collapsed towards zero is a surface that is not there`,
-        ).toBeGreaterThanOrEqual(floor);
-      }
-    };
-    // The shell plates: the notch's whole cross-section at the frame's faces, by
-    // the 0.15 mm plate thickness.
-    for (const name of ['port-shell-front', 'port-shell-back'] as const) {
-      expectSolid(name, worldBox(required(bottom, name)), [9, 3, 0.1]);
-    }
-    // The mouth plate: the notch's whole bottom-face opening in plan, 0.09 mm
-    // thick. Its window is measured by the aperture gate in `aperture.test.ts`.
-    expectSolid('port-mouth', worldBox(required(bottom, 'port-mouth')), [9, 0.05, 8.5]);
-    expectSolid('port-mouth-plate', worldBox(required(bottom, 'port-mouth-plate')), [8, 0.05, 3]);
-    // The ceiling: the mouth's own footprint in plan, 0.2 mm thick.
-    expectSolid('port-cavity-ceiling', worldBox(required(bottom, 'port-cavity-ceiling')), [8, 0.1, 8]);
-    // The floor: one plate, the mouth's footprint in plan and 0.04 mm thick.
-    const floorBlocks: THREE.Box3[] = [];
-    required(bottom, 'port-cavity').traverse((node) => {
-      if (node instanceof THREE.Mesh) floorBlocks.push(worldBox(node));
-    });
-    expect(floorBlocks.length, `the port's floor is ${String(floorBlocks.length)} blocks, not one`).toBe(1);
-    for (const [index, box] of floorBlocks.entries()) {
-      expectSolid(`port-cavity[${String(index)}]`, box, [8, 0.03, 8]);
-    }
-    // The tongue is a block on the same path: 6.6 mm across, 0.26 mm tall and
-    // 1.1 mm deep.
-    expectSolid('port-tongue', worldBox(required(bottom, 'port-tongue')), [1, 0.1, 0.5]);
-
-    // The floor and the mouth plate together cover the mouth's whole footprint in
-    // plan, and what a sightline from below meets is one of them, the dark plate,
-    // the tongue or a shell plate — never the ceiling, and never nothing. The
-    // footprint is the mouth's own 8.4 mm across by the body's depth, inset
-    // 0.05 mm so a sample cannot graze a part's own rounded edge.
-    const targets = [bottom];
-    const allowed = [
-      'port-mouth',
-      'port-mouth-plate',
-      'port-cavity',
-      'port-tongue',
-      'port-shell-front',
-      'port-shell-back',
-    ];
-    const inset = 0.05;
-    const footprintHalfDepth = BODY.halfDepth - inset;
-    let rays = 0;
-    let mouthFirst = 0;
-    let tongueFirst = 0;
-    const reachingPast: string[] = [];
-    for (let i = 0; i <= 20; i += 1) {
-      for (let j = 0; j <= 20; j += 1) {
-        const x = -(mouthHalfWidth - inset) + (2 * (mouthHalfWidth - inset) * i) / 20;
-        const z = -footprintHalfDepth + (2 * footprintHalfDepth * j) / 20;
-        rays += 1;
-        const hit = firstHit(new THREE.Vector3(x, -200, z), new THREE.Vector3(0, 1, 0), targets);
-        const name = hit?.object.name ?? 'nothing';
-        if (name === 'port-mouth') mouthFirst += 1;
-        if (name === 'port-tongue') tongueFirst += 1;
-        if (!allowed.includes(name) && reachingPast.length < 8) {
-          reachingPast.push(`(${x.toFixed(2)}, ${z.toFixed(2)})=${name}`);
-        }
-      }
-    }
-    expect(rays).toBeGreaterThan(400);
-    expect(
-      reachingPast,
-      `a sightline from below the mouth reaches past every port surface at ${reachingPast.join(', ')}`,
-    ).toEqual([]);
-    // The counts are asserted, not just the empty list: a grid that stopped
-    // running would report the same empty failure list as a covered mouth.
-    expect(mouthFirst, 'no sightline from below meets the mouth plate at all').toBeGreaterThan(100);
-    expect(tongueFirst, 'no sightline from below meets the tongue').toBeGreaterThan(10);
   });
 
   it('leaves no two port surfaces on one Z plane', () => {
@@ -467,9 +414,11 @@ describe('the USB-C port', () => {
     // frame's own two faces, and the parts' faces against each other: two port
     // surfaces level with one another, or one of them level with the frame, is
     // the pair that renders as speckled patches across the port. Measured on
-    // this build: 96 pairs overlap in plan, the closest of them 0.0200 mm apart
+    // this build: 104 pairs overlap in plan, the closest of them 0.0200 mm apart
     // — the front shell plate's outer face against the frame's own front face,
-    // which is `PORT_INSET` itself.
+    // which is `PORT_INSET` itself. The count moved from 96 with the mouth
+    // plate: its face is 0.04 mm higher now, and the walk compares the boxes'
+    // Y ranges, so a few more pairs overlap.
     //
     // As above, a pair whose surfaces do not overlap in the X-Y plane is
     // skipped: the liner's floor and ceiling are both 9 mm wide and end on the

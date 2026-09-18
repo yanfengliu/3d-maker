@@ -45,6 +45,17 @@ describe('the USB-C aperture', () => {
     // at its two *top* corners, and no corners at the bottom, where the notch
     // opens onto the rail's edge. The full rounded rectangle — bottom corners
     // included — is the mouth plate's window, and the gate below measures that.
+    //
+    // That 1.1 mm is the corner *at the rail plane*, and the rail plane is the
+    // narrowest cross-section, which is the right bound for a ray that runs the
+    // whole depth. Towards the frame's faces the same corner measures 1.46 mm,
+    // because `housingGeometry` pre-compensates for `BODY.bevel`: it draws the
+    // notch at `USB_C.radius + BODY.bevel` (1.46 mm), and the extruded bevel
+    // grows the rail-plane band back in by exactly that bevel. Measured on the
+    // built frame, the corner radius is 1.0999 at |z| ≤ 4.042 — within 0.001 mm
+    // of a 1.1 arc — and 1.4600 at |z| = 4.375, the frame's own face; the two
+    // are 0.36 mm apart, which is `BODY.bevel`.
+    //
     // Measured on this build: 823 of 823 clear samples open, 148 of 148 outside
     // samples blocked. `CLEARANCE` is 0.15 mm, so a mouth 0.3 mm narrower or
     // wider than the documented one fails one side or the other.

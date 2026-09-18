@@ -152,12 +152,13 @@ export const PLATEAU_MIC_CAVITY_RADIUS = 0.75;
  *  Both places that build it carry these numbers. `port.ts`'s `housingGeometry`
  *  draws the notch into the frame's own outline, 8.4 mm wide and 3.2 mm up from
  *  the rail with 1.1 mm corners *at the rail plane*; `PORT_POCKET.mouth` is the
- *  plate whose rounded window is the 8.4 x 3.2 aperture in that plane. Both
+ *  plate whose rounded window is the 8.4 x 3.2 aperture. Both
  *  pre-compensate for `BODY.bevel`: `slabGeometry` grows the slab's middle layer
  *  0.36 mm outside the outline it is handed, and that middle layer is the rail
- *  plane, so a notch drawn with the documented numbers alone comes out 7.68 mm
- *  wide where the eye reads it. `height` is not the depth of the recess behind
- *  the mouth; the pocket's own planes are in `PORT_POCKET`. */
+ *  plane's band, so a notch drawn with the documented numbers alone comes out
+ *  7.68 mm wide where the eye reads it. `height` is not the depth of the recess
+ *  behind the mouth; the pocket's own planes are in `PORT_POCKET` — and
+ *  `PORT_POCKET.mouth`'s face is `PORT_INSET` inside this plane, not on it. */
 export const USB_C = { width: 8.4, height: 3.2, radius: 1.1, centreX: 0 } as const;
 
 /** How far a port part is set inside the frame's own face, so the pair can
@@ -165,12 +166,17 @@ export const USB_C = { width: 8.4, height: 3.2, radius: 1.1, centreX: 0 } as con
  *  it and reads as speckled patches across the port (the same class that turned
  *  the button pills black). 0.02 mm is a fiftieth of the frame's own chamfer —
  *  invisible as a step, and two orders of magnitude above the depth buffer's
- *  resolution at this range. */
+ *  resolution at this range. The shell plates take it along Z, against the
+ *  frame's front and back faces; `PORT_POCKET.mouth` takes it along Y, against
+ *  the rail's bottom face. */
 export const PORT_INSET = 0.02;
 
 /** How far a bore mouth's face stands off the rail: enough that the disc never
- *  z-fights the wall, far too little to read as a lip at any view. `PORT_POCKET`
- *  below places the port's mouth plate with the same stand-off. */
+ *  z-fights the wall, far too little to read as a lip at any view. A bore mouth
+ *  needs its 0.02 *outward*: the disc lies wholly over the frame's own face, so
+ *  a face level with that one would fight it and a face set inside would not be
+ *  there at all. `PORT_POCKET.mouth` takes the same 0.02 the other way, for the
+ *  opposite reason: see the note there. */
 export const BORE_PROUD = 0.02;
 
 /**
@@ -187,15 +193,16 @@ export const BORE_PROUD = 0.02;
  * `shell` therefore closes both ends — one plate against each of the frame's
  * faces, spanning the notch's cross-section.
  *
- * `mouth` is what the eye reads as the aperture. It is a plate lying in the
- * rail's bottom-face plane, standing `BORE_PROUD` off it — the same flush face
- * with a hair of stand-off every bore mouth on this edge uses, so it can never
- * z-fight the rail and its 0.09 mm edge is invisible from the front or the
- * back. Its own outline is wider than the notch, so its material is buried in
- * the frame's metal; the only thing it leaves open is its window, an 8.4 x 3.2
- * mm rounded rectangle with `USB_C.radius` corners. Measured on the built
- * plate, the window's outline matches the documented rounded rectangle to
- * within 0.02 mm. Without it the notch's own floor would be the aperture, and
+ * `mouth` is what the eye reads as the aperture: a plate filling the notch's
+ * bottom opening, with an 8.4 x 3.2 mm rounded window whose corners are
+ * `USB_C.radius`, matching the documented rounded rectangle to within 0.02 mm on
+ * the built plate. Its face is set `PORT_INSET` (0.02) *inside* the rail's
+ * bottom-face plane — measured y = -74.9800 against the frame's own -75.0000 —
+ * because its outline is wider than the notch and so lies over the frame's
+ * metal: level with the frame's face it would z-fight it, and proud of it (where
+ * this build started, at -75.0200) it hangs below the frame's surface instead of
+ * being buried in it. `port.ts` carries the measured burial and `port.test.ts`
+ * gates it. Without a filler the notch's own floor would be the aperture, and
  * that reads as an 8.4 x 8.75 mm dark rectangle with an angular outline.
  *
  * Everything behind that window is `bore`: `plate` is the dark face 0.03 mm
@@ -238,19 +245,20 @@ export const PORT_POCKET = {
      *  another, never a shared plane. */
     base: 0.01,
   },
-  /** The mouth plate: the flush dark-rimmed aperture the bottom view reads. */
+  /** The mouth plate: the metal rim and window the bottom view reads. */
   mouth: {
     /** Its own outline in plan, from the body's centre line: 0.4 mm wider than
-     *  the notch on each side, and reaching to within 0.095 mm of the frame's
-     *  faces. Buried in the frame's metal, so only the window shows. Its corners
-     *  are near square because nothing but the window is visible. */
+     *  the notch at the rail plane on each side, which covers the opening where
+     *  the rail's chamfer widens the notch towards the frame's faces. Buried in
+     *  the frame's metal, so only the window shows; its corners are near square
+     *  because nothing but the window is visible. */
     halfWidth: 4.6,
     halfDepth: 4.28,
     radius: 0.4,
     thickness: 0.09,
-    /** How far its bottom face stands below the rail's: `BORE_PROUD`, the
-     *  stand-off every bore mouth on this edge is placed with. */
-    standOff: BORE_PROUD,
+    /** How far its bottom face is set *inside* the rail's: `PORT_INSET`, the
+     *  opposite sign to `BORE_PROUD` on purpose — see the note above. */
+    inset: PORT_INSET,
   },
   /** The dark plate filling that window, and the window in it that the tongue
    *  is seen through. */
