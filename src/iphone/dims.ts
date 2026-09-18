@@ -144,59 +144,21 @@ export const FLASH_CAVITY_RADIUS = 2.35;
 export const LIDAR_CAVITY_RADIUS = 3.85;
 export const PLATEAU_MIC_CAVITY_RADIUS = 0.75;
 
-/** USB-C opening on the bottom edge: the port's *mouth*, as the bottom view
- *  reads it — the width and height of the hole in the rail, with rounded
- *  corners. It is not the depth of the recess behind it; that is
- *  `PORT_POCKET.depth` below.
+/** USB-C opening on the bottom edge. `width` and `height` are the mouth as the
+ *  bottom view reads it: 8.4 mm across the body's width and 3.2 mm through the
+ *  body's depth, with `radius` corners — the rounded-rectangle aperture in the
+ *  rail's bottom face.
  *
- *  `radius` is the mouth's *intended* corner radius: the rounded rectangle the
- *  design promises, and the outline the port's shell plates are drawn with
- *  inside the frame. The frame's cut does not build it — `buildHousing` cuts
- *  the slot with `PORT_CUT_RADIUS` (0.24), because a 3.2 mm-tall hole carrying
- *  1.1 mm corners cannot keep its arcs above the rail (derivation in
- *  `PORT_CUT_INSET` below). So the lip reads a rectangle with 0.24 corners
- *  while the 1.1 corners sit behind it on the shell plates, and the two numbers
- *  stay named side by side rather than one being quietly rewritten. */
+ *  Both places that build it carry these numbers. `port.ts`'s `housingGeometry`
+ *  draws the notch into the frame's own outline, 8.4 mm wide and 3.2 mm up from
+ *  the rail with 1.1 mm corners *at the rail plane*; `PORT_POCKET.mouth` is the
+ *  plate whose rounded window is the 8.4 x 3.2 aperture in that plane. Both
+ *  pre-compensate for `BODY.bevel`: `slabGeometry` grows the slab's middle layer
+ *  0.36 mm outside the outline it is handed, and that middle layer is the rail
+ *  plane, so a notch drawn with the documented numbers alone comes out 7.68 mm
+ *  wide where the eye reads it. `height` is not the depth of the recess behind
+ *  the mouth; the pocket's own planes are in `PORT_POCKET`. */
 export const USB_C = { width: 8.4, height: 3.2, radius: 1.1, centreX: 0 } as const;
-
-/**
- * How far above the rail's own bottom face the housing's slot cut is posed, and
- * how tight its corners have to be.
- *
- * The cut is a hole in the shape `slabGeometry` extrudes, and that shape is
- * pre-shrunk by the frame's chamfer, so the shape's own bottom line is
- * `BODY.bevel` above the rail and only grows out to the rail over the bevel's
- * band. Three things follow, and all three were measured rather than reasoned:
- *
- *  - A hole posed *on* the rail cuts a shallow V: it reaches the rail in the
- *    middle of the slab and stops `BODY.bevel` short of it at the frame's two
- *    faces, so the mouth's ends are closed by a wedge of the rail's face. That
- *    is the shape round 6 shipped, which measured 6.7 mm wide and 1 mm deep.
- *  - A hole posed *below* the rail cuts the mouth flat-bottomed, but its own
- *    outline then crosses the shape's bottom edge, and the curved corner arcs
- *    the triangulator keeps as its end caps put vertices up to `PORT_CUT_INSET`
- *    below the rail — measured: a 0.5 mm notch's worth, and the frame's
- *    silhouette gate reads those vertices as the frame standing 0.5 mm past the
- *    rail it is supposed to be sitting on.
- *  - So the hole is posed just *above* the rail and its corners are held to
- *    `cutRadius`, which is what the geometry leaves: with the mouth's height `h`
- *    and this inset `i`, a corner of radius `r` reaches
- *    `-r + sqrt(r² - (h/2 - i)²)` below the hole's own centre, and that has to
- *    stay above the rail. A corner radius of `USB_C.radius` (1.1 mm) cannot:
- *    it needs `h/2 - i` above the centre, so a 3.2 mm mouth would have to be
- *    4.2 mm deep to hold it.
- *
- * What the cut builds is therefore a flat-bottomed notch `USB_C.width` across
- * and `USB_C.height` up from the rail (the hole crosses the shape's own bottom
- * edge, and the chamfer pulls the notch's floor out to the rail), with corners
- * held to `PORT_CUT_RADIUS` rather than to the `USB_C.radius` the mouth is
- * documented with. The 1.1 corners are the shell plates', not this cut's.
- */
-export const PORT_CUT_INSET = 0.005;
-/** The corner radius the housing's slot is actually cut with: a `USB_C.height`
- *  hole cannot carry the mouth's documented `USB_C.radius` corners and keep
- *  its arcs above the rail (see above). */
-export const PORT_CUT_RADIUS = 0.24;
 
 /** How far a port part is set inside the frame's own face, so the pair can
  *  never be coplanar: an aluminum face exactly level with the frame's z-fights
@@ -206,120 +168,160 @@ export const PORT_CUT_RADIUS = 0.24;
  *  resolution at this range. */
 export const PORT_INSET = 0.02;
 
+/** How far a bore mouth's face stands off the rail: enough that the disc never
+ *  z-fights the wall, far too little to read as a lip at any view. `PORT_POCKET`
+ *  below places the port's mouth plate with the same stand-off. */
+export const BORE_PROUD = 0.02;
+
 /**
- * The USB-C pocket: the recess behind the mouth, and the one part of the port
- * the frame's own through-cut cannot describe.
+ * The USB-C pocket: the recess behind the mouth, and the parts that give the
+ * bottom view its read.
  *
- * `slabGeometry` cuts the slot through the whole slab, so the housing's cut is
- * necessarily a through-hole: without something filling its cross-section, the
- * port reads as a dark slot in the *front* and *back* silhouettes as well as in
- * the bottom one. The frame's cut is kept anyway, because it is the only thing
- * that puts a real mouth through the rail's chamfer.
+ * Three measured facts shape it.
  *
- * The cut is a funnel, not a tube: its walls are the chamfer's, so its opening
- * is narrowest at the frame's two faces and widens towards the slab's middle.
- * Every part here spans the mouth's whole 8.4 x 3.2 mm opening, from the rail to
- * the mouth's own top line, because that is what it takes to close the cut: the
- * round before this one left a 0.65 mm band of the opening covered by nothing at
- * all, and a ray along -Z crossed the phone's whole 8.75 mm depth through it.
+ * The frame's cut is a through-cut along Z. An outline extruded by
+ * `slabGeometry` is extruded through the whole 8.75 mm depth, so the notch
+ * `port.ts`'s `housingGeometry` draws into the frame's outline removes material
+ * from the rail's bottom face across that whole depth: what it leaves there is
+ * 8.4 mm wide and 8.75 mm deep, not the 3.2 mm the aperture is documented with.
+ * `shell` therefore closes both ends — one plate against each of the frame's
+ * faces, spanning the notch's cross-section.
  *
- *   - `port-shell` is the cut's filling — one `shellThickness` plate against
- *     each face of the frame, spanning the mouth's whole opening in Y, so every
- *     sightline along Z through that opening meets aluminum. A single block
- *     deep enough to fill both ends would have to be as wide as the funnel at
- *     its middle, which is wider than the funnel's own faces: it stands proud of
- *     the rail's chamfer and the port reads as a dark lump stuck to the bottom
- *     of the phone, which is one of the two failures this part is written
- *     against.
- *   - the liner is the pocket's floor and ceiling — two horizontal plates, both
- *     reaching from the mouth's opening out to the frame's own two faces (less
- *     `PORT_INSET`) so the through-cut's ends are closed by liner as well as by
- *     the shell, and the pocket is left open on one side only: -Y. They are
- *     built as blocks rather than slabs, because `slabGeometry` extrudes along Z
- *     and a "flat plate" written that way stands on edge at the body's middle.
- *   - the tongue sits in the floor's opening, and it is the floor's own
- *     aperture: the floor's top is a hair below the tongue's base and the
- *     tongue's footprint is wider than the aperture all round, so the two
- *     surfaces seal against each other and the only thing a sightline from
- *     below meets inside the aperture is the tongue. An earlier version put the
- *     liner's floor across the whole mouth with its top face level with the
- *     rail's bottom face: the floor was the first thing every upward ray met,
- *     and the tongue was not visible from anywhere — the second failure.
+ * `mouth` is what the eye reads as the aperture. It is a plate lying in the
+ * rail's bottom-face plane, standing `BORE_PROUD` off it — the same flush face
+ * with a hair of stand-off every bore mouth on this edge uses, so it can never
+ * z-fight the rail and its 0.09 mm edge is invisible from the front or the
+ * back. Its own outline is wider than the notch, so its material is buried in
+ * the frame's metal; the only thing it leaves open is its window, an 8.4 x 3.2
+ * mm rounded rectangle with `USB_C.radius` corners. Measured on the built
+ * plate, the window's outline matches the documented rounded rectangle to
+ * within 0.02 mm. Without it the notch's own floor would be the aperture, and
+ * that reads as an 8.4 x 8.75 mm dark rectangle with an angular outline.
  *
- * Every dimension is written from the rail and the frame's half-depth rather
- * than as an absolute Z: this is the only part of the phone that crosses from
- * one face to the other.
+ * Everything behind that window is `bore`: `plate` is the dark face 0.03 mm
+ * inside it, `liner` is the pocket's floor 0.07 mm behind that, and
+ * `liner.ceilingBase` puts the ceiling above the mouth's top line. The window
+ * therefore frames the recess's own walls rather than a lit aluminum surface of
+ * the frame, which is what the previous build showed as a bright trapezoid
+ * floating in the mouth.
+ *
+ * Every dimension is an offset from the rail's bottom face (y = `-RAIL.y`)
+ * except the two half-extents, which are measured from the body's centre line:
+ * this is the only part of the phone that crosses from one face to the other.
  */
 export const PORT_POCKET = {
-  /** How far the pocket's ceiling sits above the rail. */
-  depth: 2.5,
-  /** The shell plates' thickness, and how far their lower edge is held above the
-   *  rail's bottom face.
-   *
-   *  The plates have to stop clear of that face: an edge landing on it, or
-   *  within 0.005 mm of it, is the coplanar pair the port's Y-plane gate
-   *  measures — and this pair used to be the one the gate could not see, because
-   *  it only compared Z. `plateBase` is well clear of the floor's own
-   *  `liner.drop`, so the lower band of the opening is the tongue's alone. */
-  shellThickness: 0.15,
-  plateBase: 0.012,
-  /** The pocket's floor and ceiling: the tunnel's own two walls.
-   *
-   *  Both plates carry the mouth's rounded rectangle in plan — the same outline
-   *  the cut has — and both reach to the frame's own faces, less
-   *  `PORT_INSET`. The floor's top sits `drop` below the rail's bottom face,
-   *  and that offset is load-bearing rather than cosmetic: a floor whose top
-   *  face lands exactly in the rail's own plane is a coplanar pair with it, and
-   *  the two fight for the depth samples the mouth is read through. The z-plane
-   *  gate saw the port's other coplanar pairs and could not see this one,
-   *  because it only ever compared Z. */
+  /** The two plates that close the frame's through-cut. */
+  shell: {
+    /** Each plate's thickness, and how far its outer face is held inside the
+     *  frame's own face so the pair can never be coplanar: `PORT_INSET`, the
+     *  same 0.02 mm every port face is set inside the frame's with. The notch is
+     *  a through-cut, so this plate is what the back and front views see where
+     *  the mouth's cross-section opens on the frame's faces; measured on the
+     *  built frame, the difference between the plate's face and the frame's own
+     *  face beside it is 1.1 luma on the back view and 2.1 on the front, and
+     *  changing this inset between 0.008 and 0.02 moves it by less than 0.2. */
+    thickness: 0.15,
+    inset: PORT_INSET,
+    /** The plates' own outline. The notch's opening at the frame's faces is
+     *  wider than at the rail plane — measured 9.12 mm across and 3.2 mm tall
+     *  there against 8.4 x 3.2 at the middle, because the chamfer's bevel grows
+     *  the material into the notch over its last 0.36 mm — so the plates have to
+     *  be wider than the mouth to cover it. Their corners are near square and
+     *  buried in the frame's metal, which is what covers the notch's own rounded
+     *  corners at that depth. */
+    width: 9.6,
+    height: 3.8,
+    radius: 0.01,
+    /** The plates' lower edge above the rail's bottom face: clear of that face
+     *  by more than the 0.005 mm the Y-plane gate calls coplanar, and 0.06 mm
+     *  clear of the mouth plate's top so the two are one plate's edge inside
+     *  another, never a shared plane. */
+    base: 0.01,
+  },
+  /** The mouth plate: the flush dark-rimmed aperture the bottom view reads. */
+  mouth: {
+    /** Its own outline in plan, from the body's centre line: 0.4 mm wider than
+     *  the notch on each side, and reaching to within 0.095 mm of the frame's
+     *  faces. Buried in the frame's metal, so only the window shows. Its corners
+     *  are near square because nothing but the window is visible. */
+    halfWidth: 4.6,
+    halfDepth: 4.28,
+    radius: 0.4,
+    thickness: 0.09,
+    /** How far its bottom face stands below the rail's: `BORE_PROUD`, the
+     *  stand-off every bore mouth on this edge is placed with. */
+    standOff: BORE_PROUD,
+  },
+  /** The dark plate filling that window, and the window in it that the tongue
+   *  is seen through. */
+  plate: {
+    /** Larger than `mouth`'s window all round by 0.2 mm, so its own outline is
+     *  buried in the mouth plate's material and cannot leave a coincident pair
+     *  of walls or a gap at the aperture's rim. */
+    width: 8.8,
+    height: 3.6,
+    radius: 1.25,
+    /** The window the pocket's floor and the tongue are read through: 0.3 mm
+     *  inside the aperture on every side, so the aperture's own outline stays
+     *  the mouth plate's window and this one reads only as depth. */
+    window: { width: 7.8, depth: 2.6, radius: 0.9 },
+    thickness: 0.1,
+    /** Its bottom face above the rail's. It sits inside `mouth`'s thickness, so
+     *  the metal rim of the window is what the eye meets first and this face is
+     *  the dark one behind it. */
+    base: 0.03,
+  },
+  /** The pocket's floor and ceiling. Both are `bore`, and both are inside the
+   *  pocket: their lowest faces sit above the rail's bottom face, which is what
+   *  stops them reading as a dark frame hanging under the phone — the failure
+   *  this round fixes. */
   liner: {
-    /** The plates' thickness: thin enough that what they add below (or above)
-     *  the rail is a fraction of a pixel, thick enough to be a solid against a
-     *  ray rather than a surface. */
-    thickness: 0.02,
-    /** The floor's top face, below the rail's bottom face. */
-    drop: 0.01,
-    /** How far the plates' outer faces are held inside the frame's own, so no
-     *  plate's end can be coplanar with a frame face. */
-    inset: PORT_INSET + 0.055,
+    /** The floor plate's own extent in plan, wider than the notch at its
+     *  narrowest (8.4 x 8.6 mm at the rail plane) so no edge of it can show
+     *  inside the mouth. */
+    halfWidth: 4.5,
+    halfDepth: 4.3,
+    /** Its thickness and its bottom face above the rail's: 0.07 mm behind the
+     *  dark plate's face and 0.02 mm clear of it, so the two never share a
+     *  plane. */
+    thickness: 0.04,
+    base: 0.1,
     /** The ceiling plate's underside above the rail, and its thickness.
      *
-     *  `ceilingBase` clears the mouth's own 3.2 mm and clears the shell plate's
-     *  top edge by more than `MIN_SEPARATION` too: the plate spans the mouth's
-     *  whole opening and the ceiling is the wall above it, so the two are the
-     *  same outline at almost the same Y, and 0.004 mm of daylight between them
-     *  — what landing the ceiling exactly on the mouth's top line left — is the
-     *  coplanar pair the Y-plane gate catches. */
+     *  `ceilingBase` clears the mouth's own 3.2 mm by 0.012 mm. That gap is
+     *  load-bearing rather than cosmetic: the plate spans the mouth's whole
+     *  opening and the ceiling is the wall above it, so the two are the same
+     *  outline at almost the same Y, and landing the ceiling exactly on the
+     *  mouth's top line is the coplanar pair the Y-plane gate catches. */
     ceilingBase: 3.212,
     ceilingThickness: 0.2,
   },
-  /** The connector tongue inside the pocket, measured from the rail and the
-   *  body's centre line. It is the one bright surface in the port and has to be
-   *  seen from below: it is narrower than the mouth so the dark liner shows on
-   *  both sides of it, and its footprint is wider than the floor's aperture so
-   *  the two overlap and no sightline can slip between them.
+  /** The connector tongue: a thin dark-steel strip on the pocket's floor, its
+   *  root buried in the floor plate and its underside the only face the bottom
+   *  view reaches.
    *
-   *  `topY` is the whole reason the tongue reads at all. A ray into the mouth
-   *  comes over the rail's own lip, so the highest surface it can reach at the
-   *  tongue's tip is set by the mouth's opening and the tip's Z: at
-   *  `maxZ` = `mouthZ` - 0.275 the tip may stand 0.1 mm above the rail, and the
-   *  0.6 mm it stands here is visible from about 3 degrees below the phone's
-   *  bottom face — a shallow view, which is the view a port is looked at from.
-   *
-   *  `baseY` sits below the floor's top face on purpose: the tongue's root is
-   *  buried in the liner and only its upper part stands in the opening, so the
-   *  two parts' surfaces meet inside solid material instead of leaving the
-   *  0.005 mm slit a face-to-face pair would. It stops inside the liner's own
-   *  thickness, so the root is buried without the tongue's underside becoming
-   *  the lowest point of the port. */
+   *  Measured: the previous build's tongue stood 0.6 mm above the rail and ran
+   *  from z = -3 to z = 4.1, so its whole underside — 6.6 x 7.1 mm at
+   *  y = -75.02, below the rail's own plane — was what the bottom view saw, lit
+   *  by the environment under the phone and read as a grey-blue trapezoid
+   *  floating in the middle of the mouth. This one is 0.26 mm tall, sits 0.08 mm
+   *  above the rail, and runs 1.1 mm along Z in the mouth's *deep* half: the
+   *  bottom view looks up and back, so the half nearer the body's back (-Z) is
+   *  the half that reads below the aperture's mid-line — measured on
+   *  `.shots/sweep/cosmic-orange_port.png`, a strip at +Z renders in the upper
+   *  half of the opening and the same strip at -Z in the lower. Its top is
+   *  0.34 mm above the rail, well below the mouth's 1.6 mm mid-height, so it
+   *  reads as a strip near the mouth's floor rather than as the brightest thing
+   *  in frame. Its material is `materials.ts`'s `tongue`: `0x343841` at metalness
+   *  0.9, roughness 0.42 and anisotropy 0.3, which renders the strip at 43 luma
+   *  against the pocket's 11 and the rail's 95. */
   tongue: {
-    baseY: -0.02,
-    topY: 0.6,
+    baseY: 0.08,
+    topY: 0.34,
     halfWidth: 3.3,
-    minZ: -3,
-    maxZ: 4.1,
-    radius: 0.08,
+    minZ: -1.45,
+    maxZ: -0.35,
+    radius: 0.06,
   },
 } as const;
 
@@ -352,10 +354,6 @@ export const BOTTOM_BORES = {
  * so the bore reads on the top edge exactly as it did before the wrap.
  */
 export const TOP_BORE = { x: -17.5, radius: 0.6 } as const;
-
-/** How far a bore mouth's face stands off the rail: enough that the disc never
- *  z-fights the wall, far too little to read as a lip at any view. */
-export const BORE_PROUD = 0.02;
 
 /**
  * Dynamic Island: a pill lying *on* the cover glass, its top edge 12 mm below

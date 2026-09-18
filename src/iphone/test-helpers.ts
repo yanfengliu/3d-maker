@@ -6,11 +6,11 @@ import type { PhoneMaterials } from './materials.js';
 
 /**
  * The measurements the iPhone test files share: `parts.test.ts` (the edge and
- * Z-plane contracts), `port.test.ts` (the USB-C gates) and `plateau.test.ts`
- * (the forged roll). `logo.test.ts` builds from `logo.ts` alone and needs none
- * of them.
+ * Z-plane contracts, and the MagSafe ring), `port.test.ts` (the USB-C gates),
+ * `plateau.test.ts` (the forged roll) and `logo.test.ts` (the inlay's placement
+ * on the built back, which needs the built panel the same way).
  *
- * They live here rather than in one test file because those three measure the
+ * They live here rather than in one test file because those files measure the
  * same surfaces the same way, and a copy per file would let one of them drift
  * from the others while all of them stayed green.
  *
@@ -185,6 +185,115 @@ export function vertexReader(object: THREE.Object3D): {
 export function worldBox(object: THREE.Object3D): THREE.Box3 {
   object.updateWorldMatrix(true, true);
   return new THREE.Box3().setFromObject(object);
+}
+
+export interface FootprintReport {
+  /** How many of the part's own vertices were measured. */
+  readonly count: number;
+  /** The part's vertices, in the space the panel shares, that do NOT lie over
+   *  the panel's footprint. Empty is the claim. */
+  readonly outside: readonly THREE.Vector3[];
+  /** How much further the part's own XY box could grow along each of the four
+   *  body axes and still lie over the panel's face. */
+  readonly margins: {
+    readonly left: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly top: number;
+  };
+}
+
+/** How far every probe starts from the point it measures. The crossing the
+ *  containment probe counts is the panel's inner face, half a thickness beyond
+ *  the mid-plane the point is projected to, so it falls 499.7 of the 500 mm
+ *  whose crossings `insideDepth` counts: inside the window by 0.3 mm. */
+const PROBE_REACH = 500;
+/** How far a margin probe will look before giving up: from the box edge of any
+ *  part this file measures, 60 mm reaches past every edge of the panel. */
+const MARGIN_LIMIT = 60;
+
+/** True when `point`, projected onto the panel's own mid-plane, lies over the
+ *  panel's footprint. `insideDepth` answers it because it counts only the
+ *  crossings between the ray's start and the point: a point inside the panel
+ *  meets its inner face on the way in and nothing on the way out, so an odd
+ *  count is "inside", while a point beyond the footprint meets no wall at all.
+ *  The mid-plane is used so the answer is about the footprint rather than about
+ *  where in the panel's 0.6 mm thickness the point sits. */
+function overPanel(panel: THREE.Object3D, point: THREE.Vector3, midZ: number): boolean {
+  const probe = new THREE.Vector3(point.x, point.y, midZ);
+  return insideDepth(panel, probe, new THREE.Vector3(0, 0, 1), PROBE_REACH) > 0;
+}
+
+/**
+ * How far `from` can move along `(dx, dy)` and stay over the panel's face,
+ * found by bisection: 20 halvings of `MARGIN_LIMIT` is finer than any vertex
+ * the model has, and it measures the panel's real outline rather than a
+ * bounding box. Rays are cast at the panel's caps rather than across its walls
+ * on purpose — the panel's top edge is a sampled curve, and a wall ray fired
+ * exactly along x = 0 lands on the seam between two of its quads and reads as a
+ * miss, which is how this measurement was first written and wrongly reported a
+ * zero margin.
+ */
+function marginAlong(panel: THREE.Object3D, from: THREE.Vector3, dx: number, dy: number, midZ: number): number {
+  const over = (distance: number): boolean =>
+    overPanel(panel, new THREE.Vector3(from.x + dx * distance, from.y + dy * distance, 0), midZ);
+  if (!over(0)) return 0;
+  if (over(MARGIN_LIMIT)) return MARGIN_LIMIT;
+  let low = 0;
+  let high = MARGIN_LIMIT;
+  for (let step = 0; step < 20; step += 1) {
+    const middle = (low + high) / 2;
+    if (over(middle)) low = middle;
+    else high = middle;
+  }
+  return low;
+}
+
+/**
+ * Measures a part against the opaque panel it has to hide behind: which of its
+ * vertices lie over the panel's footprint, and how far its own XY box stops
+ * short of the panel's outline. The two parts must share a space — both are
+ * measured where they sit in the tree they were built into.
+ *
+ * This is the geometry a "the part draws no pixel" claim rests on: a point
+ * behind the panel's outer face and over the panel's footprint has panel
+ * material between it and a straight-on viewer.
+ */
+export function panelFootprint(panel: THREE.Object3D, part: THREE.Object3D): FootprintReport {
+  const slab = worldBox(panel);
+  const midZ = (slab.min.z + slab.max.z) / 2;
+  const point = new THREE.Vector3();
+  const outside: THREE.Vector3[] = [];
+  let count = 0;
+
+  part.updateWorldMatrix(true, true);
+  part.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) return;
+    const geometry: unknown = node.geometry;
+    if (!(geometry instanceof THREE.BufferGeometry)) return;
+    const attribute: unknown = geometry.getAttribute('position');
+    if (!(attribute instanceof THREE.BufferAttribute)) return;
+    for (let index = 0; index < attribute.count; index += 1) {
+      point.fromBufferAttribute(attribute, index).applyMatrix4(node.matrixWorld);
+      count += 1;
+      if (!overPanel(panel, point, midZ)) outside.push(point.clone());
+    }
+  });
+
+  const box = worldBox(part);
+  const centre = box.getCenter(new THREE.Vector3());
+  const toEdge = (x: number, y: number, dx: number, dy: number): number =>
+    marginAlong(panel, new THREE.Vector3(x, y, 0), dx, dy, midZ);
+  return {
+    count,
+    outside,
+    margins: {
+      left: toEdge(box.min.x, centre.y, -1, 0),
+      right: toEdge(box.max.x, centre.y, 1, 0),
+      bottom: toEdge(centre.x, box.min.y, 0, -1),
+      top: toEdge(centre.x, box.max.y, 0, 1),
+    },
+  };
 }
 
 /** How far a part's outward face stands from the body's centre line, on the

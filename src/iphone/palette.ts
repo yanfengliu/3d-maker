@@ -293,6 +293,77 @@ export function antennaColor(way: Colorway): THREE.Color {
   return fromHsl(hsl.h, hsl.s * (1 - ANTENNA_DESATURATE), hsl.l + ANTENNA_LIFT);
 }
 
+/**
+ * The mmWave antenna window: the matte insert in the top edge of a US unit,
+ * and the one surface on this phone that is not metal.
+ *
+ * A polymer window seated in anodized aluminum is a dielectric, so the
+ * material is `metalness` 0, has no clearcoat, and carries a rough lobe — and
+ * that is the half of the requirement the reference's *character* asks for: no
+ * specular band anywhere on it. `.shots/ref/mmwave-1.jpg`'s own window measures
+ * 109 to 112 luma across its whole face (p5 109, p50 110, p95 112) while the
+ * frame's face beside it runs 104 to 165 — the window is the flat one, the
+ * frame is the one that catches the light. `materials.ts`'s `mmwave` renders
+ * the same way: every sample of its face on the built `top` view is one value,
+ * p5 = p50 = p95 at 145, 98 and 191 luma on the three finishes, where the
+ * frame's face falls from 177 luma on its flat to 149 where it turns into the
+ * chamfer.
+ *
+ * `MMWAVE_TONE` is the tone, one row per finish, solved the way the logo rows
+ * above are: a hue, a saturation and an HSL lightness, with the hue always the
+ * finish's own. It cannot be one scalar of the frame's colour, because the
+ * frame's rendered brightness is a *metal reflection* and this surface is
+ * diffuse: measured on the `top` view, the orange and silver faces render at
+ * 174 and 228 luma off albedos of 0.22 and 0.49 in relative luminance, while
+ * Deep Blue's face renders at 118 off 0.048 — the studio reflected in a dark
+ * blue metal is brighter than its albedo by a factor the orange's is not. One
+ * ratio of the frame's lightness therefore lands on three different steps, so
+ * each row is solved to the same step instead.
+ *
+ * The step is the reference's own: the window reads 0.83 of the frame's luma on
+ * the same row — 110 against 136 in that photo, in the encoded 8-bit luma the
+ * window's 1.20/1.16/1.09/1.05/0.28 material survey was taken in. Measured on
+ * the built `top` view, window over the mean of the frame's face either side of
+ * it on the same rows, the rows below land 0.833 (Cosmic Orange, 145 against
+ * 174), 0.831 (Deep Blue, 98 against 118) and 0.836 (silver, 191 against 228).
+ * In relative luminance the same frames read 0.663, 0.661 and 0.670 against the
+ * photo's 0.643, so the step matches in both conventions rather than only in
+ * the one it was fitted in.
+ */
+export const MMWAVE_TONE: Record<ColorKey, { readonly light: number }> = {
+  'cosmic-orange': { light: 0.402 },
+  'deep-blue': { light: 0.278 },
+  silver: { light: 0.558 },
+};
+
+/** The insert's saturation, as the share eased out of the frame's own: the
+ *  window is `s * (1 - MMWAVE_DESATURATE)`, so every finish's row is a *less*
+ *  saturated dye than the metal around it — 0.61 to 0.52 on Cosmic Orange, 0.27
+ *  to 0.23 on Deep Blue. The ease is small on purpose: the frame's own render
+ *  washes its chroma out under the studio's white specular, so most of the
+ *  window's lower chroma comes from it being the diffuse surface, not from this
+ *  number — measured, the window's mid-face chroma is 119 against the frame's
+ *  134 on orange and 45 against 43 on Deep Blue, where the photo's own window
+ *  is at parity with its frame (143 against 141). */
+export const MMWAVE_DESATURATE = 0.15;
+
+/** A dielectric insert, and a rough one. `metalness` is 0 rather than small
+ *  because there is no metal in the part — a polymer window is the one place on
+ *  this phone where that costs nothing — and the roughness is what keeps a
+ *  highlight off it: at 0.82 the lobe is spread over the whole hemisphere, so
+ *  the studio returns as even light rather than as a band. No clearcoat, for
+ *  the same reason: a coat is a second, smoother mirror over the surface. */
+export const MMWAVE_ROUGHNESS = 0.82;
+export const MMWAVE_METALNESS = 0;
+
+/** The window's tone: the frame's own hue, at the finish's own saturation and
+ *  lightness. See `MMWAVE_TONE` for why the hue is the frame's and the other
+ *  two are not derivable from it. */
+export function mmwaveColor(way: Colorway, key: ColorKey): THREE.Color {
+  const hsl = frameHsl(way);
+  return fromHsl(hsl.h, hsl.s * (1 - MMWAVE_DESATURATE), MMWAVE_TONE[key].light);
+}
+
 export function isColorKey(value: string | null | undefined): value is ColorKey {
   return value === 'cosmic-orange' || value === 'deep-blue' || value === 'silver';
 }

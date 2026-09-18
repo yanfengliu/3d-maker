@@ -7,7 +7,8 @@ import { COLOR_KEYS, type ColorKey } from './palette.js';
 
 /**
  * The look's *inputs*, pinned: the frame and scene values the 1400x1000 `back`
- * view's rail-over-panel ratio is built from.
+ * view's rail-over-panel ratio is built from, the mmWave insert's character and
+ * tone, the three dark optics (`DARK_OPTICS`) and the port's tongue (`TONGUE`).
  *
  * This bounds inputs, not pixels. The pixels are `scripts/check-finishes.mjs`'s
  * job — it drives Chrome, reads the canvas back and fails when a finish's
@@ -21,10 +22,12 @@ import { COLOR_KEYS, type ColorKey } from './palette.js';
  * failing `check:finishes` against green pins here points at the pixels rather
  * than at the values.
  *
- * The literals are transcribed from round 7's measurement rather than read from
- * `palette.ts`: a pin that copies the symbol it checks proves only that the code
- * agrees with itself. A deliberate retune updates this table, `palette.ts` and
- * `check:finishes`'s targets together, and this file goes red until it does.
+ * The literals are transcribed from the measurement each was fitted to — the
+ * frame, panel and environment from round 7's, the insert, optics and tongue
+ * from theirs — rather than read from `palette.ts` or `materials.ts`: a pin that
+ * copies the symbol it checks proves only that the code agrees with itself. A
+ * deliberate retune updates this table, the symbols and `check:finishes`'s
+ * targets together, and this file goes red until it does.
  */
 
 /** The frame's finish, per colorway. Metalness is one value for all three —
@@ -54,7 +57,7 @@ const ENVIRONMENT_INTENSITY = 1.6;
  * shows no reflection on at all.
  *
  * `tint` is transcribed from the solved rows rather than read out of
- * `materials.ts`'s `MMWAVE_TONE`: a pin that copies the symbol it checks proves
+ * `palette.ts`'s `MMWAVE_TONE`: a pin that copies the symbol it checks proves
  * only that the code agrees with itself. The rows were solved by measurement to
  * the reference's 0.83 of the frame's luma on the same row of the `top` view —
  * measured 0.833 Cosmic Orange, 0.831 Deep Blue, 0.836 silver — and a retune
@@ -141,6 +144,122 @@ function relativeLuminance(color: THREE.Color): number {
 function sceneSource(): string {
   return readFileSync(new URL('./scene.ts', import.meta.url), 'utf8');
 }
+
+/**
+ * The dark optics: the LiDAR window, the lens glass and the pupil, pinned as
+ * inputs with the pixels they were fitted against in the message.
+ *
+ * These three are one class, and round 8 found it by looking at a frame: with a
+ * working environment, a dielectric returns its Fresnel fraction of the studio,
+ * and on a surface facing the camera that fraction is large enough to turn a
+ * near-black window into a grey disc and to draw a bright liner along every
+ * lens's glass. The reference's own steps are what the retune is fitted to —
+ * measured on `.shots/ref/Apple-iPhone-17-Pro-camera-close-up-250909_big.png`,
+ * the LiDAR window reads 12 luma (p05 5, p50 9) against a 94.5-luma plateau, and
+ * the lens rim steps 88 to 119.
+ *
+ * The pixel numbers are the `after` arm of the same-rect, same-pose comparison
+ * in `.shots/sliceR/` (ignored scratch, not tracked): `before` is the frame set
+ * `.shots/k2/final/` at the revision this round started from, `after` is the
+ * close-up and `back` presets re-shot through `scripts/capture-shots.mjs` at
+ * 1400x1000. `closeUpRect` names the rect each luma was read over and
+ * `surroundCloseUp` the value beside it that did not move — because a previous
+ * slice in this repo shipped a claim no one could reproduce for want of exactly
+ * that. This file still bounds inputs and not pixels: a green pin here with the
+ * look gone is possible, and `check:finishes` is the other half.
+ */
+const DARK_OPTICS = {
+  darkGlass: {
+    specularIntensity: 0.45,
+    roughness: 0.3,
+    clearcoat: 0,
+    tint: '090c12',
+    closeUp: 18,
+    closeUpBefore: 43,
+    closeUpRect: 'x 1130 y 610 40x40 of the camera-closeup preset',
+    surroundCloseUp: 150,
+  },
+  lensGlass: {
+    specularIntensity: 0.3,
+    roughness: 0.22,
+    clearcoat: 0,
+    tint: '05070d',
+    closeUp: 102,
+    closeUpBefore: 169,
+    closeUpRect: 'x 674 y 588 3x2 — the two pixels of the rim liner',
+    surroundCloseUp: 35,
+  },
+  lensPupil: {
+    specularIntensity: 0.3,
+    roughness: 0.07,
+    clearcoat: 0,
+    tint: '16283f',
+    closeUp: 92,
+    closeUpBefore: 169,
+    closeUpRect: 'x 662 y 548 26x6 — the crescent at the pupil’s lower rim, p95',
+    surroundCloseUp: 37,
+  },
+} as const;
+
+const DARK_OPTICS_KEYS = ['darkGlass', 'lensGlass', 'lensPupil'] as const;
+
+/**
+ * The USB-C connector tongue: the dark-steel strip on the port's pocket floor
+ * (`dims.ts`'s `USB_C.tongue`, 0.26 mm tall, 1.1 mm along Z), and the same class
+ * as the dark optics above — a surface that returned more of the studio than the
+ * part around it.
+ *
+ * Its values were fitted to a geometry that no longer exists, and that is why
+ * they were wrong rather than merely stale: `0xa9aeb6` at metalness 1 was
+ * defensible under a slab that stood proud of the rail and filled the mouth, and
+ * this tongue is a strip near the pocket's floor. Measured on the bottom preset
+ * after the rebuild, the light material rendered 111 luma over the rect below,
+ * against a pocket at 11 and a rail at 95 — brighter than the metal it is cut
+ * into, a floating jewel rather than a connector. `0x343841` puts that rect at
+ * 43. On the model the brightest pixel is the rail's own edge at 238 (x 1341,
+ * y 308, identical in both arms), so the strip is not the brightest thing in the
+ * frame and never was; it was brighter than the part it is cut into, and that is
+ * the read that was wrong.
+ *
+ * The window it was fitted to is 20–45 — 1.8x to 4x the pocket, well under the
+ * rail — so 43 is inside it, though 8 above the 25–35 the handover's arithmetic
+ * predicted from a 0.39-linear environment term: that estimate averaged the
+ * studio, and this strip mirrors what is *under* the phone instead. The port's
+ * read is the mouth plate's rounded aperture and the 11-luma pocket behind it;
+ * this is the detail inside.
+ *
+ * The two arms are `.shots/tongue/before/` and `.shots/tongue/after/` (ignored
+ * scratch, not tracked), both the `port` sweep — `bottom:cosmic-orange:wheel=-2`
+ * through `scripts/sweep-iphone.mjs` at 1400x1000 — so the comparison holds the
+ * pose still. The other arm in the same sweep, the `camera-closeup` frame, is
+ * byte-identical between them (sha256 489ac92b…), which is the evidence that
+ * nothing outside the port moved.
+ */
+const TONGUE = {
+  tint: '343841',
+  metalness: 0.9,
+  roughness: 0.42,
+  anisotropy: 0.3,
+  /**
+   * The tongue's albedo over the frame's, in relative luminance, on the colorway
+   * the pixel was measured on: the bound is the class — a dark detail, not a
+   * light one — and the light version it replaced sits at 1.89 of the same
+   * quantity. Deep Blue is the finish that does not fit it: that frame's albedo
+   * is the darkest of the three (0.0481) and it is metal, so this steel's 0.0394
+   * is 0.82 of it, while the frame renders far brighter off that low albedo than
+   * this strip does. The step is still a *dark* one in the convention that
+   * matters — 43 rendered against a 95-luma rail — and dark in absolute terms on
+   * all three.
+   */
+  frameRatioCeiling: 0.25,
+  /** The strip's rendered luma before and after the retune, and the surfaces
+   *  beside it that did not move. */
+  stripBefore: 111,
+  strip: 43,
+  stripRect: 'x 640 y 480 100x4 of the bottom preset, `port` sweep, wheel -2',
+  pocket: 11,
+  rail: 95,
+} as const;
 
 describe('the look’s inputs', () => {
   it('sets every finish’s frame to the values the ratios were fitted with', () => {
@@ -261,5 +380,84 @@ describe('the look’s inputs', () => {
     const materials = readFileSync(new URL('./materials.ts', import.meta.url), 'utf8');
     const dead = [...materials.matchAll(/^\s*envMapIntensity:/gm)];
     expect(dead.length, 'materials.ts carries a per-material envMapIntensity that nothing reads').toBe(0);
+  });
+
+  it('holds the dark optics below full specular, at the level their own ladders measured', () => {
+    const materials = materialsFor('cosmic-orange');
+    for (const key of DARK_OPTICS_KEYS) {
+      const material = materials[key];
+      const pin = DARK_OPTICS[key];
+      // The class first, so a mutation reports the class rather than only a
+      // changed number: a dark optic that returns the studio at full strength
+      // is the defect this round fixed, and `specularIntensity: 1` is the
+      // default that does it. Three sets `specularF90` from this value for a
+      // dielectric the moment it is not 1, so a 1 here restores the grazing
+      // term as well as the normal-incidence one — measured on the close-up,
+      // this surface rendered `closeUpBefore` luma at that setting and
+      // `closeUp` now.
+      expect(
+        material.specularIntensity,
+        `${key}: specular is at full strength, so the surface returns its whole Fresnel fraction of the studio — ${pin.closeUpRect} went from ${String(pin.closeUpBefore)} to ${String(pin.closeUp)} luma when this came down to ${String(pin.specularIntensity)}`,
+      ).toBeLessThan(1);
+      expect(material.specularIntensity, `${key}: specular is positive`).toBeGreaterThan(0);
+      expect(
+        material.clearcoat,
+        `${key}: a clearcoat at ${String(material.clearcoat)} is a second, sharper mirror over the face — the LiDAR window's original defect was clearcoat 1 at roughness 0.08`,
+      ).toBeLessThan(0.5);
+
+      expect(material.specularIntensity, `${key}: the specular level, which is what lands it`).toBeCloseTo(
+        pin.specularIntensity,
+        3,
+      );
+      expect(material.roughness, `${key}: the roughness`).toBeCloseTo(pin.roughness, 3);
+      expect(material.clearcoat, `${key}: the clearcoat`).toBe(pin.clearcoat);
+    }
+  });
+
+  it('keeps the dark optics’ own tones while their return comes down', () => {
+    const materials = materialsFor('cosmic-orange');
+    // The retune is a specular-level change, and that is a claim about all three
+    // finishes at once: none of these three surfaces is finish-tinted, so a
+    // colourway switch must not move them at all.
+    const before = DARK_OPTICS_KEYS.map((key) => materials[key].color.getHexString(THREE.SRGBColorSpace));
+    expect(before, 'the dark optics’ albedos').toEqual(DARK_OPTICS_KEYS.map((key) => DARK_OPTICS[key].tint));
+    for (const key of COLOR_KEYS) {
+      const switched = materialsFor(key);
+      expect(
+        DARK_OPTICS_KEYS.map((name) => switched[name].color.getHexString(THREE.SRGBColorSpace)),
+        `${key}: the dark optics are not finish tints, so their albedos must not follow the dropdown`,
+      ).toEqual(before);
+      for (const name of DARK_OPTICS_KEYS) {
+        expect(switched[name].specularIntensity, `${key}: ${name}'s specular level`).toBeCloseTo(
+          DARK_OPTICS[name].specularIntensity,
+          3,
+        );
+      }
+    }
+  });
+
+  it('keeps the port’s tongue a dark detail, below the frame whose mouth it sits in', () => {
+    // The class first, on the colorway the pixel was measured on: a tongue whose
+    // albedo is not far below the frame's own is the defect this pins — the
+    // light version sat at 1.89 of it and rendered `stripBefore` luma on the
+    // strip, 16 above the rail it is cut into.
+    const orange = materialsFor('cosmic-orange');
+    const albedo = relativeLuminance(orange.tongue.color);
+    const frame = relativeLuminance(orange.aluminum.color);
+    const ratio = albedo / frame;
+    expect(
+      ratio,
+      `Cosmic Orange: the tongue's albedo reads ${ratio.toFixed(3)} of the frame's (${albedo.toFixed(4)} against ${frame.toFixed(4)}), above the ${String(TONGUE.frameRatioCeiling)} that makes it a dark detail — over ${TONGUE.stripRect} the light version rendered ${String(TONGUE.stripBefore)} luma against a pocket at ${String(TONGUE.pocket)} and a rail at ${String(TONGUE.rail)}, and this one renders ${String(TONGUE.strip)}`,
+    ).toBeLessThan(TONGUE.frameRatioCeiling);
+
+    // The values, and that they do not follow the dropdown: the tongue is steel,
+    // not a finish tint, and `applyColorway` leaves this material alone.
+    for (const key of COLOR_KEYS) {
+      const material = materialsFor(key).tongue;
+      expect(material.color.getHexString(THREE.SRGBColorSpace), `${key}: the tongue's albedo`).toBe(TONGUE.tint);
+      expect(material.metalness, `${key}: the tongue's metalness`).toBeCloseTo(TONGUE.metalness, 3);
+      expect(material.roughness, `${key}: the tongue's roughness`).toBeCloseTo(TONGUE.roughness, 3);
+      expect(material.anisotropy, `${key}: the tongue's anisotropy`).toBeCloseTo(TONGUE.anisotropy, 3);
+    }
   });
 });

@@ -12,15 +12,12 @@ import {
   LOGO_CENTRE_Y,
   LOGO_HEIGHT,
   MAGSAFE,
-  PORT_CUT_INSET,
-  PORT_CUT_RADIUS,
   RAIL,
   TOP_BORE,
-  USB_C,
 } from './dims.js';
 import { appleLogoGeometry } from './logo.js';
 import { buildBackPanel, PANEL_FACE_Z } from './plateau.js';
-import { boreMouth } from './port.js';
+import { boreMouth, housingGeometry } from './port.js';
 import type { PhoneMaterials } from './materials.js';
 
 // The plateau, the back panel and the bottom edge live in their own modules,
@@ -74,49 +71,17 @@ const MAGSAFE_PROUD = 0.02;
 
 /** Anodized unibody with the USB-C opening cut through the bottom edge. The cut
  *  is the port's *mouth* — a real hole in the rail's chamfer, which is the only
- *  way the recess reads as an opening rather than as a decal — but a cut through
- *  a slab is a through-hole by construction, so it also opens on the front and
- *  back faces. `port.ts`'s `port-shell` fills its cross-section; without that,
- *  this one cut puts a dark slot in all three silhouettes.
+ *  way the recess reads as an opening rather than as a decal. The outline it is
+ *  drawn into, and why it is a contour and not a `slot` hole, are `port.ts`'s
+ *  `housingGeometry`; this function is only the mesh around it.
  *
- *  The shape handed to `slabGeometry` is the outline the chamfer is grown
- *  *from*, so it is pre-shrunk by `BODY.bevel` on every side and the slab's
- *  middle — its widest layer — lands exactly on `RAIL`. A hole only opens an
- *  edge if part of it crosses that edge, and the shape's own bottom line is
- *  `BODY.bevel` above the rail: posed on that line, the hole reaches the rail
- *  in the middle of the slab and stops `BODY.bevel` short of it at the frame's
- *  two faces, which cuts a shallow V — measured, 6.7 mm wide and 1 mm deep
- *  instead of the mouth's 8.4 x 3.2. `PORT_CUT_INSET` poses the hole's bottom
- *  edge just above the rail instead, and `USB_C.height` above that is its top,
- *  so what it cuts is one flat-bottomed rectangle at the rail's own face. Its
- *  corners are `PORT_CUT_RADIUS`, for the reason `dims.ts` measures: a hole wide
- *  enough to hold the mouth's own `USB_C.radius` corners reaches below the
- *  rail, and the frame's own silhouette gate reads that as the frame crossing
- *  it. */
+ *  A cut through a slab is a through-hole by construction, so the mouth also
+ *  opens on the frame's front and back faces. `port.ts`'s `port-shell` closes
+ *  its cross-section at both of them, and `port-mouth` fills what is left of
+ *  its bottom-face opening; without those two, this one cut puts a dark slot in
+ *  all three silhouettes. */
 export function buildHousing(materials: PhoneMaterials): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    slabGeometry({
-      width: BODY.width - 2 * BODY.bevel,
-      height: BODY.height - 2 * BODY.bevel,
-      radius: BODY.radius - BODY.bevel,
-      maxZ: BODY.halfDepth,
-      thickness: BODY.depth,
-      bevel: BODY.bevel,
-      slot: {
-        width: USB_C.width,
-        // The cut is posed `PORT_CUT_INSET` above the rail's bottom face and
-        // reaches `USB_C.height` above it, which is what makes the mouth a flat
-        // rectangle rather than the V a hole landing on the shape's own bottom
-        // line cuts. Its corners are `PORT_CUT_RADIUS` for the reason `dims.ts`
-        // measures: a hole wide enough to hold the mouth's own 1.1 mm corners
-        // cannot stay inside the shape's outline.
-        height: USB_C.height - PORT_CUT_INSET,
-        radius: PORT_CUT_RADIUS,
-        baseY: -RAIL.y + PORT_CUT_INSET,
-      },
-    }),
-    materials.aluminum,
-  );
+  const mesh = new THREE.Mesh(housingGeometry(), materials.aluminum);
   mesh.name = 'frame';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -201,8 +166,10 @@ export function buildFront(materials: PhoneMaterials): THREE.Group {
  * Matte Ceramic Shield back panel, Apple logo inlay, MagSafe ring. The panel
  * itself is `plateau.ts`'s — it is split out of this file because it is the
  * back's structural surface, the one `plateau.test.ts` (its top edge) and the
- * plane gate above (its Z planes) measure without needing the logo's SVG parse,
- * and because its top edge follows the plateau's roll.
+ * plane gate above (its Z planes) measure on its own, and because its top edge
+ * is the plateau's own rolled bottom: move either outline and the other's has
+ * to follow. The logo's parse is no longer the reason it is separate — `logo.ts`
+ * reads its path in node, so a test reaches `buildBack` without a DOM.
  */
 export function buildBack(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();

@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 
+import { LOGO_CENTRE_Y, LOGO_HEIGHT } from './dims.js';
 import { appleLogoGeometry, appleLogoShapes, logoLayout } from './logo.js';
+import { buildBack } from './parts.js';
+import { materials, panelFootprint, required, worldBox } from './test-helpers.js';
 
 /** How tall an inlay the chirality gate below is built for. A literal, not
  *  `LOGO_HEIGHT`: the gate is measuring which side of the body the leaf lands
@@ -261,5 +264,125 @@ describe('the Apple logo’s chirality', () => {
     expect(centre.y, 'the inlay is not centred on its own Y').toBeCloseTo(0, 6);
     expect(partBox.min.y, 'the inlay is not the finished height').toBeCloseTo(-LOGO_GATE_HEIGHT / 2, 3);
     expect(partBox.max.z, 'the inlay does not grow away from z = 0').toBeLessThanOrEqual(1e-6);
+  });
+});
+
+/**
+ * The inlay's placement and size on the built back.
+ *
+ * The chirality gate above is the only thing that ever measured this part, and
+ * the register's logo entry names what that leaves open: "The inlay's size,
+ * position, depth and the leaf's shape are verified visually, not gated." That
+ * gate builds its own inlay from `logo.ts`, so it can say which side the leaf
+ * lands on and nothing about where `buildBack` puts the part or how big it is —
+ * which is the whole of the user-visible class: an inlay off centre, of the
+ * wrong height, or floating off the panel.
+ *
+ * Measured on the built `apple-logo` and the panel it is set into: the flat
+ * back is at z = -4.925, `PANEL_FACE_Z + 0.05` — the 0.05 mm the call site
+ * calls `LOGO_EMBED`, which keeps the outline from showing a gap against the
+ * glass — and the visible face is one extrusion further out at -5.085, 0.11 mm
+ * proud of the panel's own face. The inlay is 14.0000 mm tall against
+ * `LOGO_HEIGHT`'s 14, its centre is (0.0000, -14.5000) against the -14.5
+ * `LOGO_CENTRE_Y`, and all 5376 of its vertices project over the panel's face;
+ * its own box stops 25.57 mm short of a side wall, 41.56 of the panel's bottom
+ * edge and 42.17 of its top.
+ *
+ * Bounds. Placement, size and the two Z planes, measured on the *built* part.
+ * The embed and the 0.16 mm depth are literals here, with the call site's
+ * `LOGO_EMBED` named as their provenance, so editing either moves the geometry
+ * and takes this gate red instead of redefining it. The leaf's shape, the
+ * outline's proportions and the parser's command coverage stay the chirality
+ * gate's and the eye's business.
+ */
+describe('the Apple logo’s placement on the back', () => {
+  /** How far the inlay's flat back is set into the panel, and how deep the
+   *  extrusion runs from it: `buildBack`'s `LOGO_EMBED` (0.05, in `parts.ts`)
+   *  and the 0.16 mm it passes `appleLogoGeometry`. */
+  const EMBED = 0.05;
+  const DEPTH = 0.16;
+  /** How far a measured placement may sit from its documented value. A
+   *  placement is a translation and the height is a scale, so the built part
+   *  lands on its number to float32 resolution; 0.01 mm is a sixtieth of the
+   *  panel's own 0.6 mm thickness and four orders above that arithmetic. */
+  const PLACEMENT_TOL = 0.01;
+  /** How far the inlay must stay clear of the panel's outline: 10 mm, the
+   *  panel's own bottom corner radius, against a measured 25.57 mm at the
+   *  closest. */
+  const MARGIN_MIN = 10;
+
+  function builtLogo(): { readonly panel: THREE.Object3D; readonly logo: THREE.Object3D } {
+    const back = buildBack(materials);
+    return { panel: required(back, 'back-panel'), logo: required(back, 'apple-logo') };
+  }
+
+  /** The names and positions of a footprint report's offending vertices. */
+  function offenderList(report: { readonly outside: readonly THREE.Vector3[] }): string {
+    return report.outside
+      .slice(0, 4)
+      .map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+      .join(' / ');
+  }
+
+  it('sets the inlay into the panel’s outer face at its documented depth', () => {
+    const { panel, logo } = builtLogo();
+    const face = worldBox(panel);
+    const box = worldBox(logo);
+    // Both planes are measured against the panel that was *built*, not against
+    // `PANEL_FACE_Z`: the inlay is placed from the same constant the panel is,
+    // so a check written against the constant would move with any change to it.
+    // `PANEL_FACE_Z` is the existing Z-plane gate's business in `parts.test.ts`.
+    expect(
+      box.max.z,
+      `the inlay’s flat back is at z = ${box.max.z.toFixed(4)}, not ${String(EMBED)} mm inside the panel’s outer face at z = ${face.min.z.toFixed(4)}`,
+    ).toBeCloseTo(face.min.z + EMBED, 3);
+    // And the visible face is one extrusion outside that flat back — 0.11 mm
+    // proud of the panel's own face. Level with it is the coplanar pair that
+    // renders speckled; behind it, the inlay never reads at all.
+    expect(
+      box.min.z,
+      `the inlay’s visible face is at z = ${box.min.z.toFixed(4)}, not ${String(DEPTH)} mm outside its flat back`,
+    ).toBeCloseTo(face.min.z + EMBED - DEPTH, 3);
+  });
+
+  it('is LOGO_HEIGHT tall and centred where dims.ts documents', () => {
+    const { logo } = builtLogo();
+    const box = worldBox(logo);
+    const centre = box.getCenter(new THREE.Vector3());
+    expect(
+      Math.abs(box.max.y - box.min.y - LOGO_HEIGHT),
+      `the inlay is ${(box.max.y - box.min.y).toFixed(4)} mm tall`,
+    ).toBeLessThanOrEqual(PLACEMENT_TOL);
+    expect(
+      Math.abs(centre.y - LOGO_CENTRE_Y),
+      `the inlay’s centre is at y = ${centre.y.toFixed(4)}`,
+    ).toBeLessThanOrEqual(PLACEMENT_TOL);
+    // The two literals `dims.ts` documents, so a constant quietly edited to
+    // match a wrong geometry cannot make either line above green.
+    expect(LOGO_HEIGHT).toBe(14);
+    expect(LOGO_CENTRE_Y).toBe(-14.5);
+    // Centred on X: the transform centres the outline on its own box, and that
+    // box's widest points are the body's two sides, so the part comes back
+    // symmetric about the body's centre line.
+    expect(
+      Math.abs(centre.x),
+      `the inlay’s centre is ${centre.x.toFixed(4)} mm off the body’s centre line`,
+    ).toBeLessThanOrEqual(PLACEMENT_TOL);
+  });
+
+  it('sits inside the panel’s footprint, clear of every edge', () => {
+    const { panel, logo } = builtLogo();
+    const report = panelFootprint(panel, logo);
+    expect(report.count, 'the inlay had no vertices to measure').toBeGreaterThan(1000);
+    expect(
+      offenderList(report),
+      `the inlay reaches past the panel’s footprint at ${offenderList(report)}`,
+    ).toBe('');
+    const walls = Object.entries(report.margins);
+    const [side, gap] = walls.reduce((worst, wall) => (wall[1] < worst[1] ? wall : worst));
+    expect(
+      gap,
+      `the inlay stops ${gap.toFixed(4)} mm short of the panel’s ${side} wall`,
+    ).toBeGreaterThanOrEqual(MARGIN_MIN);
   });
 });

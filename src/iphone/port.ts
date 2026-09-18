@@ -4,13 +4,18 @@ import {
   BODY,
   BORE_PROUD,
   BOTTOM_BORES,
-  PORT_CUT_RADIUS,
-  PORT_INSET,
   PORT_POCKET,
   RAIL,
   USB_C,
 } from './dims.js';
-import { addMesh, blockGeometry, boreGeometry, slabGeometry } from './geometry.js';
+import {
+  addMesh,
+  blockGeometry,
+  boreGeometry,
+  roundedHole,
+  roundedShape,
+  slabGeometry,
+} from './geometry.js';
 import type { PhoneMaterials } from './materials.js';
 
 /**
@@ -18,15 +23,120 @@ import type { PhoneMaterials } from './materials.js';
  *
  * This is split out of `parts.ts` because the port is the one place in the
  * model where the frame's own construction works against it, and the argument
- * for how it is filled is longer than any other part's. `slabGeometry` cuts the
- * port's slot through the whole slab, so the housing's cut is a through-hole by
- * construction — the defect that put a dark USB-C slot on the phone's *back*,
- * where the real port is a blind recess.
+ * for how it is filled is longer than any other part's.
  *
- * The frame's cut is kept anyway: it is the only thing that puts a real mouth
- * through the rail's chamfer, and it is what `buildHousing` in `parts.ts` cuts
- * with `PORT_CUT_INSET`. Everything behind that mouth is built here.
+ * The frame's cut is here too, rather than in `parts.ts`, because it has to be
+ * drawn into the frame's *outline* and `slabGeometry` takes only a rectangle
+ * plus optional holes. `parts.ts`'s `buildHousing` calls `housingGeometry`
+ * below. The reason is measured, not stylistic: a hole that crosses the
+ * outline — which is what an edge notch is — is undefined for the triangulator
+ * `ExtrudeGeometry` uses, and on the build this round replaced it dropped the
+ * cut silently. The frame came out with no opening at all (0 of 464 ray samples
+ * across the mouth's cross-section reached through it), the 0.24 mm-cornered
+ * "mouth" the docs described was never built, and everything the eye read as
+ * the port was the bottom assembly's liner: a dark rectangle 8.4 x 8.6 mm with
+ * an angular aperture, a bright steel slab floating in the middle of it and a
+ * hard dark frame around it.
  */
+
+/** The frame's slab geometry, with the port's mouth notched into its bottom
+ *  edge.
+ *
+ *  The notch's numbers are `USB_C`'s, pre-compensated by `BODY.bevel`: an
+ *  `ExtrudeGeometry` bevel grows the slab's *middle* layer outside the outline
+ *  it is drawn from, and that middle layer is the rail plane, so a notch drawn
+ *  at the documented 8.4 x 3.2 with 1.1 corners comes out 7.68 mm wide where
+ *  the eye reads it. Measured on the built frame, the widest layer is the rail
+ *  plane and the notch there is 8.4 mm across, 3.2 mm up from the rail, with
+ *  1.1 mm corners, which is what `USB_C` documents.
+ *
+ *  Everything after the shape mirrors `slabGeometry` line for line — same
+ *  extrusion options, same snap of the extruded depth to `BODY.depth`, same
+ *  placement of the slab's largest Z on `BODY.halfDepth` — because the frame's
+ *  silhouette is gated to `RAIL` and a second construction of it that drifted
+ *  would be a defect of its own. */
+export function housingGeometry(): THREE.ExtrudeGeometry {
+  const bevel = BODY.bevel;
+  const halfWidth = BODY.width / 2 - bevel;
+  const halfHeight = BODY.height / 2 - bevel;
+  const radius = BODY.radius - bevel;
+  const notchHalf = USB_C.width / 2 + bevel;
+  const notchTop = -RAIL.y + USB_C.height + bevel;
+  const notchRadius = USB_C.radius + bevel;
+
+  // One closed contour, counter-clockwise: right along the bottom edge, up and
+  // over the notch, up the right edge, left along the top, down the left. The
+  // notch's own corners are concave, so they turn clockwise and take
+  // `clockwise = true`; every body corner turns counter-clockwise.
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfWidth + radius, -halfHeight);
+  shape.lineTo(-notchHalf, -halfHeight);
+  shape.lineTo(-notchHalf, notchTop - notchRadius);
+  shape.absarc(-notchHalf + notchRadius, notchTop - notchRadius, notchRadius, Math.PI, Math.PI / 2, true);
+  shape.lineTo(notchHalf - notchRadius, notchTop);
+  shape.absarc(notchHalf - notchRadius, notchTop - notchRadius, notchRadius, Math.PI / 2, 0, true);
+  shape.lineTo(notchHalf, -halfHeight);
+  shape.lineTo(halfWidth - radius, -halfHeight);
+  shape.absarc(halfWidth - radius, -halfHeight + radius, radius, -Math.PI / 2, 0, false);
+  shape.lineTo(halfWidth, halfHeight - radius);
+  shape.absarc(halfWidth - radius, halfHeight - radius, radius, 0, Math.PI / 2, false);
+  shape.lineTo(-halfWidth + radius, halfHeight);
+  shape.absarc(-halfWidth + radius, halfHeight - radius, radius, Math.PI / 2, Math.PI, false);
+  shape.lineTo(-halfWidth, -halfHeight + radius);
+  shape.absarc(-halfWidth + radius, -halfHeight + radius, radius, Math.PI, Math.PI * 1.5, false);
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: Math.max(0.001, BODY.depth - 2 * bevel) + 2 * bevel,
+    bevelEnabled: true,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelOffset: 0,
+    bevelSegments: 3,
+    curveSegments: 16,
+  });
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox;
+  if (box === null) throw new Error('the frame has no bounding box');
+  const scale = (box.max.z - box.min.z) / BODY.depth;
+  geometry.translate(0, 0, -box.min.z);
+  geometry.scale(1, 1, 1 / scale);
+  geometry.translate(0, 0, BODY.halfDepth - BODY.depth);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+/** A rounded-rectangle plate lying flat in the body's X-Z plane, its bottom
+ *  face on `bottomY` and its outline `width` across the body and `depth`
+ *  through it.
+ *
+ *  `roundedShape` draws in X-Y and extrudes towards +Z, so the plate is turned
+ *  a quarter turn about X: the shape's height becomes the body's depth and the
+ *  extrusion runs downwards. A `window` is the rounded hole through the plate —
+ *  the aperture, for the mouth. No bevel: the window's own edge is the outline
+ *  the port's aperture gate measures, and a bevel would round it by an amount
+ *  that depends on the plate's thickness. */
+function flatPlateGeometry(
+  width: number,
+  depth: number,
+  radius: number,
+  thickness: number,
+  bottomY: number,
+  window?: { readonly width: number; readonly depth: number; readonly radius: number },
+): THREE.ExtrudeGeometry {
+  const shape = roundedShape(width, depth, radius);
+  if (window !== undefined) {
+    shape.holes.push(roundedHole(window.width, window.depth, window.radius));
+  }
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: thickness,
+    bevelEnabled: false,
+    curveSegments: 48,
+  });
+  geometry.rotateX(Math.PI / 2);
+  geometry.translate(0, bottomY + thickness, 0);
+  geometry.computeVertexNormals();
+  return geometry;
+}
 
 /** A dark disc lying on an end edge, its face flush with the rail: the mouth of
  *  a bore. `direction` is the outward sign along Y, so the disc is pushed out
@@ -42,181 +152,149 @@ export function boreMouth(radius: number, x: number, direction: 1 | -1): THREE.B
 /** USB-C opening with a real pocket, five speaker bores to its right and five
  *  microphone bores to its left. No SIM tray: US eSIM.
  *
- *  The port opens *downward only*, and the parts below are what make that true
- *  rather than merely intended. Three of them cover the mouth's whole 8.4 x
- *  3.2 mm opening, from the rail to the mouth's top line — that is the property
- *  the earlier arrangement missed, and it is not a cosmetic one: it left a
- *  0.65 mm band of the opening covered by nothing, and a ray along -Z crossed
- *  the phone's whole 8.75 mm depth through it.
+ *  The port opens *downward only*, and four things make that true.
  *
- *  - `port-shell` is the frame's own aluminum: a `shellThickness` plate against
- *    each of the frame's faces, named together as one part because the shell is
- *    what closes the cut and both of its faces have to be measured. It spans the
- *    mouth's whole opening, so from the front and from the back the port's
- *    x-range reads as metal with a recess behind it instead of a slot through
- *    the phone.
- *  - `port-cavity` and `port-cavity-ceiling` (the `bore` material) are the
- *    pocket's dark liner — its floor and its ceiling. Both reach from the
- *    opening out to the frame's own faces, so the two ends of the through-cut
- *    are closed by liner as well as by the shell. The floor's top face sits
- *    below the rail's bottom face, and it is the floor's *aperture* — not the
- *    plate — that a sightline from below passes through.
- *  - `port-tongue` (polished steel) fills that aperture. It is the one bright
- *    surface in the port, which is what separates "recess with a connector in
- *    it" from "dark hole". Its footprint is wider than the aperture all round,
- *    so the two overlap and no ray can slip between them.
+ *  - `port-shell` is the frame's through-cut closed at both ends: one
+ *    `shell.thickness` plate against each of the frame's faces, its outline
+ *    wide and tall enough to cover the notch's whole cross-section there.
+ *    Measured, the notch's opening at the frame's faces is 9.12 mm across
+ *    against 8.4 at the rail plane, because the chamfer's bevel grows material
+ *    into the notch over its last 0.36 mm of depth.
+ *  - `port-mouth` is the aperture. It is a plate lying in the rail's
+ *    bottom-face plane, standing `BORE_PROUD` off it, filling the notch's whole
+ *    bottom-face opening — which is 8.4 mm wide and the body's 8.75 mm deep —
+ *    except for its own window: `USB_C.width x USB_C.height` with
+ *    `USB_C.radius` corners. That window is the rounded-rectangle opening the
+ *    bottom view reads, and it is measured on the built plate by
+ *    `port.test.ts`.
+ *  - `port-mouth-plate` and `port-cavity` are the dark faces behind it: the
+ *    plate 0.03 mm inside the aperture, the pocket's floor 0.07 mm behind the
+ *    plate. Both are `bore`, so the window frames the recess's own walls rather
+ *    than a lit aluminum surface — the bright trapezoid the previous build
+ *    showed was the frame's own bottom face seen through the liner's opening.
+ *  - `port-tongue` is the connector: a 6.6 x 1.1 x 0.26 mm dark-steel strip on
+ *    the pocket's floor, its root buried in the floor plate and its underside
+ *    the only face a sightline from below meets. The previous build's tongue
+ *    hung 0.02 mm below the rail's own plane and ran the pocket's whole depth,
+ *    so its 6.6 x 7.1 mm underside was what the bottom view saw.
  *
- *  Three arrangements have been tried here, and the failures are worth keeping.
- *  A tongue inside a closed dark block was never visible from anywhere: the
- *  block's own faces were always in front of it. A floor plate across the whole
- *  mouth with its top face level with the rail's bottom face was the first thing
- *  every upward ray met, so the tongue was invisible again — and that floor was
- *  also a coplanar pair with the rail, which the z-plane gate could not see. A
- *  single block as large as the mouth reads as a dark lump stuck to the bottom
- *  of the phone, because the housing's cut is a *funnel*: narrowest at the
- *  frame's two faces, so a block wide enough to fill the mouth stands proud of
- *  the rail's chamfer at the mouth's front and back edges. All three failures
- *  are written down in `PORT_POCKET`, which is where the pocket's shape is
- *  measured. */
+ *  Three earlier arrangements are worth keeping as failures. A tongue inside a
+ *  closed dark block was never visible from anywhere: the block's faces were
+ *  always in front of it. A floor plate across the whole mouth with its top
+ *  face level with the rail's bottom face was the first thing every upward ray
+ *  met, so the tongue was invisible again — and that floor was also a coplanar
+ *  pair with the rail, which the z-plane gate could not see. A single block as
+ *  large as the mouth reads as a dark lump stuck to the bottom of the phone,
+ *  because the housing's cut is narrowest at the frame's two faces: a block
+ *  wide enough to fill the mouth stands proud of the rail's chamfer at the
+ *  mouth's front and back edges. */
 export function buildBottom(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
   group.name = 'bottom';
-  const rail = -RAIL.y;
   const pocket = PORT_POCKET;
-  const liner = pocket.liner;
-  /** The mouth's own outline — the rectangle `buildHousing` cuts, `USB_C.width`
-   *  across and `USB_C.height` up from the rail — which every part here is
-   *  measured from. */
-  const mouthHalfWidth = USB_C.width / 2;
-  const mouthTop = rail + USB_C.height;
-  /** The liner's corner rounding: the cut's own, a hair inside it. The floor and
-   *  ceiling carry the mouth's outline in plan, so their corners have to sit
-   *  inside the frame's cut rather than at its edge, where a bevel would make
-   *  them stand proud of the rail's bottom face. */
-  const linerRadius = Math.max(0.01, PORT_CUT_RADIUS - PORT_INSET);
-  /** How far the liner reaches along Z: the frame's own face, less `inset`. */
-  const linerHalfDepth = BODY.halfDepth - liner.inset;
+  const rail = -RAIL.y;
 
   // The shell: one plate against each of the frame's faces, closing the two
-  // ends of the through-cut. Its outline is the mouth's and it spans the mouth's
-  // opening from `plateBase` above the rail to the mouth's own top, so it covers
-  // the cut at that depth and buries itself in the frame's metal around it. Its
-  // outer face stops `PORT_INSET` inside the frame's own face, which is what
-  // keeps the pair off one plane — a plate built from the *far* end takes a
-  // negative `maxZ`, so that sign is what grows it towards the face it is meant
-  // to hide. The 0.012 mm it leaves below itself is the rail's own bottom face's
-  // distance from it, and the tongue and the liner cover that band.
-  const shellFace = BODY.halfDepth - PORT_INSET;
-  const shellBase = rail + pocket.plateBase;
-  const plate = (parent: THREE.Object3D, name: string, outerZ: number): void => {
+  // ends of the through-cut. Its outline is wider than the mouth and buried in
+  // the frame's metal, and its outer face stops `shell.inset` inside the
+  // frame's own face — which is what keeps the pair off one plane. A plate
+  // built from the *far* end takes a negative `maxZ`, so that sign is what
+  // grows it towards the face it is meant to hide.
+  const shell = new THREE.Group();
+  shell.name = 'port-shell';
+  group.add(shell);
+  const shellOuter = BODY.halfDepth - pocket.shell.inset;
+  const shellBase = rail + pocket.shell.base;
+  for (const [name, outer] of [
+    ['port-shell-front', shellOuter],
+    ['port-shell-back', -shellOuter],
+  ] as const) {
     addMesh(
-      parent,
+      shell,
       slabGeometry({
-        width: USB_C.width,
-        height: mouthTop - shellBase,
-        radius: USB_C.radius,
-        maxZ: outerZ + (outerZ < 0 ? pocket.shellThickness : 0),
-        thickness: pocket.shellThickness,
+        width: pocket.shell.width,
+        height: pocket.shell.height,
+        radius: pocket.shell.radius,
+        maxZ: outer + (outer < 0 ? pocket.shell.thickness : 0),
+        thickness: pocket.shell.thickness,
         bevel: 0.004,
-        centreY: (mouthTop + shellBase) / 2,
+        centreY: shellBase + pocket.shell.height / 2,
       }),
       materials.aluminum,
       name,
       'aluminum',
       false,
     );
-  };
-  // One part, two plates: the shell is what closes the cut, so both of its
-  // faces have to be measured against the frame's.
-  const shell = new THREE.Group();
-  shell.name = 'port-shell';
-  group.add(shell);
-  plate(shell, 'port-shell-front', shellFace);
-  plate(shell, 'port-shell-back', -shellFace);
-
-  // The pocket's dark liner: two horizontal plates, each the mouth's own
-  // rounded rectangle in plan, each reaching the frame's own faces. Blocks
-  // rather than slabs, and that is not a style choice: `slabGeometry` builds
-  // its rounded rectangle in X and Y and extrudes it along Z, so a "flat plate"
-  // written that way is a plate standing on edge at the body's mid-height,
-  // nowhere near the port. The pocket's floor and ceiling are horizontal, so
-  // they are blocks laid out by their corners.
-  //
-  // The floor is a plate with the tongue's footprint cut out of it, and the
-  // aperture is what makes the tongue visible at all: the plate's top face sits
-  // `drop` below the rail, so a sightline from below that passes inside the
-  // aperture meets the tongue, and one that passes outside it meets dark liner
-  // instead of the phone's interior. The plate is not built as one solid with a
-  // hole because `blockGeometry` has no hole to give it; four blocks laid
-  // around the aperture are the same surface and cannot leave a corner gap,
-  // since they overlap at every corner.
-  const linerTop = rail - liner.drop;
-  const floorBottom = linerTop - liner.thickness;
-  /** The floor is four blocks rather than one plate with a hole, because
-   *  `blockGeometry` has no hole to give it: two side rails and the two end
-   *  bars between them, sharing every corner so the aperture's outline is the
-   *  plate's own. They are one part, named for what they are — the pocket's
-   *  floor — because that is what the gates measure. */
-  const plateGroup = new THREE.Group();
-  plateGroup.name = 'port-cavity';
-  /** Half the aperture, inside the tongue's own half-width by `overlap`, so the
-   *  plate's inner edges and corners are buried in the tongue rather than
-   *  touching them. */
-  const overlap = 0.3;
-  const apertureHalfWidth = pocket.tongue.halfWidth - overlap;
-  const apertureZ = pocket.tongue.maxZ - overlap;
-  const apertureNear = pocket.tongue.minZ + overlap;
-  const floor = (min: readonly [number, number, number], max: readonly [number, number, number]): THREE.Mesh =>
-    addMesh(plateGroup, blockGeometry(min, max, linerRadius), materials.bore, 'port-cavity-floor', 'bore', false);
-  // Two side rails of the floor, each running the plate's whole depth, and the
-  // two end bars between them. Every corner is shared by two blocks, so the
-  // aperture's outline is the plate's own and cannot leave a corner gap.
-  //
-  // Each rail's two X ends are ordered per side rather than scaled by `side`:
-  // the loop used to pass `side * mouthHalfWidth` as the *minimum* X for
-  // `side = -1`, so `blockGeometry` was handed a 1.2 mm negative width.
-  // `BoxGeometry` is symmetric in its width and `roundBoxVertices` then shrinks
-  // the box to its rounding radius, so the block was built without complaint and
-  // collapsed to x ∈ [-3.601, -3.599] — a 0.002 mm sliver of the 1.2 mm rail the
-  // mouth's left flank needs. A sightline from below at x ∈ [-4.2, -3.0] met the
-  // ceiling instead of a floor, and the Y- and Z-plane gates skipped every pair
-  // the collapsed box no longer overlapped, so nothing went red.
-  // `port.test.ts` now asserts each block's own extents and the floor's
-  // coverage of the mouth, so a negative extent anywhere in this file is a
-  // failing test rather than a silently missing surface.
-  for (const side of [-1, 1] as const) {
-    const inner = side * apertureHalfWidth;
-    const outer = side * mouthHalfWidth;
-    floor(
-      [Math.min(inner, outer), floorBottom, -linerHalfDepth],
-      [Math.max(inner, outer), linerTop, linerHalfDepth],
-    );
   }
-  for (const [zMin, zMax] of [
-    [-linerHalfDepth, apertureNear],
-    [apertureZ, linerHalfDepth],
-  ] as const) {
-    floor(
-      [-apertureHalfWidth, floorBottom, zMin],
-      [apertureHalfWidth, linerTop, zMax],
-    );
-  }
-  group.add(plateGroup);
 
-  // The ceiling is the floor's twin at the mouth's other edge: the same
-  // thickness, the same z reach, the same x extent, set above the mouth's own
-  // top. The two plates are then the tunnel's own cross-section, and the bottom
-  // view reads one rounded rectangle. Before this the ceiling sat 1.5 mm above
-  // the rail with a shorter z extent than the floor, so the two plates ended at
-  // different depths, their openings did not line up, and the mouth rendered as
-  // a black hexagon.
-  const ceilingBottom = rail + liner.ceilingBase;
+  // The mouth's metal and the dark plate inside it. The mouth plate's window is
+  // the aperture; the dark plate is 0.2 mm larger all round, so its outline is
+  // buried in the mouth plate's material rather than coincident with the
+  // window's wall, and its own window (0.3 mm inside the aperture) is what the
+  // pocket is read through.
+  addMesh(
+    group,
+    flatPlateGeometry(
+      pocket.mouth.halfWidth * 2,
+      pocket.mouth.halfDepth * 2,
+      pocket.mouth.radius,
+      pocket.mouth.thickness,
+      rail - pocket.mouth.standOff,
+      { width: USB_C.width, depth: USB_C.height, radius: USB_C.radius },
+    ),
+    materials.aluminum,
+    'port-mouth',
+    'aluminum',
+    false,
+  );
+  addMesh(
+    group,
+    flatPlateGeometry(
+      pocket.plate.width,
+      pocket.plate.height,
+      pocket.plate.radius,
+      pocket.plate.thickness,
+      rail + pocket.plate.base,
+      pocket.plate.window,
+    ),
+    materials.bore,
+    'port-mouth-plate',
+    'bore',
+    false,
+  );
+
+  // The pocket's floor: one solid dark plate, inside the pocket rather than
+  // under the rail — the previous build's floor hung 0.01 mm *below* the rail's
+  // own bottom face, so from below it was the surface the eye read, a hard dark
+  // rectangle 8.4 x 8.6 mm around the mouth. It is built as a block rather than
+  // a slab because `slabGeometry` builds its rounded rectangle in X and Y and
+  // extrudes along Z, so a "flat plate" written that way stands on edge at the
+  // body's mid-height, nowhere near the port.
+  const linerBase = rail + pocket.liner.base;
   addMesh(
     group,
     blockGeometry(
-      [-mouthHalfWidth, ceilingBottom, -linerHalfDepth],
-      [mouthHalfWidth, ceilingBottom + liner.ceilingThickness, linerHalfDepth],
-      linerRadius,
+      [-pocket.liner.halfWidth, linerBase, -pocket.liner.halfDepth],
+      [pocket.liner.halfWidth, linerBase + pocket.liner.thickness, pocket.liner.halfDepth],
+      0.1,
+    ),
+    materials.bore,
+    'port-cavity',
+    'bore',
+    false,
+  );
+
+  // The ceiling is the pocket's other wall: the same outline, set
+  // `liner.ceilingBase` above the rail — 0.012 mm clear of the mouth's own top
+  // line, so the two are never coplanar, and high enough that it is the surface
+  // a sightline along Z meets at the top of the mouth's cross-section.
+  const ceilingBase = rail + pocket.liner.ceilingBase;
+  addMesh(
+    group,
+    blockGeometry(
+      [-pocket.liner.halfWidth, ceilingBase, -pocket.liner.halfDepth],
+      [pocket.liner.halfWidth, ceilingBase + pocket.liner.ceilingThickness, pocket.liner.halfDepth],
+      0.1,
     ),
     materials.bore,
     'port-cavity-ceiling',
@@ -224,13 +302,10 @@ export function buildBottom(materials: PhoneMaterials): THREE.Group {
     false,
   );
 
-  // The connector tongue: the one lighter surface inside the port. Polished
-  // steel rather than dark like the pocket around it, because the whole port is
-  // read from a low angle where only a *bright* surface inside it separates
-  // "dark cavity with a metal tongue" from "dark hole". Its root is buried in
-  // the liner below `rail` and only its upper part stands in the opening, so
-  // the two parts' surfaces meet inside solid material instead of leaving a
-  // slit a ray could pass through.
+  // The connector tongue: a thin strip on the floor, its root buried in the
+  // floor plate so the two parts' surfaces meet inside solid material instead
+  // of leaving a slit a ray could pass through, and only its underside left
+  // where the bottom view can reach it.
   addMesh(
     group,
     blockGeometry(

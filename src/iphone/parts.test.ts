@@ -17,6 +17,7 @@ import {
 } from './dims.js';
 import {
   buildAntennas,
+  buildBack,
   buildBackPanel,
   buildBottom,
   buildControls,
@@ -33,6 +34,7 @@ import {
   expectOnRail,
   materials,
   outerFace,
+  panelFootprint,
   railProfile,
   railReach,
   required,
@@ -430,6 +432,68 @@ describe('the top edge’s mmWave antenna window', () => {
       clearance,
       `the window clears the top mic bore by ${clearance.toFixed(4)} mm`,
     ).toBeGreaterThanOrEqual(BORE_CLEARANCE);
+  });
+});
+
+/**
+ * The MagSafe ring, which no gate saw at all.
+ *
+ * The register's round-6 edge entry names it: "It does not see `buildBack`'s
+ * logo or MagSafe ring … MagSafe still has none." Round 7 measured the cost —
+ * `magsafe.color` pure red, five views diffed, **0 pixels differed** — so this
+ * gate asks the geometry that occlusion follows from, not the shading.
+ *
+ * Measured here: the ring's outermost vertex is at z = -4.95829 against the
+ * panel's outer face at -4.97499, **0.0167 mm behind it**, and all 1419 of its
+ * vertices project inside the panel's footprint, the closest 5.10 mm short of a
+ * side wall (bottom 14.71, top 30.32). The depth margin is the tessellation's
+ * as much as the placement's: 10 radial segments never sample the tube's
+ * equator, so the widest circle the built mesh reaches is `tube * sin 72°` =
+ * 0.7133 mm rather than the ideal 0.75: that 0.0367 mm is what turns the
+ * placement's 0.02 mm of proudness into 0.0167 mm of burial. A finer tube, or a
+ * panel face moved out, un-buries the ring and takes this gate red.
+ *
+ * Bounds. Burial, not shading: the tonal step is `materials.test.ts`'s and the
+ * render's, and a grazing sightline clearing the panel's own edge travels 5.1 mm
+ * inward before dropping 0.0167 mm to the ring — the pixel diff covers that.
+ */
+describe('the MagSafe ring', () => {
+  /** How far the ring's outermost vertex must sit behind the panel's own outer
+   *  face: a literal, measured 0.0167 mm here, so a ring that met the face or
+   *  stood proud of it — the 0.12 mm state that drew a visible circle — fails. */
+  const BURIAL_MIN = 0.01;
+  /** How far the ring must stay clear of the parts around it: 4 mm, against a measured 5.10 mm to the panel's outline and 7.91 to the frame's front face. */
+  const MARGIN_MIN = 4;
+
+  function builtRing(): { readonly panel: THREE.Object3D; readonly ring: THREE.Object3D } {
+    const back = buildBack(materials);
+    return { panel: required(back, 'back-panel'), ring: required(back, 'magsafe') };
+  }
+
+  it('buries the ring behind the panel’s own outer face', () => {
+    const { panel, ring } = builtRing();
+    const face = worldBox(panel);
+    const box = worldBox(ring);
+    expect(
+      box.min.z - face.min.z,
+      `the ring’s outermost vertex is at z = ${box.min.z.toFixed(5)}, the panel’s outer face at ${face.min.z.toFixed(5)}: it stands ${(face.min.z - box.min.z).toFixed(4)} mm proud of the panel`,
+    ).toBeGreaterThanOrEqual(BURIAL_MIN);
+    // Its other end stays in the body: the tube runs back into the frame, not out the front.
+    const frontGap = BODY.halfDepth - box.max.z;
+    expect(frontGap, `the ring reaches z = ${box.max.z.toFixed(4)}, ${frontGap.toFixed(4)} mm short of the frame’s front face`).toBeGreaterThanOrEqual(MARGIN_MIN);
+  });
+
+  it('keeps every point of the ring over the panel’s face, with a margin', () => {
+    const { panel, ring } = builtRing();
+    const report = panelFootprint(panel, ring);
+    const outside = report.outside.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`);
+    expect(report.count, 'the ring had no vertices to measure').toBeGreaterThan(1000);
+    expect(
+      outside.slice(0, 4).join(' / '),
+      `the ring reaches past the panel’s footprint at ${outside.slice(0, 4).join(' / ')}`,
+    ).toBe('');
+    const [side, gap] = Object.entries(report.margins).reduce((worst, wall) => (wall[1] < worst[1] ? wall : worst));
+    expect(gap, `the ring stops ${gap.toFixed(4)} mm short of the panel’s ${side} wall`).toBeGreaterThanOrEqual(MARGIN_MIN);
   });
 });
 
