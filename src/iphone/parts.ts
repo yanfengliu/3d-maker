@@ -46,45 +46,49 @@ export { buildBackPanel, PANEL_FACE_Z };
  *  `BUTTONS[].proud` and `BUTTONS[].seamProud` in `dims.ts`, because the seam
  *  has to stay behind its own pill and Camera Control's two faces are set into
  *  the rail rather than standing off it. The seam is a thin dark bar larger
- *  than the pill, so it reads as the shadowed gap at the button's base rather
- *  than as a darker button.
+ *  than the pill, so it reads as the shadowed gap at the button's base, not a
+ *  darker button.
  *
- *  The seam having its own stand-off is load-bearing: it used to take the
- *  pill's outer plane as its own, which made a near-black face exactly coplanar
- *  with the pill's outer face. Two coplanar faces fight for the same depth
- *  samples, and the pill lost often enough to read as a black, speckled pill in
- *  every profile shot.
+ *  Its own stand-off is load-bearing: sharing the pill's outer plane made a
+ *  near-black face exactly coplanar with the pill's, and the pill lost enough of
+ *  the depth fight to render black and speckled in every profile shot.
  *
- *  How far the seam's outline stands outside the pill's is this margin plus the
- *  seam's own bevel (0.075, capped by its 0.16 thickness) minus the pill's
- *  (0.12), so the dark band the profile view can reach is 0.15 + 0.075 - 0.12 =
- *  0.105 mm on the flats — measured on the built parts, 0.1050 to 0.1663, wider
- *  at the 45-degree corners because the seam's corner arcs are centred 0.15
- *  further out rather than grown by 0.15.
+ *  The band a profile view reaches is this margin plus the seam's bevel (0.075)
+ *  minus the pill's (0.12): 0.105 mm on the flats, measured 0.1050 to 0.1671 on
+ *  the built parts, wider at the two top corners because the seam's corner arcs
+ *  are centred 0.15 further out rather than grown by it. Uniform, that band is
+ *  the defect the two halvings fixed: at 0.3 it measured 0.2550-0.3776 mm and
+ *  rendered a **hard near-black ring** around the whole pill (`.shots/z1/m0_3/
+ *  cosmic-orange_buttons.png` through `.shots/scratch/z1/measure.mjs`: 1 px on
+ *  the depth edges at luma 18 and 9, 1-2 px on the ends at 13 and 10, against
+ *  the face's 100.3-101.5), while at 0.08 the dark is gone from the frame
+ *  entirely — the A/B the pills vanish from. The reference's own base line
+ *  measures 82-105 luma against 144-174 beside it (`.shots/ref/gsmr-040.jpg`):
+ *  a shadow rather than a drawn edge, and `SEAM_BASE` is where it goes.
  *
- *  At 0.3 the band measured 0.2550 to 0.3776 mm, and that is what the `left`
- *  profile four wheel notches in rendered as a **hard near-black outline**
- *  around the whole pill — `.shots/z1/m0_3/cosmic-orange_buttons.png`, read
- *  back through `.shots/scratch/z1/measure.mjs`: a dark run 1 px wide on the
- *  pill's depth edges (luma 18 and 9) and 1-2 px on its ends (luma 13 and 10)
- *  against the pill face's 100.3-101.5, a ring at 0.09-0.18 of the metal it
- *  bounds. On the real device that dark is the gap at the button's base, and the
- *  reference's own base line measures 82-105 luma against 144-174 beside it
- *  (`.shots/ref/gsmr-040.jpg`, `.shots/scratch/z1/ref-040-edge.png`) — a shadow
- *  rather than a drawn edge. At 0.15 the same frame renders the ring as a single
- *  soft line at luma 31, 0.31 of the face, and it is gone from the frame
- *  entirely at 0.08, which is why this is 0.15 and not less.
- *
- *  It is also what puts metal back beside the pill: the frame's flat wall at
- *  `RAIL.x` measures 8.0847 mm across on the built housing, reaching z =
- *  ±4.0424, and the seam's silhouette reached ±4.000 at a margin of 0.3 — only
- *  0.0424 mm of flat left on each side, so the rail's chamfer highlight ran
- *  straight into the pill's outline and the pill read as an isolated uniform
- *  patch. At 0.15 the seam stops at ±3.850 and leaves 0.1924 mm. `parts.test.ts`
- *  gates the band on the built geometry from both sides: too wide is the
- *  outline, and a band that reaches zero is the A/B frame the pills vanished
- *  in. */
+ *  The margin is also what puts metal back beside the pill: the frame's wall at
+ *  `RAIL.x` measures 8.0847 mm across and reaches z = ±4.0424, so 0.3 left
+ *  0.0424 mm of flat each side and 0.15 leaves 0.1924 mm. */
 const SEAM_MARGIN = 0.15;
+/** How much further the seam's outline stands below the pill's base (-Y) than
+ *  around the rest of its silhouette: the base shadow, which no uniform margin
+ *  can make. The outline is the pill's own grown by `SEAM_MARGIN` everywhere but
+ *  the base, which takes `SEAM_MARGIN + SEAM_BASE`, so the band measures 0.755 mm
+ *  there (0.795 on Camera Control) against the 0.105-0.167 mm hairline elsewhere.
+ *
+ *  0.65 is measured off `.shots/ref/gsmr-040.jpg` and is a shape rather than one
+ *  pixel's. On the volume-up pill, at x = 762 — the column through the pill's
+ *  outer face, outside the rail's silhouette between the pills — the bright face
+ *  runs y = 246..286 and the dark band under it to y = 293 before the pixels
+ *  turn to the blue wall, 6.5 px, while the same column above the face runs
+ *  y = 245..241, 4 px: both ends carry the same photographic softness, so the
+ *  shadow the base *adds* is that 2.5 px difference, and the volume-down pill's
+ *  same subtraction gives 3.3 px. At 3.8 px/mm — the two 11 mm volume pills
+ *  measure 41.5 and 42.0 px along their own axis, while the body's 698 px over
+ *  `BODY.height` is 4.65 px/mm at mid-body, where the camera is nearer — the
+ *  2.9 px mean is 0.76 mm and the band resolves 0.26 mm per pixel; the 0.3-0.4 mm
+ *  an earlier handoff carried needs 8-10 px/mm, which this frame has nowhere. */
+const SEAM_BASE = 0.65;
 /** How far a pill's extrusion runs back past the rail. Without it the pill's
  *  inner cap lands exactly on the wall, which is one more coplanar pair. */
 const EMBED = 0.1;
@@ -238,10 +242,9 @@ export function buildBack(materials: PhoneMaterials): THREE.Group {
 }
 
 /**
- * Side controls. Every pill is proud anodized metal — the frame's own finish —
- * with a thin dark seam at its base: the physical left edge (-X) carries
- * Action and the two volume keys, the physical right edge (+X) the power pill
- * and the nearly flush Camera Control.
+ * Side controls: every pill is proud anodized metal — the frame's own finish —
+ * with a dark seam at its base. The left edge (-X) carries Action and the two
+ * volume keys, the right (+X) the power pill and the nearly flush Camera Control.
  */
 export function buildControls(materials: PhoneMaterials): THREE.Group {
   const group = new THREE.Group();
@@ -261,17 +264,20 @@ export function buildControls(materials: PhoneMaterials): THREE.Group {
     const seamX = button.edge * (RAIL.x + button.seamProud);
 
     // The seam is larger than the pill and stands far less proud, so only the
-    // sliver around the pill's base shows.
+    // sliver around the pill shows — and larger still below it, where the sliver
+    // is the reference's base shadow. `SEAM_BASE` is spent on the -Y end alone:
+    // growing the outline and pulling its centre down by half the growth leaves
+    // the top and both depth sides at `SEAM_MARGIN`.
     addMesh(
       group,
       pillGeometry(
-        button.height + 2 * SEAM_MARGIN,
+        button.height + 2 * SEAM_MARGIN + SEAM_BASE,
         pillDepth + 2 * SEAM_MARGIN,
         pillRadius,
         button.edge,
         seamX,
         button.seamProud + EMBED,
-        button.centreY,
+        button.centreY - SEAM_BASE / 2,
       ),
       materials.seam,
       `${button.label}-seam`,
@@ -291,13 +297,13 @@ export function buildControls(materials: PhoneMaterials): THREE.Group {
 
 /**
  * A pill whose rounded cross-section runs along Y and whose outer face lands
- * exactly on `outerX`, extruded inwards from there by `thickness` — which is
- * the documented `proud` plus `EMBED`, so its inner cap sits inside the metal.
+ * exactly on `outerX`, extruded inwards by `thickness` — the documented `proud`
+ * plus `EMBED`, so its inner cap sits inside the metal. `centreY` is the
+ * outline's own centre, which the seam's is not: see its call site.
  *
- * The quarter turn has to follow the edge's sign. Extruding towards +X and
- * then translating by the *negative* edge puts the pill's caps the wrong way
- * round on that edge, so its outward face is back-facing and renders as the
- * dark hollow behind it — a second reason the right-hand buttons read black.
+ * The quarter turn follows the edge's sign. Extruding towards +X and translating
+ * by the *negative* edge puts the caps the wrong way round on that edge, so the
+ * outward face is back-facing and renders as the dark hollow behind it.
  */
 function pillGeometry(
   height: number,
@@ -489,9 +495,5 @@ export function buildAntennas(materials: PhoneMaterials): THREE.Group {
   }
   return group;
 }
-
-
-
-
 
 

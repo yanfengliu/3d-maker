@@ -125,8 +125,10 @@ describe('the edge contract against the built geometry', () => {
       // made the pills render black and speckled.
       expect(outerFace(worldBox(seam), button.edge), `${button.label}: the seam is not behind the pill`).toBeCloseTo(RAIL.x + button.seamProud, 3);
       expect(button.seamProud, `${button.label}: the seam's plane is level with the pill's own — a coplanar pair`).not.toBeCloseTo(button.proud, 5);
-      // How wide that sliver actually is, around the pill's whole silhouette:
-      // `expectSeamBand` carries the two bounds and the frames they came from.
+      // How wide that sliver actually is, measured where the shape puts it: a
+      // hairline around the pill's top and depth sides, and the reference's own
+      // base shadow below it. `expectSeamBand` carries both bounds and the
+      // frames they came from.
       expectSeamBand(button.label, pill, seam);
     }
   });

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   antennaColor,
   COLORWAYS,
+  DARK_GLASS_REFLECT,
   DEFAULT_COLOR,
   logoColor,
   magsafeColor,
@@ -202,9 +203,8 @@ export function createMaterials(): PhoneMaterials {
   // base layer at this `ior` plus 0.04 on the clearcoat). `scene.ts` fixed it: the
   // wall in front of the camera is now two small cards whose edges fall inside
   // those degrees — on the same rect, mean 64, p02 44, median 51, maximum 110.
-  //
-  // Nothing here is a lever for that, and this material carries no
-  // `envMapIntensity`: its level is the scene's one value (see the header).
+  // Nothing here is a lever for that, and this material carries no `envMapIntensity`:
+  // its level is the scene's one value (see the header).
   const frontGlass = new THREE.MeshPhysicalMaterial({
     color: 0x060709,
     metalness: 0,
@@ -254,7 +254,6 @@ export function createMaterials(): PhoneMaterials {
   // pixels from rgb(86,90,99) to rgb(111,91,97) while the glass inside it and the
   // ring outside it did not move, so the liner is the pupil's own rim — a cap 5
   // degrees off its crown normal, reflecting a different direction of the studio.
-  //
   // Roughness spreads that slowly, measured on the close-up's 26x6 px band at
   // the pupil's lower rim: p95 169 (max 171) at clearcoat 1 and roughness 0.07;
   // 158 at 0.3; 113 at 0.32 under a 0.35 coat; 94 at 0.5; 84 at 0.7. What
@@ -312,8 +311,8 @@ export function createMaterials(): PhoneMaterials {
   // to carry `emissive: 0xfff2d6` at 0.85, which under ACES tone mapping came
   // out as a pure white blown disc in every view, and at an albedo of 0xe9ebee
   // it measured 230 luma on the back view — brighter than the plateau's own
-  // highlight. The reference close-up's window measures 176 at its rim and 216
-  // in the middle; at 0xa9adb2 this one measures 206 there.
+  // highlight. The reference's window measures 176 at its rim and 216 in the
+  // middle; at 0xa9adb2 this one measures 206 there.
   const flash = new THREE.MeshPhysicalMaterial({
     color: 0xa9adb2,
     metalness: 0,
@@ -322,30 +321,28 @@ export function createMaterials(): PhoneMaterials {
     clearcoatRoughness: 0.5,
   });
 
-  // LiDAR, the mic pinhole and the island's front camera: dark glass windows,
-  // and the surface this round's defect was named for.
-  //
-  // The reference close-up's own LiDAR window measures 12 luma (p05 5, p50 9)
-  // against a 94.5-luma plateau around it — 0.127 of its surround. This one
-  // measured 68 against a 157-luma plateau on the `back` view and 43 against
-  // 150 on the close-up preset: 0.43 and 0.29 of the surface beside it, a grey
-  // disc — clearcoat 1 at roughness 0.08 was a mirror for the whole studio on a
-  // window that should hold almost none of it.
-  //
-  // Coat and roughness are nearly exhausted as levers — clearcoat 1 at
-  // roughness 0.08 renders 107 luma on the round-7 rect, clearcoat 0.5 at 0.12
-  // is 85, clearcoat 0.2 at 0.3 is 68, and clearcoat 0 at roughness 0.62 is
-  // still 44 — so the level itself is what moves it. `specularIntensity` 0.45
-  // with no coat renders 30 luma there and 18 on the close-up, against plateaus
-  // that did not move (157 and 150), which is 0.19 and 0.12 of the surround:
-  // inside the reference's 0.13-0.25 band. The window keeps its gloss — it is
-  // the coat, not the polish, that was returning the studio.
+  // LiDAR, the mic pinhole and the island's front camera: the dark glass windows
+  // this round's defect was named for. The reference's own measures 12 luma
+  // (p05 5, p50 9) over a 94.5-luma plateau, 0.127 of it; this one measured 68
+  // against 157 on `back` and 43 against 150 on the close-up, 0.43 and 0.29.
+  // Coat and roughness are nearly spent as levers — clearcoat 1 at roughness
+  // 0.08 renders 107 luma on the round-7 rect, clearcoat 0.5 at 0.12 is 85,
+  // clearcoat 0.2 at 0.3 is 68, clearcoat 0 at roughness 0.62 is still 44 — so
+  // the level moves it: 0.45 with no coat renders 30 there and 18 on the
+  // close-up, and the gloss survives, since it is the coat and not the polish.
+  // One value cannot hold the band, and `palette.ts`'s `DARK_GLASS_REFLECT`
+  // carries why: the window reads 30 against plateau faces of 83, 154 and 208,
+  // so 0.361 on Deep Blue against a 0.13-0.25 band, orange 0.201 and silver
+  // 0.159 inside it. One value would have to be both <= 20.8 luma and >= 27.0;
+  // so the reflectivity is per finish and not a tint — the albedo lever made a
+  // 180-luma grey disc. `mmwave` and `seam` above are per-finish for the same
+  // reason.
   const darkGlass = new THREE.MeshPhysicalMaterial({
     color: 0x090c12,
     metalness: 0.2,
     roughness: 0.3,
     clearcoat: 0,
-    specularIntensity: 0.45,
+    specularIntensity: 0.45 * DARK_GLASS_REFLECT[DEFAULT_COLOR],
   });
 
   // Camera Control's cover: a dark shade of the finish. `palette.ts`'s
@@ -469,7 +466,8 @@ export function createMaterials(): PhoneMaterials {
  * The optics are in this list deliberately: the ring, Camera Control, the logo,
  * the mmWave insert and the MagSafe ring are all tints of the finish, and a
  * switch that repainted only the frame and the panel would leave an orange lens
- * ring on a Deep Blue phone.
+ * ring on a Deep Blue phone. `darkGlass` is the one entry whose *tint* is not
+ * per finish and whose reflectivity is — see `DARK_GLASS_REFLECT`.
  */
 export function applyColorway(materials: PhoneMaterials, key: ColorKey): void {
   const way = COLORWAYS[key];
@@ -491,6 +489,9 @@ export function applyColorway(materials: PhoneMaterials, key: ColorKey): void {
   materials.lensRing.roughness = ringRoughness(key);
   materials.sapphire.color.copy(sapphireColor(key));
   materials.logo.color.copy(logoColor(key));
+  // The window's reflectivity, one row per finish: the tint above is the same
+  // dark glass on all three, and this is the level that holds its band.
+  materials.darkGlass.specularIntensity = 0.45 * DARK_GLASS_REFLECT[key];
   // The mmWave window is the finish's own hue, muted and stepped down: a
   // colourway switch has to repaint it, or a Deep Blue phone keeps an orange
   // insert in its top edge.

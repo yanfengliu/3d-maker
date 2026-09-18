@@ -67,6 +67,54 @@ const DARK_OPTICS = {
     closeUpBefore: 43,
     closeUpRect: 'x 1130 y 610 40x40 of the camera-closeup preset',
     surroundCloseUp: 150,
+    /**
+     * The LiDAR window's reflectivity, one row per finish, as the multiplier
+     * `palette.ts`'s `DARK_GLASS_REFLECT` applies to `specularIntensity` above.
+     * Round 9 fitted one value and recorded Deep Blue as unreached; this is the
+     * per-finish level that closes it, and the reason is arithmetic rather than
+     * analogy — see `reflectCeiling`/`reflectFloor` below.
+     *
+     * Measured on the `back` preset's own two rects below, mean BT.709 luma of
+     * the window over the plateau's flat face beside it, **83 / 154 / 208 luma**
+     * across the three finishes at HEAD (the recorded round-9 work's "89-209"
+     * span is 6 luma low at the bottom and 1 high at the top):
+     *
+     *   finish          reflect  specular  window  plateau  ratio
+     *   cosmic-orange   1        0.45      31      154      0.201
+     *   deep-blue       0.378    0.17      14      83       0.169
+     *   silver          1        0.45      33      208      0.159
+     *
+     * and the reference photo's own through the same arithmetic is 12 over
+     * 94.5, **0.127**. The ladder each row was fitted to, window luma at
+     * `specularIntensity` 0.13 / 0.17 / 0.25 / 0.45 / 0.60: blue 12 / 14 / 19 /
+     * 30 / 38, orange 14 / 16 / 21 / 31 / 39, silver 16 / 18 / 22 / 33 / 40.
+     */
+    reflect: { 'cosmic-orange': 1, 'deep-blue': 0.378, silver: 1 },
+    /** The band the ratio is held in, and the reference's own measure in it. */
+    bandFloor: 0.13,
+    bandCeiling: 0.25,
+    referenceRatio: 0.127,
+    /** The arithmetic that forces the per-finish level, in luma of the window:
+     *  blue's plateau x `bandCeiling` is the highest window it may render, and
+     *  silver's plateau x `bandFloor` the lowest. The first is under the second,
+     *  so no single level satisfies both — which is what the test asserts. */
+    reflectCeiling: 20.8,
+    reflectFloor: 27,
+    /** The window luma the one-level arm (0.45 on every finish) renders, and
+     *  the ratio it lands on — the row the defect is stated as. */
+    oneLevel: { window: 30, ratio: 0.361 },
+    /** The two lumas each ratio above is made of, in BT.709 luma of the frames
+     *  the sweep shot: the window's own face and the plateau's flat face beside
+     *  it, both at 1400x1000 and the same pose per finish. */
+    window: { 'cosmic-orange': 31, 'deep-blue': 14, silver: 33 },
+    plateau: { 'cosmic-orange': 154, 'deep-blue': 83, silver: 208 },
+    /** The two rects every number above was read over, both absolute pixels of
+     *  the 1400x1000 `back` frame: the window's own face and the plateau's flat
+     *  face beside it. The window rect is inscribed in the disc (the 60 px disc
+     *  is centred at 845, 225) so it cannot straddle the bezel, and the plateau
+     *  rect sits on the flat face clear of the plateau's edges. */
+    backWindowRect: 'x 836 y 205 24x24 of the back preset',
+    backPlateauRect: 'x 700 y 90 90x90 of the back preset',
   },
   lensGlass: {
     specularIntensity: 0.3,
@@ -300,6 +348,9 @@ describe('the look’s optics, glass and tongue', () => {
         `${key}: a clearcoat at ${String(material.clearcoat)} is a second, sharper mirror over the face — the LiDAR window's original defect was clearcoat 1 at roughness 0.08`,
       ).toBeLessThan(0.5);
 
+      // The `DEFAULT_COLOR` arm of the pin: `createMaterials` builds Cosmic
+      // Orange, whose reflect is 1, so the built value is the base level and
+      // the per-finish rows are the test below.
       expect(material.specularIntensity, `${key}: the specular level, which is what lands it`).toBeCloseTo(
         pin.specularIntensity,
         3,
@@ -313,7 +364,8 @@ describe('the look’s optics, glass and tongue', () => {
     const materials = materialsFor('cosmic-orange');
     // The retune is a specular-level change, and that is a claim about all three
     // finishes at once: none of these three surfaces is finish-tinted, so a
-    // colourway switch must not move them at all.
+    // colourway switch must not move their albedos at all. Their *levels* are a
+    // separate claim, and the LiDAR window's is per finish — see the test below.
     const before = DARK_OPTICS_KEYS.map((key) => materials[key].color.getHexString(THREE.SRGBColorSpace));
     expect(before, 'the dark optics’ albedos').toEqual(DARK_OPTICS_KEYS.map((key) => DARK_OPTICS[key].tint));
     for (const key of COLOR_KEYS) {
@@ -323,12 +375,59 @@ describe('the look’s optics, glass and tongue', () => {
         `${key}: the dark optics are not finish tints, so their albedos must not follow the dropdown`,
       ).toEqual(before);
       for (const name of DARK_OPTICS_KEYS) {
+        const pin = DARK_OPTICS[name];
+        // The window's level is the one that may follow the finish, and the
+        // albedo above is the one that may not — that pair is the whole fix:
+        // `darkGlass` is dark glass on all three and only its reflectivity moves.
+        const factor = 'reflect' in pin ? pin.reflect[key] : 1;
         expect(switched[name].specularIntensity, `${key}: ${name}'s specular level`).toBeCloseTo(
-          DARK_OPTICS[name].specularIntensity,
+          pin.specularIntensity * factor,
           3,
         );
       }
     }
+  });
+
+  describe('darkGlass, one band across three plateaus', () => {
+    it('holds the LiDAR window in its band on every finish, at a per-finish level', () => {
+      // The class first, and it is arithmetic rather than analogy: this surface
+      // is an untinted dielectric, so it renders the same luma whatever the
+      // frame is, and the plateau behind it does not. Blue's plateau times the
+      // band's own ceiling is the brightest window blue may show; silver's times
+      // the floor is the darkest silver may show. When the first is under the
+      // second, one level cannot serve both however it is chosen — which is why
+      // the level is a row per finish and the tint is not.
+      const pin = DARK_OPTICS.darkGlass;
+      expect(
+        pin.reflectCeiling,
+        `the one-level arm: Deep Blue's plateau (${String(pin.window['deep-blue'])}) x the band's ceiling (${String(pin.bandCeiling)}) is ${String(pin.reflectCeiling)} luma, the brightest window its ratio admits, and silver's plateau (${String(pin.window.silver)}) x the floor (${String(pin.bandFloor)}) is ${String(pin.reflectFloor)} luma, the darkest silver's admits — so a single level would have to be both <= ${String(pin.reflectCeiling)} and >= ${String(pin.reflectFloor)}`,
+      ).toBeLessThan(pin.reflectFloor);
+      expect(
+        pin.oneLevel.window / pin.plateau['deep-blue'],
+        `the same arm as a ratio: Deep Blue's one-level window renders ${String(pin.oneLevel.window)} luma over ${pin.backWindowRect} against ${String(pin.plateau['deep-blue'])} over ${pin.backPlateauRect}, ${String(pin.oneLevel.ratio)} — outside the ${String(pin.bandFloor)}-${String(pin.bandCeiling)} band the other two are inside`,
+      ).toBeCloseTo(pin.oneLevel.ratio, 3);
+
+      // Then the per-finish values: the reflectivity each finish is set to, the
+      // tint they share, and the ratio each renders — with the two rects those
+      // lumas were read over.
+      for (const key of COLOR_KEYS) {
+        const materials = materialsFor(key);
+        expect(
+          materials.darkGlass.specularIntensity,
+          `${key}: the LiDAR window's reflectivity, expected ${String(pin.reflect[key])} of ${String(pin.specularIntensity)}; the per-finish row renders ${String(pin.window[key])} luma and ${(pin.window[key] / pin.plateau[key]).toFixed(3)}`,
+        ).toBeCloseTo(pin.specularIntensity * pin.reflect[key], 3);
+        expect(
+          materials.darkGlass.color.getHexString(THREE.SRGBColorSpace),
+          `${key}: the window's tint — the reflectivity is per finish and this is not, so the surface stays dark glass rather than a disc of the finish's own tone`,
+        ).toBe(pin.tint);
+        const ratio = pin.window[key] / pin.plateau[key];
+        expect(
+          ratio,
+          `${key}: the window renders ${String(pin.window[key])} luma over ${pin.backWindowRect} against ${String(pin.plateau[key])} over ${pin.backPlateauRect}, a ratio of ${ratio.toFixed(3)} against the ${String(pin.bandFloor)}-${String(pin.bandCeiling)} band (the reference's own is ${String(pin.referenceRatio)})`,
+        ).toBeGreaterThanOrEqual(pin.bandFloor);
+        expect(ratio, `${key}: the window's ratio, over the band's ceiling`).toBeLessThanOrEqual(pin.bandCeiling);
+      }
+    });
   });
 
   it('keeps the cover glass’s environment structure, and the wall its own veneer dims', () => {

@@ -371,6 +371,54 @@ export function mmwaveColor(way: Colorway, key: ColorKey): THREE.Color {
   return fromHsl(hsl.h, hsl.s * (1 - MMWAVE_DESATURATE), MMWAVE_TONE[key].light);
 }
 
+/**
+ * The LiDAR window's reflectivity, per finish: the one optic whose *level* is a
+ * finish, at one constant untinted tint.
+ *
+ * The surface is `materials.ts`'s `darkGlass` — the LiDAR window, the mic
+ * pinhole and the island's front camera — held at `0x090c12` on every finish,
+ * because on the real device that window is dark glass whatever the phone is
+ * made of; only how much studio it returns varies. Measured on the `back`
+ * preset's own window rect (x 836 y 205 24x24) against the plateau's flat face
+ * (x 700 y 90 90x90), in the BT.709 luma `check-finishes.mjs` prints, the window
+ * renders **30, 30 and 33 luma** on the three finishes while that plateau reads
+ * **83, 154 and 208** — the same surface landing on 0.361, 0.201 and 0.159 of
+ * its surround. Only blue is outside the reference's 0.13-0.25 band; the
+ * reference close-up measures 12 luma over 94.5, **0.127**, through the same
+ * arithmetic.
+ *
+ * One level cannot serve all three, and that is arithmetic rather than analogy:
+ * to land mid-band the window must read at most 83 x 0.25 = 20.8 luma against
+ * blue's plateau and at least 154 x 0.13 = 20.0 against orange's, while silver
+ * needs 208 x 0.13 = 27.0 to clear the floor. An untinted dielectric renders
+ * the same luma on every finish, so one value has to be both <= 20.8 and
+ * >= 27.0. It cannot be. `mmwave` and `seam` above are per-finish for the same
+ * reason; what differs here is which quantity is derived.
+ *
+ * It is a *reflectivity*, not a tint, and that is the requirement rather than a
+ * preference. The albedo lever was measured and rejected: with
+ * `specularIntensity` at 0.45 and this tint walked from `0x090c12` to
+ * `0x909090`, the window rendered **180 luma** — a flat light-grey disc, the
+ * "finish-tinted disc" it may not become. The reflectivity is what moves the
+ * surface (0.13 -> 28 luma, 0.45 -> 30, 0.85 -> 50 on the same rect), so the
+ * tint stays one value and this table scales the Fresnel return instead.
+ *
+ * `reflect` is a dimensionless multiplier on that reflectivity, 1 being the
+ * level the two finishes already inside the band keep. The measured ladders
+ * behind each row, window luma at `specularIntensity` 0.13 / 0.17 / 0.25 / 0.45
+ * / 0.60 — blue 12 / 14 / 19 / 30 / 38 against a plateau fixed at 83, orange
+ * 14 / 16 / 21 / 31 / 39 against 154, silver 16 / 18 / 22 / 33 / 40 against 208.
+ * Blue takes the value that lands 14 luma — 0.169 of its plateau, mid-band — and
+ * orange and silver keep 0.45, already inside at 0.201 and 0.159, which is what
+ * round 9 fitted. The band bounds a ratio, not a reflectivity, so the three
+ * finishes land on three levels by construction: that is the fix.
+ */
+export const DARK_GLASS_REFLECT: Record<ColorKey, number> = {
+  'cosmic-orange': 1,
+  'deep-blue': 0.378,
+  silver: 1,
+};
+
 export function isColorKey(value: string | null | undefined): value is ColorKey {
   return value === 'cosmic-orange' || value === 'deep-blue' || value === 'silver';
 }
