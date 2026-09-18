@@ -18,7 +18,7 @@ import type { ColorKey } from './palette.js';
  *
  * The look's own fixtures are at the end of the file — the real material set,
  * its relative luminance, and a reader for `scene.ts` — shared by the look's
- * two halves, `materials.test.ts` and `optics.test.ts`, for the same reason.
+ * three files, `materials.test.ts`, `optics.test.ts` and `tone.test.ts`.
  *
  * Nothing in the app imports this module — only `*.test.ts` files do — so it is
  * not reachable from either page's entry point and never reaches the bundle.

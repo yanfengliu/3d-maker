@@ -100,7 +100,7 @@ export interface PhoneMaterials {
 /** How far the pills' seam's albedo sits below the frame's it is cut into, in
  *  linear luminance: 0.2594 is the shade of the finish that renders the
  *  reference's own 0.494-0.572 base shadow. It is a shade of the *finish* and
- *  not one grey — `optics.test.ts`'s `BUTTON_SEAM` carries the cross-finish
+ *  not one grey — `tone.test.ts`'s `BUTTON_SEAM` carries the cross-finish
  *  ladder, and why one grey cannot be the same step below all three frames. */
 const SEAM_SHADE = 0.2594;
 
@@ -364,7 +364,7 @@ export function createMaterials(): PhoneMaterials {
   // The pills' base shadow, and the hairline the lens rings share (`lens.ts`): the
   // finish's own metal in shadow at `SEAM_SHADE`, not a fixed grey, so the crevice
   // keeps its ratio on a dark frame and a pale one. `0x0a0b0d` rendered its own face
-  // at 10 luma, 0.10 of the pill's 101.4; `optics.test.ts` carries the readings.
+  // at 10 luma, 0.10 of the pill's 101.4; `tone.test.ts` carries the readings.
   const seam = new THREE.MeshStandardMaterial({
     color: new THREE.Color(way.aluminum).multiplyScalar(SEAM_SHADE),
     metalness: 0.2,

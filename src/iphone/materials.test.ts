@@ -10,13 +10,14 @@ import { materialsFor, relativeLuminance, sceneSource } from './test-helpers.js'
  * view's rail-over-panel ratio is built from, the mmWave insert's character and
  * tone, and the scene's one environment level.
  *
- * `optics.test.ts` is this file's other half — the three dark optics
- * (`DARK_OPTICS`), the cover glass's environment wall (`FRONT_WALL`) and the
- * port's tongue (`TONGUE`) — and the fixtures both halves build a real material
- * set with are in `test-helpers.ts`. The split is length only: this file was
- * 553 lines, past the repo's 500-line rule, and every assertion and its message
- * moved with the pins it is about, so the two files together claim exactly what
- * the one file did.
+ * `optics.test.ts` and `tone.test.ts` are this file's other halves — the three
+ * dark optics (`DARK_OPTICS`) and the cover glass's environment wall
+ * (`FRONT_WALL`) in `optics.test.ts`, the port's tongue (`TONGUE`) and the
+ * pills' base seam in `tone.test.ts` — and the fixtures all three build a real
+ * material set with are in `test-helpers.ts`. The split is length only: this
+ * file was 553 lines, past the repo's 500-line rule, and every assertion and its
+ * message moved with the pins it is about, so the files together claim exactly
+ * what the one file did.
  *
  * This bounds inputs, not pixels. The pixels are `scripts/check-finishes.mjs`'s
  * job — Chrome, the canvas read back, a finish's measured ratio against ±0.05 of
@@ -27,7 +28,8 @@ import { materialsFor, relativeLuminance, sceneSource } from './test-helpers.js'
  * because a material can be right and the environment black — which is what
  * round 7 found, and no file here could see it — and a failing `check:finishes`
  * against green pins here points at the pixels rather than at the values. The
- * same bound holds for `optics.test.ts`: it reads values, never a frame.
+ * same bound holds for `optics.test.ts` and `tone.test.ts`: they read values,
+ * never a frame.
  *
  * The literals are transcribed from the measurement each was fitted to rather
  * than read from `palette.ts` or `materials.ts`: a pin that copies the symbol it

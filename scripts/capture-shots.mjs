@@ -5,6 +5,8 @@
 // `chrome --screenshot` is not usable here: with `--virtual-time-budget` it
 // captures before the WebGL scene has presented, and its shared profile makes
 // sequential runs flaky. CDP gives an exact "the page says it is ready" point.
+// The throwaway profile that replaces the shared one is removed on the way out,
+// on every exit path; `scripts/lib/chrome-profile.mjs` owns it.
 //
 // Usage: node scripts/capture-shots.mjs
 // env: SHOT_BASE, SHOT_OUT, SHOT_W, SHOT_H, SHOT_LIST as `view:color,...`,
@@ -12,10 +14,10 @@
 //      The index page ignores view and color, so a library capture is
 //      `SHOT_PAGE=index.html SHOT_LIST=hero:cosmic-orange`.
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+
+import { createChromeProfile, removeChromeProfile } from './lib/chrome-profile.mjs';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const BASE = process.env['SHOT_BASE'] ?? 'http://localhost:5199';
@@ -88,7 +90,7 @@ async function connect(webSocketDebuggerUrl) {
 }
 
 const port = 9300 + Math.floor(Math.random() * 400);
-const profile = `${tmpdir()}\\iphone-shot-${randomUUID()}`;
+const profile = createChromeProfile('shot');
 const chrome = spawn(
   CHROME,
   [
@@ -166,6 +168,11 @@ try {
   }
 } finally {
   chrome.kill();
+  // After the kill, and blocking only while Chrome holds the directory: the deletion
+  // is best-effort and reports rather than throws, so it cannot replace a capture
+  // failure or change the exit code below.
+  const leftover = removeChromeProfile(profile);
+  if (leftover !== null) console.error(`capture-shots: ${leftover}`);
 }
 
 process.exitCode = failures === 0 ? 0 : 1;
