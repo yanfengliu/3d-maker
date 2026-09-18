@@ -39,6 +39,8 @@ export interface Colorway {
   readonly roughness: number;
   /** Frame clearcoat: the Cosmic Orange depth treatment. */
   readonly clearcoat: number;
+  /** How far above the frame's own HSL lightness the panel sits; see below. */
+  readonly panelLift: number;
 }
 
 /**
@@ -55,22 +57,57 @@ export const COLORWAYS: Record<ColorKey, Colorway> = {
   'cosmic-orange': {
     label: 'Cosmic Orange',
     aluminum: 0xcf6238,
-    roughness: 0.34,
+    roughness: 0.62,
     clearcoat: 0.25,
+    panelLift: 0.1,
   },
   // Rich, dark navy. The light, grey-blue this used to be read as washed out.
+  //
+  // The roughest of the three at 0.3, up from 0.24: its rail read 0.530 of its
+  // panel against the photo's 0.47 once this round's environment was in, and a
+  // rougher lobe is the direction that brings it down.
   'deep-blue': {
     label: 'Deep Blue',
     aluminum: 0x323e57,
-    roughness: 0.36,
+    roughness: 0.3,
     clearcoat: 0.18,
+    panelLift: 0.1,
   },
   // Cool light silver, not beige: a neutral frame under a near-white panel.
+  //
+  // Two levers move this rail, and on this finish they move it in opposite
+  // directions, which is what makes silver's row the awkward one. Measured on
+  // the `back` view, rail band over panel band in relative luminance, with the
+  // rail's own cross-section across x 488..510 beside it:
+  //
+  //   roughness 0.92, tint 0xb8b9bc   rail 191 / panel 228 = 0.670  out of band
+  //   roughness 0.42, tint 0xb8b9bc   rail 214 / panel 228 = 0.866  in band
+  //
+  // A rougher lobe averages more of the dim floor and a smoother one holds more
+  // of the bright wall behind the camera, so here roughness *raises* the ratio,
+  // and 0.92 sat 0.20 below the 0.87 band. That is why silver's roughness is
+  // 0.42 and not the 0.92 the previous round fitted: the environment underneath
+  // it changed, and 0.92 no longer lands. The tint then carries the level,
+  // walked down from 0xdcdde0 to 0xb8b9bc — 0.7231 to 0.4852 in relative
+  // luminance from the built colours — which is what puts the 0.42 rail back on
+  // the band. The panel keeps its own albedo through `panelLift` rather than
+  // following the tint down: 0.7780 built against 0.7750 before.
+  //
+  // What this does not fix, because it cannot: on a straight-on back view the
+  // rail's visible 26 px is the frame's flat back face, coplanar with the panel
+  // beside it, so the two mirror one direction of the room and can differ only
+  // in level. A ratio of 0.87 caps that difference at about 14 luma at this
+  // exposure, so the mid-grey frame against a light panel that the reference
+  // photo shows is not reachable while the ratio stays in band. What the
+  // roughness buys is structure wherever the frame's normal actually turns —
+  // the profile views, the buttons, the plateau's rolled edges, the hero view —
+  // and it is those surfaces the reference's sheen belongs to.
   silver: {
     label: 'Silver',
-    aluminum: 0xdcdde0,
-    roughness: 0.33,
+    aluminum: 0xb8b9bc,
+    roughness: 0.42,
     clearcoat: 0.12,
+    panelLift: 0.435,
   },
 };
 
@@ -82,40 +119,52 @@ export const COLORWAYS: Record<ColorKey, Colorway> = {
  * gets brighter. A flat +0.10 put the silver panel at #f7f7f8, lighter than any
  * real back panel, because a bright frame has less room above it — so the lift
  * is proportional to the room that is left. Measured from the built colours,
- * the panel lands 0.026 to 0.077 of HSL lightness above its frame: `#cf7754`
- * over `#cf6238`, `#42506e` over `#323e57`, `#e3e4e6` over `#dcdde0`. All three
- * stay in the frame's hue, which is the point — a fixed pale panel is what read
+ * the orange and blue panels land 0.026 to 0.077 of HSL lightness above their
+ * frames: `#cf7754` over `#cf6238`, `#42506e` over `#323e57`. All three stay in
+ * the frame's hue, which is the point — a fixed pale panel is what read
  * salmon-pink on the orange frame.
+ *
+ * The lift is per finish because the frame tint is. Silver's frame carries the
+ * tint that its rail/panel ratio needs, and its panel has to stay on the albedo
+ * its own photo shows rather than follow that tint down; see the silver row in
+ * `COLORWAYS` for the measurement behind both numbers.
  */
-const PANEL_LIFT = 0.1;
 const PANEL_DESATURATE = 0.08;
 
 /**
  * How far past the frame's own value each finish's polished lens ring goes,
  * and how polished that ring is.
  *
- * Apple's close-up settles this: the ring around each lens is clearly orange on
- * Cosmic Orange and blue on Deep Blue, not bare chrome. Silver's ring is the
- * silver frame with a polish on it and nothing more. A polished surface of the
- * same dye reads brighter and more saturated than the matte rail beside it, so
- * the tint is the frame's hue pushed in both directions — the ring still
+ * Apple's close-up settles the tint: the ring around each lens is clearly
+ * orange on Cosmic Orange and blue on Deep Blue, not bare chrome. Silver's ring
+ * is the silver frame with a polish on it and nothing more. A polished surface
+ * of the same dye reads brighter and more saturated than the matte rail beside
+ * it, so the tint is the frame's hue pushed in both directions — the ring still
  * separates from the plateau it sits on instead of merging into it.
  *
- * Silver carries no lift or saturation on purpose, and that leaves its ring at
- * `roughness` 0.35: a neutral mirror reflects the dark studio wall instead of
- * the light, so the shared 0.22 turned silver's rings charcoal with bright
- * rims. Roughness is what spreads the softbox across the ring's face and makes
- * it read as bright polished silver at the same colour. The two tinted finishes
- * keep 0.22 — their rings separate by their own dye, and blurring that
- * reflection costs the colour its polish.
+ * The roughness is what fixes the glints, and it is not an environment problem.
+ * At 0.22 the crown of the first lens carried 111 pixels at 235 luma and above
+ * — hard white bands where the reference has soft highlights on tinted metal.
+ * Those pixels are #ffe3ca, #fff6ec: the studio lights' own warm white, not the
+ * ring's dye. That is Schlick's term at near-grazing incidence, where
+ * reflectance goes to 1 whatever the metal is, so the reflection loses the tint
+ * and takes the source's colour. The ceiling cards were halved to test whether
+ * the source was theirs (1.15 to 0.62) and the count did not fall — 62 pixels
+ * at 1.15, 104 at 0.62 — so the environment is not the lever. Fresnel cannot be
+ * dimmed; the lobe has to be spread. At 0.42 the same three rings measure no
+ * pixel at 235 or above, their maxima 232, 205 and 205, and the crown keeps its
+ * orange.
+ *
+ * Silver is 0.4 rather than 0.42 — a neutral polish was already the rougher of
+ * the three before this round and it stays that way.
  */
 const RING_POLISH: Record<
   ColorKey,
   { readonly lift: number; readonly saturate: number; readonly roughness: number }
 > = {
-  'cosmic-orange': { lift: 1.14, saturate: 1.12, roughness: 0.22 },
-  'deep-blue': { lift: 1.34, saturate: 1.15, roughness: 0.22 },
-  silver: { lift: 1.0, saturate: 1, roughness: 0.35 },
+  'cosmic-orange': { lift: 1.14, saturate: 1.12, roughness: 0.42 },
+  'deep-blue': { lift: 1.34, saturate: 1.15, roughness: 0.42 },
+  silver: { lift: 1.0, saturate: 1, roughness: 0.4 },
 };
 
 /**
@@ -193,12 +242,12 @@ function fromHsl(h: number, s: number, l: number): THREE.Color {
   return color;
 }
 
-/** The panel: the frame's hue, lifted `PANEL_LIFT` and eased, with less room to
+/** The panel: the frame's hue, lifted `panelLift` and eased, with less room to
  *  rise the brighter the frame already is. */
 export function panelColor(way: Colorway): THREE.Color {
   const hsl = frameHsl(way);
   const room = 1 - hsl.l * 0.85;
-  return fromHsl(hsl.h, hsl.s * (1 - PANEL_DESATURATE), hsl.l + PANEL_LIFT * room);
+  return fromHsl(hsl.h, hsl.s * (1 - PANEL_DESATURATE), hsl.l + way.panelLift * room);
 }
 
 /** The polished ring's colour: the frame's own hue, polished — the dye's chroma
