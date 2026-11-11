@@ -58,7 +58,7 @@ The designated coordinator reads `../fleet/docs/skills/coordinator.md` before pl
 
 Each line below is a gate and what it checks; [docs/policies/gates.md](docs/policies/gates.md) holds the rest of each, with its bounds and how it measures.
 
-Node 24 (`.nvmrc`; CI reads it via `node-version-file`). All of these are authoritative, and all green before any commit that touches code:
+Node 24 (`.nvmrc`; CI reads it via `node-version-file`). All of these are authoritative, and all green on a tree that is handed back or lands:
 
 - `npm test` — vitest. 57 tests in 11 files.
 - `src/repo-conventions.test.ts` — the repo's own rules as a gate, because two of them were prose only and were broken repeatedly.
