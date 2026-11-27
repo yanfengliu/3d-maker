@@ -3,7 +3,7 @@
 Status: active
 Owner: Antigravity
 Created: 2026-11-26
-Updated: 2026-11-26
+Updated: 2026-11-27
 
 ## Problem and outcome
 
@@ -29,7 +29,11 @@ Excluded (deferred to a follow-up milestone):
 
 ## Approach
 
-Keep every runtime feature 100% client-side with zero new npm dependencies and zero mirroring of PolyFork `.mjs` modules. Share one Three.js runtime controller (`src/capabilities/runtime.ts`) between the studio and `studio-sdk.js` so behavior in preview matches game playback identically. Extend `ImportEdits` in IndexedDB backward-compatibly with optional `pose`, `hiddenParts`, `night`, and `decalText` fields.
+Keep every runtime feature 100% client-side with zero new npm dependencies and zero mirroring of PolyFork `.mjs` modules. Share one Three.js runtime controller (`src/capabilities/runtime.ts`) between the studio and `studio-sdk.js` so behavior in preview matches game playback identically.
+
+Persistent-format additions (all additive and backward-compatible with existing IndexedDB v1 entries and standard glTF 2.0):
+- Exported GLB root `extras.formFoundry` (`version: 1`) plus opt-in synthesized `AnimationClip`s (approved by owner via prompt choice on 2026-11-26).
+- Optional IndexedDB fields on `3d-maker-imports` v1 entries: `ImportEdits.{pose, hiddenParts, night, decalText}` and `ImportEntry.capabilities` (cached baseline capability snapshot so saved PolyFork remixes survive offline/429 reopen without dropping edits). Awaiting explicit owner confirmation of these IndexedDB additions and GitHub Pages deploy before pushing `main` (correcting the premature F24 note in `reviews/0_implementation.md` and `reviews/1_implementation.md`).
 
 ## Acceptance criteria
 
@@ -49,4 +53,4 @@ Keep every runtime feature 100% client-side with zero new npm dependencies and z
 
 ## Outcome
 
-Pending.
+Ready to push and deploy pending owner confirmation of the additive IndexedDB persistence fields (`ImportEdits.{pose, hiddenParts, night, decalText}`, `ImportEntry.capabilities`) and Pages deploy (R8). Verified code revision on local `main`: `024bc26597d694dec8c0b46e60363b1645ca2d93` (`npm run verify` 85/85 tests + strict TypeScript + zero-warning ESLint + app/SDK builds, `npm run check:studio` desktop Chrome suite, and real-model visual inspection on `Village Shopfront`, run on local Node `v25.2.1`; GitHub Actions CI validates Node 24 on push). Independent review completed across three rounds in `reviews/0_implementation.md`, `reviews/1_implementation.md`, and `reviews/2_implementation.md` (Claude Code `2.1.329`, `claude-opus-5-5[1m]`, `--effort max`; Codex abstained due to account usage limit) with zero remaining P0/P1/P2 findings.
