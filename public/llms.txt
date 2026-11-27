@@ -1,6 +1,25 @@
 # Form Foundry
 
-Form Foundry edits procedural three.js assets in the browser. Fetch ./catalog.json for the starter catalog, including complete recipes. Its schema is at ./agent-schema.json. Both paths are relative to the deployed app.
+Form Foundry edits procedural three.js assets and free PolyFork models in the browser. Fetch ./catalog.json for the starter catalog, including complete recipes. Its schema is at ./agent-schema.json. Both paths are relative to the deployed app.
+
+## Self-describing exported GLBs
+
+Every GLB exported from Form Foundry (both studio originals and imported PolyFork models) embeds a versioned capability manifest in its root node extras at `nodes[0].extras.formFoundry` (exposed by three.js `GLTFLoader` on `gltf.scene.userData.formFoundry` or its root child). Inspect it before placing a model in a scene so authored interactions are never lost:
+
+- `riggedParts`: movable hinges and slides (`{ name, label, type: "rotate" | "slide", axis, range, describe }`). `0` is rest pose; `range` is the safe travel in degrees (`rotate`) or meters (`slide`).
+- `detachableParts`: named groups (`{ name, label, describe }`) that can be hidden or removed cleanly with closed geometry behind them.
+- `nightZones`: emissive night lighting zones (`{ name, label, color, intensity, albedo, describe }`) keyed by sRGB albedo in `COLOR_0`.
+- `decals`: declared flat or curved sign/logo surfaces (`{ name, at, normal, up, size, describe }`).
+- `colorZones`, `presets`, `dimensions` (`sizeM`, `originY`, `origin`), `physics` (`body`, `massKg`, `material`), `ik`, `clips`, and current `state` (`pose`, `hiddenParts`, `night`, `decalText`).
+
+In a three.js scene, `dist/studio-sdk.js` exports `inspectAsset(group)`, `createAssetController(group)`, and `synthesizeRigClips(group)` so you can discover and drive any exported GLB or starter asset in one line:
+
+    import { inspectAsset, createAssetController } from './studio-sdk.js';
+    const info = inspectAsset(gltf.scene);        // discovers door, planter, night zones, decals, size
+    const ctrl = createAssetController(gltf.scene);
+    ctrl.openPart('door');                        // or ctrl.setPart('door', 80), ctrl.closePart('door')
+    ctrl.setVisible('planter', false);            // hide a detachable part
+    ctrl.setNight(true);                          // illuminate declared night zones
 
 ## Browser API
 
@@ -12,23 +31,29 @@ Open the studio and use window.forgeStudio.
 - save() saves the active asset to this browser's inventory.
 - remix(name?) starts a separately named draft from the current model and edits. It keeps the active clip and camera. Call save() to add the copy to inventory, and call save() again to update that copy.
 - listInventory() reads the browser's saved inventory.
-- exportGLB() returns a Promise<ArrayBuffer> containing the active asset as a binary glTF file.
-- listPaintSlots() enumerates the active GLB's editable colors as {id, label, color, originalColor}. Each color is an untinted six-digit sRGB value. Starter recipes have primary and accent colors instead.
-- getImportEdits() and setImportEdits({name, tint, scale, proportion, paint?}) read and replace the loaded GLB's edits. The optional paint object maps slot IDs from listPaintSlots() to colors. Retain the other edits when patching one field. Remove a key to restore that slot.
+- inspectModel() returns the active model's complete capability manifest (`riggedParts`, `detachableParts`, `nightZones`, `decals`, `presets`, `dimensions`, `physics`, `clips`, `paintSlots`, and current `state`).
+- listParts() lists the active model's rigged parts (with current `value`) and detachable parts (with `visible`).
+- setPartPose(name, value), openPart(name), closePart(name), setPartVisible(name, visible), setNightMode(on), and applyColorway(name) operate interactive features directly.
+- exportGLB(options?) returns a Promise<ArrayBuffer> containing the active asset as a binary glTF file with `extras.formFoundry`. Pass `{ includePartClips: true }` to also bake standard glTF AnimationClips for rigged parts (for example `Open door`).
+- listPaintSlots() enumerates the active GLB's editable colors as {id, label, color, originalColor, zoneName?}. Each color is an untinted six-digit sRGB value. Starter recipes have primary and accent colors instead.
+- getImportEdits() and setImportEdits({name, tint, scale, proportion, paint?, pose?, hiddenParts?, night?, decalText?}) read and replace the loaded GLB's edits. Retain the other edits when patching one field.
 - listClips() returns clip names and durations. playClip(index) previews a clip. Compatible humanoids include the packaged downloadable CC0 motion library. Both original characters also retain their two studio cycles. exportGLB() includes all available clips even before listClips() is called.
-- openPolyfork(id, name) loads a free GLB directly from PolyFork and returns a Promise<void>.
+- openPolyfork(id, name) loads a free GLB and its public metadata directly from PolyFork and returns a Promise<void>.
 
-To change an asset, read its recipe, replace the requested fields, apply the full recipe and save when the user requests persistence. Both colors take six-digit sRGB hex values. Scale and proportion are numbers in [0.65, 1.5]. The detail field toggles optional secondary parts. Quality selects the authored geometry level, either "standard" or "hd". All six catalog recipes use HD. Version 1 recipes that omit quality render at standard quality.
+To change a starter asset, read its recipe, replace the requested fields, apply the full recipe and save when the user requests persistence. Both colors take six-digit sRGB hex values. Scale and proportion are numbers in [0.65, 1.5]. The detail field toggles optional secondary parts. Quality selects the authored geometry level, either "standard" or "hd". All six catalog recipes use HD. Version 1 recipes that omit quality render at standard quality.
 
 Example for the developer console
 
     const studio = window.forgeStudio;
-    studio.applyRecipe({version:1, template:"relay-drone", name:"Ice survey drone", primary:"#84b9cd", accent:"#253640", scale:1, proportion:1.15, detail:true, quality:"hd"});
-    const glb = await studio.exportGLB();
+    await studio.openPolyfork('village-shopfront-d3088e', 'Village Shopfront');
+    const info = studio.inspectModel();
+    studio.openPart('door');
+    studio.setNightMode(true);
+    const glb = await studio.exportGLB({ includePartClips: true });
 
 ## Upstream assets
 
-Search the public PolyFork API for an asset id and title before calling openPolyfork. Get each asset's exact animation and rig metadata from its detail endpoint. Form Foundry's starter recipes and PolyFork's model-specific creation parameters use separate formats.
+Search the public PolyFork API for an asset id and title before calling openPolyfork. Form Foundry automatically fetches the free detail metadata and colorway schema when opening a PolyFork model. Form Foundry's starter recipes and PolyFork's model-specific creation parameters use separate formats.
 
 - API overview: https://polyfork.dev/api
 - Search example: https://polyfork.dev/api/assets?q=drone&free=1&per_page=5

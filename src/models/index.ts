@@ -1,6 +1,7 @@
 import * as T from 'three'
 import type { Recipe } from '../data/recipe'
 import { character } from './character'
+import { attachOriginalCapabilities } from './capabilities'
 import { drone } from './drone'
 import { cargo, rover, tower } from './equipment'
 import { finishes } from './parts'
@@ -20,5 +21,6 @@ export function buildModel(recipe: Recipe): T.Group {
   }
   root.userData.recipe = { ...recipe }
   root.scale.set(recipe.scale * recipe.proportion, recipe.scale, recipe.scale)
+  attachOriginalCapabilities(root, recipe)
   return root
 }

@@ -8,7 +8,7 @@ export function fastBounds(root: T.Object3D): T.Box3 {
   const box = new T.Box3();
   const vertex = new T.Vector3();
   root.traverse((node) => {
-    if (!(node instanceof T.Mesh)) return;
+    if (node.userData.studioOverlay || !(node instanceof T.Mesh)) return;
     const geometry = node.geometry as T.BufferGeometry;
     const position = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
     if (!position || position.count === 0) return;

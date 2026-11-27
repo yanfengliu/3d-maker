@@ -1,0 +1,346 @@
+import type { Object3D } from 'three';
+
+export type Axis = 'x' | 'y' | 'z';
+
+export interface RiggedPartSpec {
+  name: string;
+  label: string;
+  type: 'rotate' | 'slide';
+  axis: Axis;
+  range: [number, number];
+  describe?: string;
+}
+
+export interface DetachablePartSpec {
+  name: string;
+  label: string;
+  describe?: string;
+}
+
+export interface NightZoneSpec {
+  name: string;
+  label: string;
+  color: string;
+  intensity: number;
+  albedo: string;
+  describe?: string;
+}
+
+export interface DecalSlotSpec {
+  name: string;
+  at: [number, number, number];
+  normal: [number, number, number];
+  up: [number, number, number];
+  size: [number, number];
+  describe?: string;
+}
+
+export interface ColorZoneSpec {
+  name: string;
+  label: string;
+  color: string;
+  describe?: string;
+}
+
+export interface ColorwayPresetSpec {
+  name: string;
+  label: string;
+  colors: Record<string, string>;
+}
+
+export interface AssetDimensionsSpec {
+  sizeM: { x: number; y: number; z: number };
+  originY: number;
+  origin?: string;
+}
+
+export interface AssetPhysicsSpec {
+  body: 'static' | 'dynamic';
+  massKg?: number;
+  material?: string;
+}
+
+export interface AssetIkSpec {
+  type: 'legs' | 'arm';
+  summary?: string;
+}
+
+export interface AssetRuntimeState {
+  pose?: Record<string, number>;
+  hiddenParts?: string[];
+  night?: boolean;
+  decalText?: Record<string, string>;
+}
+
+export interface AssetCapabilities {
+  version: 1;
+  name: string;
+  description?: string;
+  source?: {
+    kind: 'original' | 'polyfork' | 'local';
+    id?: string;
+    url?: string;
+    kit?: string;
+  };
+  riggedParts: RiggedPartSpec[];
+  detachableParts: DetachablePartSpec[];
+  nightZones: NightZoneSpec[];
+  decals: DecalSlotSpec[];
+  colorZones?: ColorZoneSpec[];
+  presets?: ColorwayPresetSpec[];
+  dimensions?: AssetDimensionsSpec;
+  physics?: AssetPhysicsSpec;
+  ik?: AssetIkSpec;
+  clips?: { name: string; duration: number; synthesized?: boolean }[];
+  state?: AssetRuntimeState;
+}
+
+const hexPattern = /^#[\da-f]{6}$/i;
+const axes = new Set<Axis>(['x', 'y', 'z']);
+
+export function humanizeLabel(raw: string): string {
+  const spaced = raw
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .replace(/[-_]+/g, ' ')
+    .trim();
+  return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : raw;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function tuple3(value: unknown): [number, number, number] | null {
+  if (!Array.isArray(value) || value.length !== 3) return null;
+  const nums = value.map(Number);
+  return nums.every(Number.isFinite) ? [nums[0] ?? 0, nums[1] ?? 0, nums[2] ?? 0] : null;
+}
+
+function tuple2(value: unknown): [number, number] | null {
+  if (!Array.isArray(value) || value.length !== 2) return null;
+  const nums = value.map(Number);
+  return nums.every(Number.isFinite) ? [nums[0] ?? 0, nums[1] ?? 0] : null;
+}
+
+export function parseDecalSlots(value: unknown): DecalSlotSpec[] {
+  if (!Array.isArray(value)) return [];
+  const slots: DecalSlotSpec[] = [];
+  for (const row of value) {
+    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    const at = tuple3(row.at), normal = tuple3(row.normal), up = tuple3(row.up), size = tuple2(row.size);
+    if (!at || !normal || !up || !size || size[0] <= 0 || size[1] <= 0) continue;
+    slots.push({
+      name: row.name.trim(),
+      at,
+      normal,
+      up,
+      size,
+      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
+    });
+  }
+  return slots;
+}
+
+function parseRiggedParts(value: unknown): RiggedPartSpec[] {
+  if (!Array.isArray(value)) return [];
+  const parts: RiggedPartSpec[] = [];
+  for (const row of value) {
+    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    const axis = row.axis;
+    if (typeof axis !== 'string' || !axes.has(axis as Axis)) continue;
+    const range = tuple2(row.range);
+    if (!range || range[0] === range[1]) continue;
+    const type = row.type === 'slide' ? 'slide' : 'rotate';
+    parts.push({
+      name: row.name,
+      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
+      type,
+      axis: axis as Axis,
+      range,
+      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
+    });
+  }
+  return parts;
+}
+
+function parseDetachableParts(value: unknown): DetachablePartSpec[] {
+  if (!Array.isArray(value)) return [];
+  const parts: DetachablePartSpec[] = [];
+  for (const row of value) {
+    if (typeof row === 'string' && row.trim()) {
+      parts.push({ name: row, label: humanizeLabel(row) });
+    } else if (isRecord(row) && typeof row.name === 'string' && row.name.trim()) {
+      parts.push({
+        name: row.name,
+        label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
+        ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
+      });
+    }
+  }
+  return parts;
+}
+
+function parseNightZones(value: unknown): NightZoneSpec[] {
+  if (!Array.isArray(value)) return [];
+  const zones: NightZoneSpec[] = [];
+  for (const row of value) {
+    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    if (typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
+    if (typeof row.albedo !== 'string' || !hexPattern.test(row.albedo)) continue;
+    const intensity = typeof row.intensity === 'number' && Number.isFinite(row.intensity) && row.intensity > 0
+      ? Math.min(4, row.intensity) : 1;
+    zones.push({
+      name: row.name,
+      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
+      color: row.color.toLowerCase(),
+      intensity,
+      albedo: row.albedo.toLowerCase(),
+      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
+    });
+  }
+  return zones;
+}
+
+function parseColorZones(value: unknown): ColorZoneSpec[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const zones: ColorZoneSpec[] = [];
+  for (const row of value) {
+    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    if (typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
+    zones.push({
+      name: row.name,
+      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
+      color: row.color.toLowerCase(),
+      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
+    });
+  }
+  return zones.length ? zones : undefined;
+}
+
+function parsePresets(value: unknown): ColorwayPresetSpec[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const presets: ColorwayPresetSpec[] = [];
+  for (const row of value) {
+    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim() || !isRecord(row.colors)) continue;
+    const colors: Record<string, string> = {};
+    for (const [k, v] of Object.entries(row.colors)) {
+      if (typeof v === 'string' && hexPattern.test(v)) colors[k] = v.toLowerCase();
+    }
+    if (!Object.keys(colors).length) continue;
+    presets.push({
+      name: row.name,
+      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
+      colors,
+    });
+  }
+  return presets.length ? presets : undefined;
+}
+
+/** Validate and normalize a Form Foundry capability manifest read from GLB extras or JSON. */
+export function parseCapabilities(value: unknown): AssetCapabilities | null {
+  if (!isRecord(value) || value.version !== 1 || typeof value.name !== 'string' || !value.name.trim()) return null;
+  const result: AssetCapabilities = {
+    version: 1,
+    name: value.name.trim(),
+    riggedParts: parseRiggedParts(value.riggedParts),
+    detachableParts: parseDetachableParts(value.detachableParts),
+    nightZones: parseNightZones(value.nightZones),
+    decals: parseDecalSlots(value.decals),
+  };
+  if (typeof value.description === 'string' && value.description.trim()) result.description = value.description.trim();
+  if (isRecord(value.source) && (value.source.kind === 'original' || value.source.kind === 'polyfork' || value.source.kind === 'local')) {
+    result.source = {
+      kind: value.source.kind,
+      ...(typeof value.source.id === 'string' ? { id: value.source.id } : {}),
+      ...(typeof value.source.url === 'string' ? { url: value.source.url } : {}),
+      ...(typeof value.source.kit === 'string' ? { kit: value.source.kit } : {}),
+    };
+  }
+  const colorZones = parseColorZones(value.colorZones);
+  if (colorZones) result.colorZones = colorZones;
+  const presets = parsePresets(value.presets);
+  if (presets) result.presets = presets;
+  if (isRecord(value.dimensions) && isRecord(value.dimensions.sizeM)) {
+    const { x, y, z } = value.dimensions.sizeM;
+    const originY = value.dimensions.originY;
+    if (typeof x === 'number' && typeof y === 'number' && typeof z === 'number' && typeof originY === 'number' &&
+        [x, y, z, originY].every(Number.isFinite)) {
+      result.dimensions = {
+        sizeM: { x, y, z },
+        originY,
+        ...(typeof value.dimensions.origin === 'string' ? { origin: value.dimensions.origin } : {}),
+      };
+    }
+  }
+  if (isRecord(value.physics) && (value.physics.body === 'static' || value.physics.body === 'dynamic')) {
+    result.physics = {
+      body: value.physics.body,
+      ...(typeof value.physics.massKg === 'number' && Number.isFinite(value.physics.massKg) ? { massKg: value.physics.massKg } : {}),
+      ...(typeof value.physics.material === 'string' ? { material: value.physics.material } : {}),
+    };
+  }
+  if (isRecord(value.ik) && (value.ik.type === 'legs' || value.ik.type === 'arm')) {
+    result.ik = {
+      type: value.ik.type,
+      ...(typeof value.ik.summary === 'string' ? { summary: value.ik.summary } : {}),
+    };
+  }
+  if (isRecord(value.state)) {
+    const state: AssetRuntimeState = {};
+    if (isRecord(value.state.pose)) {
+      const pose: Record<string, number> = {};
+      for (const [k, v] of Object.entries(value.state.pose)) {
+        if (typeof v === 'number' && Number.isFinite(v)) pose[k] = v;
+      }
+      if (Object.keys(pose).length) state.pose = pose;
+    }
+    if (Array.isArray(value.state.hiddenParts)) {
+      const hidden = value.state.hiddenParts.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+      if (hidden.length) state.hiddenParts = [...new Set(hidden)];
+    }
+    if (typeof value.state.night === 'boolean') state.night = value.state.night;
+    if (isRecord(value.state.decalText)) {
+      const text: Record<string, string> = {};
+      for (const [k, v] of Object.entries(value.state.decalText)) {
+        if (typeof v === 'string' && v.trim()) text[k] = v.trim().slice(0, 60);
+      }
+      if (Object.keys(text).length) state.decalText = text;
+    }
+    if (Object.keys(state).length) result.state = state;
+  }
+  return result;
+}
+
+/** Locate embedded Form Foundry capabilities on an object hierarchy (works after GLTFLoader import). */
+export function readCapabilities(root: Object3D): AssetCapabilities | null {
+  const direct = parseCapabilities(root.userData.formFoundry);
+  if (direct) return direct;
+  for (const child of root.children) {
+    const nested = parseCapabilities(child.userData.formFoundry);
+    if (nested) return nested;
+    for (const grand of child.children) {
+      const deep = parseCapabilities(grand.userData.formFoundry);
+      if (deep) return deep;
+    }
+  }
+  return null;
+}
+
+/** Collect raw decal slots embedded in node.userData.decals (such as PolyFork GLB exports). */
+export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
+  const found: DecalSlotSpec[] = [];
+  const seen = new Set<string>();
+  root.traverse(node => {
+    for (const slot of parseDecalSlots(node.userData.decals)) {
+      if (seen.has(slot.name)) continue;
+      seen.add(slot.name);
+      found.push(slot);
+    }
+  });
+  return found;
+}
+
+/** Write a clean JSON snapshot of capabilities onto the root node for glTF extras serialization. */
+export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
+  root.userData.formFoundry = structuredClone(capabilities);
+}

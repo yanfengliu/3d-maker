@@ -46,3 +46,41 @@ it('constrains on-device patches to model paint slots and validates their real o
   await expect(editImportWithPrompt(edits, slots, 'Return nonsense')).rejects.toThrow(/paint/i);
   expect(destroy).toHaveBeenCalledTimes(4);
 });
+
+it('supports natural-language commands and JSON settings for rigged parts, detachable parts, night mode, colorways, and decals', async () => {
+  const shopCaps = {
+    version: 1 as const,
+    name: 'Village Shopfront',
+    riggedParts: [{ name: 'door', label: 'Door', type: 'rotate' as const, axis: 'y' as const, range: [0, 80] as [number, number] }],
+    detachableParts: [{ name: 'planter', label: 'Planter' }, { name: 'lantern', label: 'Lantern' }],
+    nightZones: [{ name: 'pane', label: 'Pane', color: '#ffc46b', intensity: 0.8, albedo: '#34322d' }],
+    decals: [{ name: 'fascia', at: [0, 2, 1] as [number, number, number], normal: [0, 0, 1] as [number, number, number], up: [0, 1, 0] as [number, number, number], size: [1.3, 0.22] as [number, number] }],
+    presets: [{ name: 'harbour-green', label: 'Harbour green', colors: { paint: '#47582c' } }],
+  };
+  const shopSlots = [{ id: 'zone-paint', label: 'Joinery paint', color: '#4678a8', originalColor: '#4678a8' }];
+  const base = { name: 'Village Shopfront', tint: '#ffffff', scale: 1, proportion: 1 };
+
+  const opened = await editImportWithPrompt(base, shopSlots, 'open door, hide planter, night mode, harbour green colorway, sign fascia BAKERY', undefined, shopCaps);
+  expect(opened.edits).toEqual({
+    name: 'Village Shopfront',
+    tint: '#ffffff',
+    scale: 1,
+    proportion: 1,
+    paint: { 'zone-paint': '#47582c' },
+    pose: { door: 80 },
+    hiddenParts: ['planter'],
+    night: true,
+    decalText: { fascia: 'BAKERY' },
+  });
+
+  const partial = await editImportWithPrompt(opened.edits, shopSlots, 'set door to 45, show planter, day mode', undefined, shopCaps);
+  expect(partial.edits.pose).toEqual({ door: 45 });
+  expect(partial.edits.hiddenParts).toBeUndefined();
+  expect(partial.edits.night).toBeUndefined();
+
+  const closed = await editImportWithPrompt(partial.edits, shopSlots, 'close door', undefined, shopCaps);
+  expect(closed.edits.pose).toBeUndefined();
+
+  expect(() => parseImportedSettings({ ...base, pose: { ghost: 10 } }, shopSlots, shopCaps)).toThrow(/Unknown rigged part/);
+  expect(() => parseImportedSettings({ ...base, hiddenParts: ['ghost'] }, shopSlots, shopCaps)).toThrow(/Unknown detachable part/);
+});

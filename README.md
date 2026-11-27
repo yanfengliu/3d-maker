@@ -8,7 +8,7 @@ Browse and edit 3D assets on one desktop page. The inventory combines six studio
 
 Open an asset and choose **Remix** beside its name. The editor starts a separate draft with your current changes, camera and animation. Give it a name, edit it in **Properties**, then choose **Save to inventory**. Open it again from **Saved** to continue editing the same copy.
 
-On an original, change its colors, proportions, detail or mesh quality. On a PolyFork model or a local GLB, **Model colors** lets you repaint an individual material or an authored vertex-color region, such as a coat or rotor. Use the reset arrow beside the color to restore just that region. **Overall tint** and the size controls affect the whole model. GLB export includes the edited colors, rig and available animation clips.
+On an original, change its colors, proportions, detail or mesh quality, and pose its articulated parts. On a PolyFork model or a local GLB, **Colorways** and **Model colors** let you apply curated palettes or repaint individual named zones, materials, or vertex regions — including clicking a surface in the 3D viewport with the eyedropper tool. Models with authored hinges or slides (such as **Village Shopfront**’s door) expose live sliders, **Open / Close** toggles and **Test** animations; models with detachable parts, night lighting zones or decal areas expose visibility toggles, twilight night preview and sign-area preview. GLB export bakes the edited colors, poses, rig and clips, embeds a self-describing `extras.formFoundry` capability manifest for AI agents and game loaders, and optionally bakes rigged-part animation clips.
 
 ## Run locally
 

@@ -54,7 +54,12 @@ export class Viewport {
   private grid = new T.GridHelper(160, 240, '#b9bdb1', '#c9ccc0');
   private shadow = softShadow();
   private ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.ShadowMaterial({ opacity: 0.16 }));
+  private hemi = new T.HemisphereLight(0xfffdf4, 0x8b9287, 1.6);
   private key = new T.DirectionalLight('#ffefd8', 2.7);
+  private raycaster = new T.Raycaster();
+  private pickHandler: ((hit: { mesh: T.Mesh; faceIndex: number; materialIndex: number }) => void) | null = null;
+  private pointerDownPos: { x: number; y: number } | null = null;
+  private nightMode = false;
   private host: HTMLElement;
   private renderSize = new T.Vector2();
   private radius = 1;
@@ -116,7 +121,7 @@ export class Viewport {
     this.scene.environmentIntensity = 0.62;
     generator.dispose();
     room.dispose();
-    this.scene.add(new T.HemisphereLight(0xfffdf4, 0x8b9287, 1.6));
+    this.scene.add(this.hemi);
     this.key.position.set(-4, 8, 5);
     this.key.castShadow = !thumbnail;
     this.key.shadow.mapSize.set(1024, 1024);
@@ -130,6 +135,36 @@ export class Viewport {
       new ResizeObserver(() => {
         this.resize();
       }).observe(host);
+      this.renderer.domElement.addEventListener('pointerdown', event => {
+        this.pointerDownPos = { x: event.clientX, y: event.clientY };
+      });
+      this.renderer.domElement.addEventListener('pointerup', event => {
+        if (!this.pickHandler || !this.model || !this.pointerDownPos) return;
+        const dx = event.clientX - this.pointerDownPos.x;
+        const dy = event.clientY - this.pointerDownPos.y;
+        this.pointerDownPos = null;
+        if (dx * dx + dy * dy > 16) return;
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const ndc = new T.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1,
+        );
+        this.raycaster.setFromCamera(ndc, this.camera);
+        const meshes: T.Mesh[] = [];
+        this.model.traverse(node => {
+          if (node.userData.studioOverlay || !node.visible) return;
+          if (node instanceof T.Mesh) meshes.push(node as T.Mesh);
+        });
+        const [hit] = this.raycaster.intersectObjects(meshes, false);
+        if (hit && hit.object instanceof T.Mesh) {
+          this.pickHandler({
+            mesh: hit.object as T.Mesh,
+            faceIndex: hit.faceIndex ?? -1,
+            materialIndex: hit.face?.materialIndex ?? 0,
+          });
+        }
+      });
     }
     this.resize();
   }
@@ -161,7 +196,7 @@ export class Viewport {
     this.scene.add(model);
     this.wireMaterials.clear();
     model.traverse((node) => {
-      if (!(node instanceof T.Mesh)) return;
+      if (node.userData.studioOverlay || !(node instanceof T.Mesh)) return;
       node.castShadow = true;
       node.receiveShadow = true;
       const mats: unknown[] = Array.isArray(node.material) ? (node.material as unknown[]) : [node.material];
@@ -199,10 +234,22 @@ export class Viewport {
     const model = this.model;
     const box = this.atRest(() => {
       model.updateMatrixWorld(true);
+      const measured = new T.Box3();
+      const vertex = new T.Vector3();
       model.traverse((node) => {
-        if (node instanceof T.SkinnedMesh) node.skeleton.update();
+        if (node.userData.studioOverlay || !(node instanceof T.Mesh)) return;
+        const geometry = node.geometry as T.BufferGeometry;
+        const pos = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
+        if (!pos || !pos.count) return;
+        const skinned = node instanceof T.SkinnedMesh;
+        if (skinned) node.skeleton.update();
+        for (let i = 0; i < pos.count; i++) {
+          vertex.fromBufferAttribute(pos, i);
+          if (skinned) node.applyBoneTransform(i, vertex);
+          vertex.applyMatrix4(node.matrixWorld);
+          measured.expandByPoint(vertex);
+        }
       });
-      const measured = new T.Box3().setFromObject(model, true);
       if (measured.isEmpty()) measured.set(new T.Vector3(-1, 0, -1), new T.Vector3(1, 2, 1));
       return measured;
     });
@@ -330,6 +377,34 @@ export class Viewport {
   showGrid(show: boolean) {
     this.grid.visible = show;
     this.invalidate();
+  }
+  setNightMode(on: boolean) {
+    this.nightMode = on;
+    if (!this.thumbnailMode) {
+      const clear = on ? 0x181f2e : 0xe7e8e1;
+      this.renderer.setClearColor(clear, 1);
+      if (this.scene.fog instanceof T.FogExp2) this.scene.fog.color.setHex(clear);
+      const gridMat = this.grid.material;
+      if (gridMat instanceof T.Material) {
+        gridMat.transparent = on;
+        gridMat.opacity = on ? 0.18 : 1;
+        gridMat.needsUpdate = true;
+      }
+    }
+    this.scene.environmentIntensity = on ? 0.16 : 0.62;
+    this.hemi.color.setHex(on ? 0x5c75a8 : 0xfffdf4);
+    this.hemi.groundColor.setHex(on ? 0x1a2030 : 0x8b9287);
+    this.hemi.intensity = on ? 0.55 : 1.6;
+    this.key.color.setHex(on ? 0x99b7eb : 0xffefd8);
+    this.key.intensity = on ? 0.65 : 2.7;
+    this.invalidate();
+  }
+  get isNightMode() {
+    return this.nightMode;
+  }
+  setPickHandler(handler: ((hit: { mesh: T.Mesh; faceIndex: number; materialIndex: number }) => void) | null) {
+    this.pickHandler = handler;
+    this.renderer.domElement.style.cursor = handler ? 'crosshair' : '';
   }
   wireframe(on: boolean) {
     this.isWire = on;

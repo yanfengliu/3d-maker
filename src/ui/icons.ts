@@ -45,6 +45,9 @@ const paths = {
   mouse: '<rect x="5" y="2" width="14" height="20" rx="7"/><path d="M12 2v7"/>',
   palette: '<circle cx="12" cy="12" r="8"/><path d="M5 15 15 5"/>',
   bolt: '<path d="m14 2-9 12h6l-1 8 9-13h-6z"/>',
+  moon: '<path d="M20.2 14.4A8.4 8.4 0 0 1 9.6 3.8a8.4 8.4 0 1 0 10.6 10.6Z"/>',
+  eyedropper: '<path d="m2 22 4-1 12-12a2.8 2.8 0 1 0-4-4L2 17l-1 4Z"/><path d="m12 6 6 6"/>',
+  tag: '<path d="M6 3h12a3 3 0 0 1 3 3v8.5L14.5 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z"/><path d="M21 14.5h-4a2.5 2.5 0 0 0-2.5 2.5V21"/>',
 } as const;
 export type Icon = keyof typeof paths;
 export function icon(name: Icon, size = 18) {

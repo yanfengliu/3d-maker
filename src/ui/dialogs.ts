@@ -1,7 +1,9 @@
+import type { AssetCapabilities } from '../capabilities/schema';
 import { editWithPrompt, getPromptAvailability, preparePromptModel } from '../data/assistant';
 import { parseRecipe, type Recipe } from '../data/recipe';
 import { editImportWithPrompt, parseImportedSettings, type SlotName } from '../data/import-prompt';
 import type { ImportEdits } from '../imports';
+import type { ExportOptions } from '../studio/export';
 import { el, escapeHtml, notify, report } from './dom';
 import { icon } from './icons';
 import './dialogs.css';
@@ -12,9 +14,11 @@ interface DialogActions {
   importEdits: () => ImportEdits | null;
   applyImportEdits: (edits: ImportEdits) => void;
   paintSlots: () => SlotName[];
+  capabilities: () => AssetCapabilities | null;
+  hasClips: () => boolean;
   selectionKey: () => object;
   openLocal: (file: File, signal?: AbortSignal) => Promise<void>;
-  exportGlb: () => Promise<void>;
+  exportGlb: (options?: ExportOptions) => Promise<void>;
 }
 
 const message = (error: unknown) => error instanceof Error ? error.message : 'The operation could not be completed.';
@@ -29,6 +33,35 @@ function downloadRecipe(recipe: Recipe) {
   link.download = (recipe.name.replace(/[^a-z\d]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || recipe.template) + '.json';
   link.click();
   window.setTimeout(() => { URL.revokeObjectURL(url); }, 1000);
+}
+
+function capabilityReferenceMarkup(slots: SlotName[], caps: AssetCapabilities | null): string {
+  const sections: string[] = [];
+  if (slots.length) {
+    sections.push(`<details class="dialogcopy"><summary>Model color names and IDs</summary><ul>${slots.map(slot =>
+      `<li>${escapeHtml(slot.label)} · <code>${escapeHtml(slot.id)}</code></li>`).join('')}</ul></details>`);
+  }
+  if (caps && (caps.riggedParts.length || caps.detachableParts.length || caps.presets?.length || caps.nightZones.length || caps.decals.length)) {
+    const items: string[] = [];
+    for (const part of caps.riggedParts) {
+      const unit = part.type === 'slide' ? 'm' : '°';
+      items.push(`<li>Rigged: <strong>${escapeHtml(part.label)}</strong> · <code>${escapeHtml(part.name)}</code> (${String(part.range[0])}${unit} to ${String(part.range[1])}${unit})${part.describe ? ' — ' + escapeHtml(part.describe) : ''}</li>`);
+    }
+    for (const part of caps.detachableParts) {
+      items.push(`<li>Detachable: <strong>${escapeHtml(part.label)}</strong> · <code>${escapeHtml(part.name)}</code></li>`);
+    }
+    if (caps.presets?.length) {
+      items.push(`<li>Colorways: ${caps.presets.map(p => `<code>${escapeHtml(p.name)}</code>`).join(', ')}</li>`);
+    }
+    if (caps.nightZones.length) {
+      items.push(`<li>Night lighting: ${caps.nightZones.map(z => escapeHtml(z.label)).join(', ')}</li>`);
+    }
+    for (const slot of caps.decals) {
+      items.push(`<li>Decal area: <code>${escapeHtml(slot.name)}</code> (${slot.size[0].toFixed(2)} × ${slot.size[1].toFixed(2)} m)</li>`);
+    }
+    sections.push(`<details class="dialogcopy"><summary>Interactive parts and model capabilities</summary><ul>${items.join('')}</ul></details>`);
+  }
+  return sections.join('');
 }
 
 export function setupDialogs(actions: DialogActions) {
@@ -109,8 +142,9 @@ export function setupDialogs(actions: DialogActions) {
   function assistant(showRecipe = false) {
     const recipe = actions.recipe();
     const imported = actions.importEdits();
+    const caps = actions.capabilities();
     const selection = actions.selectionKey();
-    const slots = imported ? actions.paintSlots().map(({id, label}) => ({id, label})) : [];
+    const slots = imported ? actions.paintSlots() : [];
     const kind = imported ? 'settings' : 'recipe';
     const tabs = `<div class="dialogtabs" aria-label="Editing method"><button id="promptTab" aria-pressed="${String(!showRecipe)}">${icon('spark', 15)} Prompt</button><button id="recipeTab" aria-pressed="${String(showRecipe)}">${icon('code', 15)} Agent ${kind}</button></div>`;
     const editor = showRecipe
@@ -119,9 +153,8 @@ export function setupDialogs(actions: DialogActions) {
       : `<div class="modelstate"><span id="modelState">Checking on-device AI…</span><button class="textbutton" id="enableModel" hidden>Enable on-device AI</button></div>
         <form id="promptForm" class="dialogstack"><label for="promptText" class="field">Describe your edit<textarea id="promptText" rows="3" maxlength="2000"></textarea></label>
         <div class="dialogactions"><button class="btn orange" id="applyPrompt">${icon('spark', 15)} Apply edit</button></div></form>`;
-    const palette = slots.length ? `<details class="dialogcopy"><summary>Model color names and IDs</summary><ul>${slots.map(slot =>
-      `<li>${escapeHtml(slot.label)} · <code>${escapeHtml(slot.id)}</code></li>`).join('')}</ul></details>` : '';
-    const signal = open('AI tools', `<div class="dialogstack">${tabs}${editor}${palette}${statusLine}</div>`);
+    const reference = capabilityReferenceMarkup(slots, caps);
+    const signal = open('AI tools', `<div class="dialogstack">${tabs}${editor}${reference}${statusLine}</div>`);
     button('promptTab').onclick = () => { assistant(); };
     button('recipeTab').onclick = () => { assistant(true); };
     if (showRecipe) {
@@ -134,9 +167,8 @@ export function setupDialogs(actions: DialogActions) {
             throw new Error('The active model changed. Reopen AI tools for the new model.');
           }
           const value: unknown = JSON.parse(text.value);
-          // A complete starter recipe can also be pasted while an import is open.
           if (imported && !(value && typeof value === 'object' && 'template' in value)) {
-            actions.applyImportEdits(parseImportedSettings(value, slots));
+            actions.applyImportEdits(parseImportedSettings(value, slots, caps));
           } else actions.apply(parseRecipe(value));
           close();
           notify('Edits applied.');
@@ -171,7 +203,10 @@ export function setupDialogs(actions: DialogActions) {
       });
     };
     const prompt = el<HTMLTextAreaElement>('promptText');
-    prompt.placeholder = imported ? (slots[0] ? `Paint "${slots[0].label}" teal` : 'Set height to 1.1') : 'Make it teal with cream accents';
+    const firstPart = caps?.riggedParts[0];
+    prompt.placeholder = imported
+      ? (firstPart ? `Open ${firstPart.name}` : slots[0] ? `Paint "${slots[0].label}" teal` : 'Set height to 1.1')
+      : 'Make it teal with cream accents';
     el<HTMLFormElement>('promptForm').onsubmit = event => {
       event.preventDefault();
       const original = actions.recipe();
@@ -180,7 +215,7 @@ export function setupDialogs(actions: DialogActions) {
       if (actions.selectionKey() !== selection) { status('The active model changed. Reopen AI tools for the new model.'); return; }
       const snapshot = JSON.stringify(original ?? edits);
       const input = prompt.value;
-      const edit = original ? editWithPrompt(original, input, signal) : edits ? editImportWithPrompt(edits, slots, input, signal) : null;
+      const edit = original ? editWithPrompt(original, input, signal) : edits ? editImportWithPrompt(edits, slots, input, signal, caps) : null;
       if (!edit) return;
       const apply = button('applyPrompt');
       apply.disabled = true;
@@ -201,10 +236,19 @@ export function setupDialogs(actions: DialogActions) {
 
   function exports() {
     const recipe = actions.recipe();
+    const caps = actions.capabilities();
+    const hasRigged = Boolean(caps?.riggedParts.length);
+    const defaultBake = hasRigged && !actions.hasClips();
+    const rigOption = hasRigged
+      ? `<label class="play-sequence" style="margin-top:6px"><input id="exportPartClips" type="checkbox" ${defaultBake ? 'checked' : ''}/> Include rigged-part animation clips (e.g. Open ${escapeHtml(caps?.riggedParts[0]?.label.toLowerCase() ?? 'part')})</label>`
+      : '';
     const signal = open('Export asset', `<div class="dialogstack">
-      <div class="exportrow"><span class="formatmark">${icon('studio', 24)}</span><div><strong>Binary glTF</strong><p class="dialogcopy">Mesh, materials, rig and available clips in one .glb file.</p></div><button class="btn dark" id="downloadGlb">${icon('download', 15)} GLB</button></div>
+      <div class="exportrow"><span class="formatmark">${icon('studio', 24)}</span><div><strong>Binary glTF</strong><p class="dialogcopy">Mesh, materials, rig, clips and self-describing <code>extras.formFoundry</code> capabilities in one .glb file.</p>${rigOption}</div><button class="btn dark" id="downloadGlb">${icon('download', 15)} GLB</button></div>
       ${recipe ? `<div class="exportrow"><span class="formatmark">${icon('code', 24)}</span><div><strong>Editable recipe</strong><p class="dialogcopy">Rebuild this asset in Form Foundry or the three.js SDK.</p></div><button class="btn" id="downloadRecipe">${icon('download', 15)} JSON</button></div>` : ''}${statusLine}</div>`);
-    button('downloadGlb').onclick = () => { void complete(signal, actions.exportGlb, 'Preparing GLB…'); };
+    button('downloadGlb').onclick = () => {
+      const includePartClips = Boolean(document.querySelector<HTMLInputElement>('#exportPartClips')?.checked);
+      void complete(signal, () => actions.exportGlb({ includePartClips }), 'Preparing GLB…');
+    };
     if (recipe) button('downloadRecipe').onclick = () => {
       try { downloadRecipe(recipe); close(); notify('Recipe downloaded.'); } catch (error) { report(error); }
     };

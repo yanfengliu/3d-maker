@@ -75,11 +75,39 @@
 #propertiesBody{overflow-y:auto;scrollbar-width:thin;padding:0 13px 10px}
 #propertiesBody .propgroup{padding:9px 1px;border:0}
 #propertiesBody .identity{display:flex;align-items:center;gap:10px;padding-top:2px}
-#modelPaint:empty{display:none}
+#modelPaint:empty,#modelParts:empty{display:none}
 .paint-editor{display:flex;align-items:center;gap:6px;margin-top:5px}
 .paint-editor select{min-width:0;flex:1;height:29px;border:1px solid var(--line);background:#fafbf6;border-radius:4px;padding:0 5px;font-size:12px}
 .paint-editor input{width:30px;height:29px;flex:none;padding:2px;border:1px solid var(--line);border-radius:4px;background:#fafbf6;cursor:pointer}
 .paint-editor button{flex:none}
+.preset-strip{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 8px}
+.preset-chip{display:inline-flex;align-items:center;gap:5px;height:25px;padding:0 8px;border:1px solid var(--line);border-radius:13px;background:#fafbf6;font-size:11px;color:#394332;cursor:pointer}
+.preset-chip:hover{background:#eef1e5;border-color:#98a28d}
+.preset-chip[aria-pressed="true"]{background:#2b3129;color:#fff;border-color:#2b3129}
+.preset-dot{width:9px;height:9px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none}
+.part-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.part-check{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--line);border-radius:5px;background:#fafbf6;font-size:12px;color:#343e2d;cursor:pointer}
+.part-check input{margin:0;accent-color:#59674f}
+.decal-list{display:grid;gap:6px;margin-top:6px}
+.decal-row{display:grid;gap:3px}
+.decal-meta{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11px;color:#626c59}
+.decal-row input{height:27px;padding:0 8px;font-size:12px}
+.rig-parts{display:grid;gap:8px;overflow-y:auto;scrollbar-width:thin;min-height:0;padding-right:2px}
+.rig-part{padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:#fafbf6;display:grid;gap:5px}
+.rig-part-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.rig-part-head strong{font-size:12px;font-weight:620;color:#2b3325}
+.rig-part-actions{display:flex;align-items:center;gap:4px;flex:none}
+.rig-part-actions output{font:10px var(--mono);color:#5d6755;min-width:40px;text-align:right}
+.rig-btn{height:22px;padding:0 7px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:11px;font-weight:550;color:#36402e;cursor:pointer}
+.rig-btn:hover{background:#ebeee3}
+.rig-btn[aria-pressed="true"]{background:#d96a3b;color:#fff;border-color:#d96a3b}
+.rig-desc{font-size:11px;color:#697261;line-height:1.3;margin:0}
+.rig-footer{display:flex;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--line);flex:none}
+.parts-drawer{margin-top:7px;padding-top:7px;border-top:1px solid var(--line);flex:none;max-height:46%;display:flex;flex-direction:column;min-height:0}
+.parts-drawer summary{font-size:12px;font-weight:600;color:#3c4635;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}
+.parts-drawer summary::-webkit-details-marker{display:none}
+.parts-drawer[open] .rig-parts{margin-top:6px}
+.toolshelf .square[aria-pressed="true"]{background:#2b3129;color:#fff}
 .property-label{font-size:12px}
 #propertiesBody .paints{flex-wrap:wrap;gap:7px;margin-bottom:10px}
 #propertiesBody .transforms{border-top:1px solid var(--line)}
