@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "allocations": [
+    {
+      "id": 0,
+      "theme": "iphone-viewer",
+      "legacyFiles": [
+        {
+          "path": "historical/plan.md",
+          "sha256": "45813a2260912525426559baabcdd9dcc4f8eb792dfec0255568ead206cc9cb1",
+          "source": "3d-maker@cb2a797335dcdf90338070834d6c09575fdd84db:docs/work/000_iphone-viewer/plan.md"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "theme": "object-studio"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# Form Foundry
+
+## Editor and inventory
+
+The studio targets desktop browsers with WebGL 2. It opens with an editable Relay Drone. Six procedural starters cover four objects and two humanoid characters. Appearance controls change body and accent colors. Geometry controls change scale, width, surface detail, and standard or HD quality. HD adds authored components, smoother curved geometry and material detail. Each starter has animation clips. Characters use skinned meshes with stable 19-joint rigs at both qualities.
+
+The studio previews clips, speed and time, supports camera presets and orbit, and changes the floor grid or wireframe overlay independently of the exported asset. The inventory stores starter recipes in localStorage. Imported local files and edit metadata share an IndexedDB transaction. For a PolyFork import, the inventory retains the canonical source reference and retrieves the mesh when reopened. Inventory belongs to the browser and origin. Download a recipe or GLB to move work between machines.
+
+## PolyFork and imports
+
+The live catalog calls PolyFork’s public search API. Selecting a result opens its GLB from the publisher. The importer keeps embedded materials, mesh hierarchy, skeletons and clips. Name, tint, scale, and height are editable. White restores the original paint. The exported scene carries source credit and edit details for a PolyFork import. The local dataset and download scope are recorded in [the dataset guide](../dataset.md).
+
+## Agent and game interfaces
+
+A versioned JSON recipe is the source for an original asset. Agents can read `catalog.json`, `agent-schema.json` and `llms.txt` at the app root. The browser exposes `window.forgeStudio` for reading and applying recipes, saving, listing inventory, playing clips, editing imported assets and exporting binary glTF. The same validated recipes build ordinary three.js Groups in the standalone `studio-sdk.js` module. The README contains a working game integration.
+
+The AI tools panel accepts a structured recipe or a text edit. The natural-language editor uses a supported Chrome installation’s on-device language model when available. The user can explicitly enable a downloadable model. Other browsers support a documented local command vocabulary. The editor identifies which engine applied the edit. Imported GLBs use the inspector or the import edits API.
+
+## Capture contract
+
+`?asset=field-pilot` selects a starter by ID. `?shot=1` starts at rest. Add `&view=Front`, `Top` or `Side` for a fixed preset and `&noui=1` for a full-frame model. The renderer preserves its drawing buffer and sets `window.__shotReady` after five rendered frames. The default perspective shows the model from above its front-right corner.
