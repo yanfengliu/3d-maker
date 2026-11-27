@@ -90,6 +90,8 @@ export interface AssetPhysicsSpec {
 export interface AssetRuntimeState {
   pose?: Record<string, number>;
   hiddenParts?: string[];
+  /** True when the asset's own canonical root node is hidden (disambiguates editable display names in headless mode). */
+  rootHidden?: boolean;
   night?: boolean;
   decalText?: Record<string, string>;
 }
@@ -422,6 +424,7 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
       const hidden = value.state.hiddenParts.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
       if (hidden.length) state.hiddenParts = [...new Set(hidden)];
     }
+    if (typeof value.state.rootHidden === 'boolean' && value.state.rootHidden) state.rootHidden = true;
     if (typeof value.state.night === 'boolean') state.night = value.state.night;
     if (isRecord(value.state.decalText)) {
       const text: Record<string, string> = {};

@@ -387,7 +387,7 @@ function createCompositeControllerInternal(
 
       rt.slot.add(rebuilt);
       rt.inner = rebuilt;
-      rt.restNodes = captureOwnNodeTransforms(rebuilt);
+      rt.restNodes = captureRestNodeTransforms(rebuilt, nextController);
       const hostRt = rt.spec.mount.parent ? runtimes.get(rt.spec.mount.parent) : undefined;
       reseatAndRecordRest(rt, hostRt, Boolean(freshCaps.children?.length));
       if (nextPrefix) rt.spec.nodePrefix = nextPrefix;

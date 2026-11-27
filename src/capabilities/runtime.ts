@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { isAssetRootHidden } from './compose-scope';
 import {
   findOwnNodeByName,
   registerLiveController,
@@ -115,10 +116,15 @@ export function inspectAsset(root: T.Object3D, animations?: readonly T.Animation
   const sourceClips = animations?.length ? animations : root.animations;
   const clips = sourceClips.length ? describeClips(sourceClips, existing?.clips) : existing?.clips;
   if (existing) {
-    return {
+    const out: AssetCapabilities = {
       ...structuredClone(existing),
       ...(clips?.length ? { clips } : {}),
     };
+    if (out.state?.hiddenParts?.length) {
+      if (isAssetRootHidden(out, new Set(out.state.hiddenParts), root)) out.state.rootHidden = true;
+      else delete out.state.rootHidden;
+    }
+    return out;
   }
   const decals = readEmbeddedDecals(root);
   const dimensions = measureDimensions(root);
@@ -290,9 +296,11 @@ export function createAssetController(
     const cleanedText = Object.fromEntries(
       Object.entries(decalLabels).filter(([, text]) => text.trim().length > 0),
     );
+    const rootHidden = hidden.length > 0 && isAssetRootHidden(capabilities, hiddenParts, root, prefix);
     return {
       ...(Object.keys(pose).length ? { pose } : {}),
       ...(hidden.length ? { hiddenParts: hidden } : {}),
+      ...(rootHidden ? { rootHidden: true } : {}),
       ...(nightOn ? { night: true } : {}),
       ...(Object.keys(cleanedText).length ? { decalText: cleanedText } : {}),
     };

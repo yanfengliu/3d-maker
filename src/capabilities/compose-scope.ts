@@ -3,12 +3,20 @@ import { MAX_SCOPED_NAME_LEN, type CompositeChildSpec, type CompositeRestTransfo
 import { isHiddenPartName, traverseOwnSubtree } from './compose-tree';
 import type { AssetCapabilities } from './schema';
 
-export type NodeTransformSnapshot = Map<T.Object3D, { pos: T.Vector3; quat: T.Quaternion; scale: T.Vector3 }>;
+export type NodeTransformSnapshot = Map<
+  T.Object3D,
+  { pos: T.Vector3; rot: T.Euler; quat: T.Quaternion; scale: T.Vector3 }
+>;
 
 export function captureOwnNodeTransforms(root: T.Object3D): NodeTransformSnapshot {
   const snap: NodeTransformSnapshot = new Map();
   traverseOwnSubtree(root, node => {
-    snap.set(node, { pos: node.position.clone(), quat: node.quaternion.clone(), scale: node.scale.clone() });
+    snap.set(node, {
+      pos: node.position.clone(),
+      rot: node.rotation.clone(),
+      quat: node.quaternion.clone(),
+      scale: node.scale.clone(),
+    });
   });
   return snap;
 }
@@ -16,7 +24,8 @@ export function captureOwnNodeTransforms(root: T.Object3D): NodeTransformSnapsho
 export function restoreOwnNodeTransforms(snap: NodeTransformSnapshot): void {
   for (const [node, t] of snap) {
     node.position.copy(t.pos);
-    node.quaternion.copy(t.quat);
+    node.rotation.copy(t.rot);
+    if (node.quaternion.angleTo(t.quat) > 1e-6) node.quaternion.copy(t.quat);
     node.scale.copy(t.scale);
   }
 }
@@ -44,8 +53,11 @@ function isSyntheticSceneWrapper(node: T.Object3D, prefix: string): boolean {
 }
 
 /**
- * Determine whether an asset's root is hidden in `hiddenSet` (both manifest-only by `caps.name` and live across
- * synthetic GLTFLoader `Scene`/`AuxScene` wrappers) without descending past real roots into detachable sub-parts.
+ * Determine whether an asset's canonical root is hidden in `hiddenSet`:
+ * - With a live `object`, walks synthetic GLTFLoader `Scene`/`AuxScene` wrappers to check the real root node only
+ *   (never guessing from an editable display `caps.name`, which may collide with a hidden child's name).
+ * - In manifest-only (headless) mode, honors `caps.state?.rootHidden`, falling back to `caps.name` only when no
+ *   collider explicitly binds that same name as a child node.
  */
 export function isAssetRootHidden(
   caps: AssetCapabilities,
@@ -54,18 +66,21 @@ export function isAssetRootHidden(
   prefix = '',
 ): boolean {
   if (!hiddenSet.size) return false;
-  if (caps.name && isHiddenPartName(hiddenSet, caps.name, prefix)) return true;
-  if (!object) return false;
-  let cur: T.Object3D = object;
-  for (;;) {
-    if (cur.name && isHiddenPartName(hiddenSet, cur.name, prefix)) return true;
-    if (typeof cur.userData.localName === 'string' && hiddenSet.has(cur.userData.localName)) return true;
-    if (!isSyntheticSceneWrapper(cur, prefix)) break;
-    const only = cur.children.length === 1 ? cur.children[0] : undefined;
-    if (!only || only.userData.compositeSlot) break;
-    cur = only;
+  if (object) {
+    let cur: T.Object3D = object;
+    for (;;) {
+      if (cur.name && isHiddenPartName(hiddenSet, cur.name, prefix)) return true;
+      if (typeof cur.userData.localName === 'string' && hiddenSet.has(cur.userData.localName)) return true;
+      if (!isSyntheticSceneWrapper(cur, prefix)) break;
+      const only = cur.children.length === 1 ? cur.children[0] : undefined;
+      if (!only || only.userData.compositeSlot) break;
+      cur = only;
+    }
+    return false;
   }
-  return false;
+  if (caps.state?.rootHidden) return true;
+  if (!caps.name || !isHiddenPartName(hiddenSet, caps.name, prefix)) return false;
+  return !caps.colliders?.some(c => Boolean(c.node && isHiddenPartName(hiddenSet, c.node, prefix)));
 }
 
 function r3(n: number): number {
@@ -83,7 +98,9 @@ export function splitTrackTargetAndProperty(
     if (name.length > longestMatch.length && trackName.startsWith(`${name}.`)) longestMatch = name;
   }
   if (longestMatch) {
-    return { targetPart: longestMatch, propPart: trackName.slice(longestMatch.length) };
+    const propPart = trackName.slice(longestMatch.length);
+    const parsedProp = T.PropertyBinding.parseTrackName(propPart) as { propertyName?: string };
+    if (parsedProp.propertyName) return { targetPart: longestMatch, propPart };
   }
   const parsed = T.PropertyBinding.parseTrackName(trackName) as {
     objectName?: string;

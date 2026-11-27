@@ -116,6 +116,29 @@ function rebindUnscopedChildTracks(
   }
 }
 
+/** Collect animations owned by single-child wrapper nodes between `exportSource` and the asset capability root. */
+function collectDescendantWrapperClips(exportSource: Object3D): AnimationClip[] {
+  const clips: AnimationClip[] = [];
+  let cur: Object3D = exportSource;
+  while (cur.children.length === 1 && cur.children[0]) {
+    if (cur !== exportSource && cur.userData.formFoundry) break;
+    const child = cur.children[0];
+    if (child.userData.compositeSlot || child.userData.compositeChild) break;
+    if (child.animations.length) {
+      for (const clip of child.animations) {
+        const copy = clip.clone();
+        for (const track of copy.tracks) {
+          if (track.name.startsWith('.')) track.name = `${child.uuid}${track.name}`;
+        }
+        clips.push(copy);
+      }
+    }
+    if (child.userData.formFoundry) break;
+    cur = child;
+  }
+  return clips;
+}
+
 /** Capture the rig at rest, preserving detachable subtrees, active part poses, capability manifest, and optional part clips. */
 export function cloneForExport(
   source: Group,
@@ -168,12 +191,13 @@ export function cloneForExport(
   }
   copyNode(exportSource, root);
   for (const overlay of overlays) overlay.removeFromParent();
-  const sourceAnims = source.animations.length
+  const baseAnims = source.animations.length
     ? source.animations
     : exportSource.animations.length
       ? exportSource.animations
       : controllerAnims;
-  root.animations = sourceAnims.map((clip) => clip.clone());
+  const wrapperAnims = baseAnims.length ? [] : collectDescendantWrapperClips(exportSource);
+  root.animations = [...baseAnims.map((clip) => clip.clone()), ...wrapperAnims];
 
   const resolvedController = controller === undefined
     ? (activeController ?? getLiveController(exportSource))

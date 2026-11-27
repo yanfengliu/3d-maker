@@ -9,6 +9,7 @@ import {
 } from './compose-schema';
 import {
   findLegacyPhysicsOverride,
+  isAssetRootHidden,
   measureRelativeTransform,
   pickUniquePrefix,
   scopeChildSubtree,
@@ -262,6 +263,11 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
   for (const item of prepared) {
     const { id, childRoot, mount, prefix, preservedRecipe } = item;
     const childCaps = inspectAsset(childRoot);
+    if (childCaps.state?.hiddenParts?.length && !childCaps.state.rootHidden) {
+      if (isAssetRootHidden(childCaps, new Set(childCaps.state.hiddenParts), childRoot)) {
+        childCaps.state = { ...childCaps.state, rootHidden: true };
+      }
+    }
     const legacyLock = !childCaps.physics?.locked ? findLegacyPhysicsOverride(childRoot) : undefined;
     if (legacyLock) {
       childCaps.physics = { ...childCaps.physics, body: legacyLock, locked: true };
