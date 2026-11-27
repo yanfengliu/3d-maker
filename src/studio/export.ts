@@ -116,14 +116,14 @@ function rebindUnscopedChildTracks(
   }
 }
 
-/** Collect animations owned by single-child wrapper nodes between `exportSource` and the asset capability root. */
+/** Collect animations owned by single-child wrapper nodes strictly above the asset capability root. */
 function collectDescendantWrapperClips(exportSource: Object3D): AnimationClip[] {
   const clips: AnimationClip[] = [];
   let cur: Object3D = exportSource;
   while (cur.children.length === 1 && cur.children[0]) {
     if (cur !== exportSource && cur.userData.formFoundry) break;
     const child = cur.children[0];
-    if (child.userData.compositeSlot || child.userData.compositeChild) break;
+    if (child.userData.compositeSlot || child.userData.compositeChild || child.userData.formFoundry) break;
     if (child.animations.length) {
       for (const clip of child.animations) {
         const copy = clip.clone();
@@ -133,7 +133,6 @@ function collectDescendantWrapperClips(exportSource: Object3D): AnimationClip[] 
         clips.push(copy);
       }
     }
-    if (child.userData.formFoundry) break;
     cur = child;
   }
   return clips;
@@ -196,7 +195,8 @@ export function cloneForExport(
     : exportSource.animations.length
       ? exportSource.animations
       : controllerAnims;
-  const wrapperAnims = baseAnims.length ? [] : collectDescendantWrapperClips(exportSource);
+  const seenNames = new Set(baseAnims.map(c => c.name));
+  const wrapperAnims = collectDescendantWrapperClips(exportSource).filter(c => !seenNames.has(c.name));
   root.animations = [...baseAnims.map((clip) => clip.clone()), ...wrapperAnims];
 
   const resolvedController = controller === undefined

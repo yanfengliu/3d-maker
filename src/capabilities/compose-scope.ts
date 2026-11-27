@@ -24,8 +24,14 @@ export function captureOwnNodeTransforms(root: T.Object3D): NodeTransformSnapsho
 export function restoreOwnNodeTransforms(snap: NodeTransformSnapshot): void {
   for (const [node, t] of snap) {
     node.position.copy(t.pos);
-    node.rotation.copy(t.rot);
-    if (node.quaternion.angleTo(t.quat) > 1e-6) node.quaternion.copy(t.quat);
+    node.quaternion.copy(t.quat);
+    if (
+      Math.abs(node.rotation.x - t.rot.x) > 1e-5
+      || Math.abs(node.rotation.y - t.rot.y) > 1e-5
+      || Math.abs(node.rotation.z - t.rot.z) > 1e-5
+    ) {
+      node.rotation.copy(t.rot);
+    }
     node.scale.copy(t.scale);
   }
 }
@@ -64,6 +70,7 @@ export function isAssetRootHidden(
   hiddenSet: ReadonlySet<string>,
   object: T.Object3D | undefined,
   prefix = '',
+  usingOverride = false,
 ): boolean {
   if (!hiddenSet.size) return false;
   if (object) {
@@ -78,9 +85,10 @@ export function isAssetRootHidden(
     }
     return false;
   }
-  if (caps.state?.rootHidden) return true;
+  if (!usingOverride && typeof caps.state?.rootHidden === 'boolean') return caps.state.rootHidden;
   if (!caps.name || !isHiddenPartName(hiddenSet, caps.name, prefix)) return false;
-  return !caps.colliders?.some(c => Boolean(c.node && isHiddenPartName(hiddenSet, c.node, prefix)));
+  const nameSet = new Set([caps.name]);
+  return !caps.colliders?.some(c => Boolean(c.node && isHiddenPartName(nameSet, c.node, prefix)));
 }
 
 function r3(n: number): number {

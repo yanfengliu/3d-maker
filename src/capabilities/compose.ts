@@ -263,10 +263,11 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
   for (const item of prepared) {
     const { id, childRoot, mount, prefix, preservedRecipe } = item;
     const childCaps = inspectAsset(childRoot);
-    if (childCaps.state?.hiddenParts?.length && !childCaps.state.rootHidden) {
-      if (isAssetRootHidden(childCaps, new Set(childCaps.state.hiddenParts), childRoot)) {
-        childCaps.state = { ...childCaps.state, rootHidden: true };
-      }
+    if (childCaps.state?.hiddenParts?.length) {
+      childCaps.state = {
+        ...childCaps.state,
+        rootHidden: isAssetRootHidden(childCaps, new Set(childCaps.state.hiddenParts), childRoot),
+      };
     }
     const legacyLock = !childCaps.physics?.locked ? findLegacyPhysicsOverride(childRoot) : undefined;
     if (legacyLock) {

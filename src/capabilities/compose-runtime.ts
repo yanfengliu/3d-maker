@@ -349,19 +349,23 @@ function createCompositeControllerInternal(
       staging = true;
       try {
         scopeChildSubtree(rebuilt, childId, nextPrefix ?? '', freshCaps, outerClipPrefix);
-        for (const dep of dependentChildren) {
-          if (dep.spec.mount.surface && !freshCaps.surfaces?.some(s => s.name === dep.spec.mount.surface)) {
-            throw new Error(`Rebuild of "${childId}" removed surface "${dep.spec.mount.surface}" required by child "${dep.spec.id}".`);
-          }
-          if (dep.spec.mount.attachNode) {
-            const hostNode = findOwnNodeByName(rebuilt, dep.spec.mount.attachNode, nextPrefix);
-            if (!hostNode) throw new Error(`Rebuild of "${childId}" removed attachNode "${dep.spec.mount.attachNode}" required by child "${dep.spec.id}".`);
-            resolvedHosts.set(dep.spec.id, hostNode);
-            // Measure attachNode rest transform BEFORE restoring any posed state on rebuilt!
-            attachRestPoses.set(dep.spec.id, measureRelativeTransform(rebuilt, hostNode));
-          } else resolvedHosts.set(dep.spec.id, rebuilt);
-        }
         nextController = createAssetController(rebuilt, freshCaps, nextPrefix, { skipRootWrite: true, onChange: onChildChange });
+        const rebuiltRest = captureRestNodeTransforms(rebuilt, nextController);
+        const liveRebuilt = captureOwnNodeTransforms(rebuilt);
+        restoreOwnNodeTransforms(rebuiltRest);
+        try {
+          for (const dep of dependentChildren) {
+            if (dep.spec.mount.surface && !freshCaps.surfaces?.some(s => s.name === dep.spec.mount.surface)) {
+              throw new Error(`Rebuild of "${childId}" removed surface "${dep.spec.mount.surface}" required by child "${dep.spec.id}".`);
+            }
+            if (dep.spec.mount.attachNode) {
+              const hostNode = findOwnNodeByName(rebuilt, dep.spec.mount.attachNode, nextPrefix);
+              if (!hostNode) throw new Error(`Rebuild of "${childId}" removed attachNode "${dep.spec.mount.attachNode}" required by child "${dep.spec.id}".`);
+              resolvedHosts.set(dep.spec.id, hostNode);
+              attachRestPoses.set(dep.spec.id, measureRelativeTransform(rebuilt, hostNode));
+            } else resolvedHosts.set(dep.spec.id, rebuilt);
+          }
+        } finally { restoreOwnNodeTransforms(liveRebuilt); }
         if (freshCaps.children?.length) {
           nextSubComposite = createCompositeControllerInternal(rebuilt, freshCaps, rebuilt.animations, {
             skipRootWrite: true, onChange: onChildChange, onRebuild: () => { handleNestedChildRebuild(childId); },
@@ -404,17 +408,12 @@ function createCompositeControllerInternal(
         const measuredAttach = attachRestPoses.get(dep.spec.id);
         if (measuredAttach) dep.spec.mount.attachRestPose = measuredAttach;
         hostNode.add(dep.slot);
-        reseatCompositeSlot(dep.slot, dep.inner, dep.spec.mount, freshCaps, rebuilt, Boolean(dep.spec.capabilities.children?.length));
-        dep.spec.mount.slotRestPose = measureRelativeTransform(rebuilt, dep.slot);
+        reseatAndRecordRest(dep, rt, Boolean(dep.spec.capabilities.children?.length));
       }
 
       staging = true;
-      try {
-        restoreCompatibleChildState(nextController, rebuilt, nextPrefix, freshCaps, prevState, prevDecalsVisible);
-      } finally {
-        staging = false;
-      }
-
+      try { restoreCompatibleChildState(nextController, rebuilt, nextPrefix, freshCaps, prevState, prevDecalsVisible); }
+      finally { staging = false; }
       disposeUnusedResources(oldInner, retentionRoot);
       replaceChildClipsInPool(childId, rebuilt.animations);
       refreshAggregateMetadata();
@@ -431,16 +430,12 @@ function createCompositeControllerInternal(
           continue;
         }
         const rt = requireChild(item.childId);
-        const clipQuery = item.clip;
-        const clip = typeof clipQuery === 'number'
-          ? rt.clips[clipQuery]
-          : rt.clips.find(c => c.name === clipQuery || c.name.toLowerCase() === clipQuery.toLowerCase());
+        const clip = typeof item.clip === 'number'
+          ? rt.clips[item.clip]
+          : rt.clips.find(c => c.name === item.clip || c.name.toLowerCase() === String(item.clip).toLowerCase());
         if (!clip) throw new Error(`Child "${item.childId}" has no animation clip matching "${String(item.clip)}".`);
         const prev = rt.actionsByClip.get(clip);
-        if (prev) {
-          prev.stop();
-          rt.actionsByClip.delete(clip);
-        }
+        if (prev) { prev.stop(); rt.actionsByClip.delete(clip); }
         const action = rt.mixer.clipAction(clip);
         action.reset();
         action.setLoop(item.loop === false ? T.LoopOnce : T.LoopRepeat, item.loop === false ? 1 : Infinity);

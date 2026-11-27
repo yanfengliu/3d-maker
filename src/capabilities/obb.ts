@@ -315,7 +315,7 @@ function appendResolvedVolumes(
 ): void {
   const hiddenSet = new Set(hiddenOverride ?? caps.state?.hiddenParts ?? []);
   // If the asset root itself is listed in hiddenParts (live across wrappers OR manifest-only), suppress all of its colliders.
-  if (isAssetRootHidden(caps, hiddenSet, object, nodePrefix)) return;
+  if (isAssetRootHidden(caps, hiddenSet, object, nodePrefix, hiddenOverride !== undefined)) return;
 
   if (caps.children?.length) {
     if (object) {

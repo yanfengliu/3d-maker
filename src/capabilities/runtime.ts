@@ -121,8 +121,7 @@ export function inspectAsset(root: T.Object3D, animations?: readonly T.Animation
       ...(clips?.length ? { clips } : {}),
     };
     if (out.state?.hiddenParts?.length) {
-      if (isAssetRootHidden(out, new Set(out.state.hiddenParts), root)) out.state.rootHidden = true;
-      else delete out.state.rootHidden;
+      out.state.rootHidden = isAssetRootHidden(out, new Set(out.state.hiddenParts), root);
     }
     return out;
   }
@@ -296,11 +295,11 @@ export function createAssetController(
     const cleanedText = Object.fromEntries(
       Object.entries(decalLabels).filter(([, text]) => text.trim().length > 0),
     );
-    const rootHidden = hidden.length > 0 && isAssetRootHidden(capabilities, hiddenParts, root, prefix);
+    const rootHidden = hidden.length > 0 ? isAssetRootHidden(capabilities, hiddenParts, root, prefix) : undefined;
     return {
       ...(Object.keys(pose).length ? { pose } : {}),
       ...(hidden.length ? { hiddenParts: hidden } : {}),
-      ...(rootHidden ? { rootHidden: true } : {}),
+      ...(rootHidden !== undefined ? { rootHidden } : {}),
       ...(nightOn ? { night: true } : {}),
       ...(Object.keys(cleanedText).length ? { decalText: cleanedText } : {}),
     };

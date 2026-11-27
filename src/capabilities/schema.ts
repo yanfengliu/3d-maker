@@ -424,7 +424,7 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
       const hidden = value.state.hiddenParts.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
       if (hidden.length) state.hiddenParts = [...new Set(hidden)];
     }
-    if (typeof value.state.rootHidden === 'boolean' && value.state.rootHidden) state.rootHidden = true;
+    if (typeof value.state.rootHidden === 'boolean') state.rootHidden = value.state.rootHidden;
     if (typeof value.state.night === 'boolean') state.night = value.state.night;
     if (isRecord(value.state.decalText)) {
       const text: Record<string, string> = {};
