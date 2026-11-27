@@ -3,6 +3,7 @@ import '../ui/workspace.css';
 import type * as T from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { cloneForExport } from './export';
+import { addCharacterAnimations } from '../animation/library';
 import { catalog, parseRecipe, type Recipe } from '../data/recipe';
 import { readInventory, saveAsset } from '../data/inventory';
 import {
@@ -63,12 +64,20 @@ function toolbar() {
   el('save').innerHTML =
     icon(selection.id ? 'save' : 'plus', 16) + (selection.id ? ' Save changes' : ' Save to inventory');
 }
+function availableClips() {
+  const model = stage.model;
+  if (!model) return [];
+  const hadClips = model.animations.length > 0;
+  addCharacterAnimations(model);
+  if (!hadClips && model.animations.length) stage.setClip(0);
+  return model.animations;
+}
 function controls() {
   el('propertiesTab').classList.toggle('active', tab === 'props');
   el('animationTab').classList.toggle('active', tab === 'anim');
   if (tab === 'anim') {
     showAnimation(
-      stage.model?.animations ?? [],
+      availableClips(),
       stage.clipIndex,
       stage.playing,
       stage.speed,
@@ -167,6 +176,7 @@ async function exportGLB(): Promise<ArrayBuffer> {
   const model = recipe ? buildModel(recipe) : snapshot?.root;
   if (!model) throw new Error('Choose an asset to export.');
   try {
+    addCharacterAnimations(model);
     return (await new GLTFExporter().parseAsync(model, {
       binary: true,
       animations: model.animations,
@@ -323,9 +333,9 @@ const api = {
     toolbar();
     controls();
   },
-  listClips: () => stage.model?.animations.map(({ name, duration }) => ({ name, duration })) ?? [],
+  listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
   playClip: (index: number) => {
-    if (!stage.model?.animations[index]) throw new Error('Unknown animation clip.');
+    if (!availableClips()[index]) throw new Error('Unknown animation clip.');
     stage.setClip(index);
     stage.play(true);
     controls();
