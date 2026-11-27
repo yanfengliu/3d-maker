@@ -139,6 +139,21 @@ describe('imported GLB assets', () => {
     expect(asset.edits.paint).toEqual({ [green.id]: '#123456' });
   });
 
+  it('retries transient 429 and 503 responses when opening a PolyFork GLB', async () => {
+    vi.useFakeTimers();
+    const bytes = await modelFile().arrayBuffer();
+    const fetcher = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(bytes));
+    const pending = openPolyforkGlb('retry-shop', 'Village Shopfront', undefined, 'building');
+    await vi.advanceTimersByTimeAsync(3500);
+    const asset = await pending;
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(asset.source).toEqual({ kind: 'polyfork', assetId: 'retry-shop', title: 'Village Shopfront', category: 'building' });
+    vi.useRealTimers();
+  });
+
   it('rejects non-binary files, assets with external resources, and empty scenes', async () => {
     await expect(openLocalGlb(new File(['{}'], 'scene.glb'))).rejects.toThrow(/binary glTF/);
     await expect(openLocalGlb(modelFile({ images: [{ uri: 'texture.png' }] }))).rejects.toThrow(/embed/i);

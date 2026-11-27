@@ -71,18 +71,22 @@ async function subjectBounds(page) {
         if (y > maxY) maxY = y;
       }
     }
+    let out = '';
+    for (let i = 0; i < data.length; i += 0x8000) out += String.fromCharCode(...data.subarray(i, i + 0x8000));
     return {
       count,
       minX: minX / width,
       maxX: (maxX + 1) / width,
       minY: minY / height,
       maxY: (maxY + 1) / height,
-      pixels: Array.from(data),
+      pixels: btoa(out),
     };
   });
 }
 
-function meanChannelDiff(a, b) {
+function meanChannelDiff(aB64, bB64) {
+  const a = Buffer.from(aB64, 'base64');
+  const b = Buffer.from(bB64, 'base64');
   let total = 0;
   for (let i = 0; i < a.length; i += 4) {
     total += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
@@ -186,7 +190,13 @@ export async function verifyClipFraming(browser, origin, site, out) {
     // Exported GLB motion must retain authored underwater Hips heights without preview framing offsets.
     await selectClip(page, 'Swimming', 'Swimming');
     await waitFrames(page, 3);
-    const glb = await page.evaluate(async () => Array.from(new Uint8Array(await window.forgeStudio.exportGLB())));
+    const glbB64 = await page.evaluate(async () => {
+      const bytes = new Uint8Array(await window.forgeStudio.exportGLB());
+      let out = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      return btoa(out);
+    });
+    const glb = Buffer.from(glbB64, 'base64');
     const swimMinY = exportedHipsMinY(glb, 'Swimming');
     const treadMinY = exportedHipsMinY(glb, 'Treading water');
     assert.ok(swimMinY < -0.04, 'Exported Swimming Hips Y lost its underwater depth: ' + swimMinY);

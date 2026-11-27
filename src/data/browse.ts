@@ -1,7 +1,12 @@
 import { catalog, type Recipe, type TemplateId } from './recipe';
 import type { SavedAsset } from './inventory';
 import type { ImportEntry } from '../imports/library';
-import { searchPolyfork, type PolyforkAsset, type PolyforkPage } from './polyfork';
+import {
+  PolyforkRateLimitError,
+  searchPolyfork,
+  type PolyforkAsset,
+  type PolyforkPage,
+} from './polyfork';
 
 import legacyIds from './legacy-humanoids.json';
 
@@ -51,6 +56,7 @@ export interface BrowsePage {
   pageSize: number;
   total: number;
   remoteError: string | null;
+  retryAfterMs?: number;
 }
 
 const originalCategories: Record<TemplateId, BrowseCategory> = {
@@ -114,11 +120,51 @@ export function localBrowseItems(filters: BrowseQuery, locals: BrowseLocals): Br
 const pageSize = 12;
 // A combined page can straddle two API pages. Keep recent successful reads so
 // moving forward or back reuses the overlapping page without another request.
+interface InFlightPage {
+  promise: Promise<PolyforkPage>;
+  controller: AbortController;
+  waiters: number;
+}
 const pageCache = new Map<string, { value: PolyforkPage; expires: number }>();
-const cacheLimit = 80;
+const inFlight = new Map<string, InFlightPage>();
+const cacheLimit = 160;
 const cacheLifetime = 120_000;
 function cachePrefix(filters: BrowseQuery, category: string, size: number) {
   return JSON.stringify([category, filters.query.trim().toLowerCase(), size]) + '/';
+}
+
+function waitFor(entry: InFlightPage, signal: AbortSignal): Promise<PolyforkPage> {
+  if (signal.aborted) {
+    return Promise.reject(signal.reason instanceof Error ? signal.reason : new DOMException('Aborted', 'AbortError'));
+  }
+  entry.waiters++;
+  return new Promise<PolyforkPage>((resolve, reject) => {
+    let settled = false;
+    const release = () => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      entry.waiters--;
+    };
+    const onAbort = () => {
+      release();
+      if (entry.waiters <= 0) entry.controller.abort(signal.reason);
+      reject(signal.reason instanceof Error ? signal.reason : new DOMException('Aborted', 'AbortError'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    entry.promise.then(
+      value => {
+        if (settled) return;
+        release();
+        resolve(value);
+      },
+      (error: unknown) => {
+        if (settled) return;
+        release();
+        reject(error instanceof Error ? error : new Error('The catalog request failed.'));
+      },
+    );
+  });
 }
 
 async function remotePage(filters: BrowseQuery, page: number, signal: AbortSignal,
@@ -128,15 +174,27 @@ async function remotePage(filters: BrowseQuery, page: number, signal: AbortSigna
   const cached = pageCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
 
-  const value = await searchPolyfork(filters.query, signal, page, category === 'all' ? undefined : category, size);
-  signal.throwIfAborted();
-  if (value.page !== page) throw new Error('PolyFork returned an unexpected catalog page.');
-  if (pageCache.size >= cacheLimit) {
-    const first = pageCache.keys().next();
-    if (!first.done) pageCache.delete(first.value);
+  let entry = inFlight.get(key);
+  if (!entry) {
+    const controller = new AbortController();
+    const request = (async () => {
+      const value = await searchPolyfork(filters.query, controller.signal, page, category === 'all' ? undefined : category, size);
+      if (value.page !== page) throw new Error('PolyFork returned an unexpected catalog page.');
+      if (pageCache.size >= cacheLimit) {
+        const first = pageCache.keys().next();
+        if (!first.done) pageCache.delete(first.value);
+      }
+      pageCache.set(key, { value, expires: Date.now() + cacheLifetime });
+      return value;
+    })();
+    entry = { promise: request, controller, waiters: 0 };
+    inFlight.set(key, entry);
+    const created = entry;
+    void request.finally(() => {
+      if (inFlight.get(key) === created) inFlight.delete(key);
+    }).catch(() => undefined);
   }
-  pageCache.set(key, { value, expires: Date.now() + cacheLifetime });
-  return value;
+  return waitFor(entry, signal);
 }
 
 // A merged class needs its corrected count before user-visible pagination. Read the affected
@@ -148,7 +206,7 @@ async function classAssets(filters: BrowseQuery, category: string, signal: Abort
   for (const [key, entry] of pageCache) {
     if (key.startsWith(prefix) && entry.expires > Date.now()) pages.set(entry.value.page, entry.value);
   }
-  let error: string | null = null, last = 1, countKnown = false;
+  let error: string | null = null, retryAfterMs: number | undefined, last = 1, countKnown = false;
   for (let page = 1; page <= last; page++) {
     try {
       const result = await remotePage(filters, page, signal, category, size);
@@ -159,18 +217,25 @@ async function classAssets(filters: BrowseQuery, category: string, signal: Abort
       }
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'The catalog request failed.';
+      if (cause instanceof PolyforkRateLimitError) {
+        retryAfterMs = Math.max(retryAfterMs ?? 0, cause.retryAfterMs);
+        break;
+      }
       if (signal.aborted) break;
     }
   }
   const assets = [...pages.values()].filter(value => !countKnown || value.page <= last)
     .sort((a,b) => a.page - b.page).flatMap(value => value.assets);
-  return { assets, error };
+  return { assets, error, retryAfterMs };
 }
 
-function localPage(items: BrowseItem[], requested: number, remoteError: string | null = null): BrowsePage {
+function localPage(items: BrowseItem[], requested: number, remoteError: string | null = null, retryAfterMs?: number): BrowsePage {
   const page = pageWithin(requested, items.length);
   const start = (page - 1) * pageSize;
-  return { items: items.slice(start, start + pageSize), page, pageSize, total: items.length, remoteError };
+  return {
+    items: items.slice(start, start + pageSize), page, pageSize, total: items.length, remoteError,
+    ...(retryAfterMs ? { retryAfterMs } : {}),
+  };
 }
 
 function pageWithin(page: number, total: number): number {
@@ -191,7 +256,7 @@ export async function browseAssets(filters: BrowseQuery, locals: BrowseLocals, s
     return localPage(local, filters.page);
   }
 
-  const timeout = AbortSignal.timeout(12_000);
+  const timeout = AbortSignal.timeout(20_000);
   const request = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let knownPage: BrowsePage | undefined;
   try {
@@ -206,8 +271,9 @@ export async function browseAssets(filters: BrowseQuery, locals: BrowseLocals, s
         }
       }
       const failure = groups.find(group => group.error)?.error;
+      const retryAfterMs = groups.reduce((max, group) => Math.max(max, group.retryAfterMs ?? 0), 0) || undefined;
       const warning = failure ? 'PolyFork catalog results are incomplete. ' + failure : null;
-      return localPage([...local, ...matches.values()], filters.page, warning);
+      return localPage([...local, ...matches.values()], filters.page, warning, retryAfterMs);
     }
     const first = await remotePage(filters, 1, request);
     const total = local.length + first.total;
@@ -234,8 +300,11 @@ export async function browseAssets(filters: BrowseQuery, locals: BrowseLocals, s
     return knownPage;
   } catch (error) {
     signal?.throwIfAborted();
-    const message = timeout.aborted ? 'The PolyFork catalog timed out.' :
-      error instanceof Error ? error.message : 'The PolyFork catalog is unavailable.';
-    return knownPage ? { ...knownPage, remoteError: message } : localPage(local, filters.page, message);
+    const retryAfterMs = error instanceof PolyforkRateLimitError ? error.retryAfterMs : undefined;
+    const message = timeout.aborted ? 'PolyFork catalog request timed out.' :
+      error instanceof Error ? error.message : 'PolyFork catalog is unavailable.';
+    return knownPage
+      ? { ...knownPage, remoteError: message, ...(retryAfterMs ? { retryAfterMs } : {}) }
+      : localPage(local, filters.page, message, retryAfterMs);
   }
 }

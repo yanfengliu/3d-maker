@@ -2,6 +2,7 @@ import {
   browseAssets, categories, categoryLabel, localBrowseItems,
   type BrowseCategory, type BrowseItem, type BrowseLocals, type BrowseQuery, type BrowseSource,
 } from '../data/browse';
+import { clearPolyforkBackoff, expirePolyforkCooldown } from '../data/polyfork';
 import { catalog } from '../data/recipe';
 import { readInventory, removeAsset } from '../data/inventory';
 import { listImports, deleteImport } from '../imports';
@@ -34,7 +35,7 @@ export function setupShelf(actions: Actions) {
   const filters: BrowseQuery = { source: 'all', category: 'all', query: '', page: 1 };
   let locals: BrowseLocals = { recipes: [], imports: [] };
   let load: AbortController | undefined, opening: AbortController | undefined;
-  let timer = 0, localsRevision = 0, pages = 1, pendingKey = '';
+  let timer = 0, retryTimer = 0, localsRevision = 0, pages = 1, pendingKey = '';
   let retryPage: number | undefined;
   let visible = new Map<string, BrowseItem>();
   const previews = new Map<string, {revision:string; image:string}>();
@@ -111,6 +112,8 @@ export function setupShelf(actions: Actions) {
   function reload(resetScroll:boolean, debounce=false) {
     load?.abort();
     window.clearTimeout(timer);
+    window.clearTimeout(retryTimer);
+    retryTimer = 0;
     const controller = new AbortController();
     load = controller;
     if (resetScroll) retryPage = undefined;
@@ -132,6 +135,14 @@ export function setupShelf(actions: Actions) {
       if (found.remoteError) {
         el('inventoryNoticeText').textContent = found.remoteError.startsWith('PolyFork') ? found.remoteError : 'Could not load the PolyFork catalog.';
         el('inventoryNotice').hidden = false;
+        if (found.retryAfterMs) {
+          retryTimer = window.setTimeout(() => {
+            if (!controller.signal.aborted && load === controller) {
+              expirePolyforkCooldown();
+              reload(false);
+            }
+          }, found.retryAfterMs + 50);
+        }
       }
     };
     if (resetScroll || !visible.size) {
@@ -141,8 +152,21 @@ export function setupShelf(actions: Actions) {
       prev.disabled = next.disabled = pageInput.disabled = true;
     }
     grid.setAttribute('aria-busy','true');
-    const fetchResults = () => { void run().catch((error:unknown)=>{ if (!controller.signal.aborted) report(error); }); };
-    if (debounce) timer = window.setTimeout(fetchResults,180);
+    const fetchResults = () => {
+      void run().catch((error:unknown) => {
+        if (controller.signal.aborted) return;
+        retryPage = requested.page;
+        const start = (requested.page - 1) * perPage;
+        results(localItems.slice(start, start + perPage), 'Online results are unavailable.');
+        grid.setAttribute('aria-busy', 'false');
+        counts(localItems.length, true);
+        el('inventoryNoticeText').textContent = error instanceof Error && error.message.startsWith('PolyFork')
+          ? error.message : 'Could not load the PolyFork catalog.';
+        el('inventoryNotice').hidden = false;
+        report(error);
+      });
+    };
+    if (debounce) timer = window.setTimeout(fetchResults,280);
     else fetchResults();
   }
   function selectPage(value:number) {
@@ -220,6 +244,6 @@ export function setupShelf(actions: Actions) {
   next.onclick = ()=>{ selectPage(filters.page+1); };
   el('inventoryPager').onsubmit = event=>{ event.preventDefault(); selectPage(pageInput.valueAsNumber); };
   pageInput.onchange = ()=>{ selectPage(pageInput.valueAsNumber); };
-  el('inventoryRetry').onclick = ()=>{ reload(false); };
+  el('inventoryRetry').onclick = ()=>{ clearPolyforkBackoff(); reload(false); };
   return { markSelection, refreshSaved, start:()=>{ reload(true); void refreshSaved().catch(report); } };
 }

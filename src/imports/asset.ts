@@ -1,5 +1,6 @@
 import { Color, Group } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { abortableDelay } from '../data/polyfork';
 import { applyPalette, buildPalette, validatePaint, type ImportPalette } from './paint';
 
 export type ImportSource = { kind: 'local'; filename: string } | { kind: 'polyfork'; assetId: string; title: string; category?: string };
@@ -128,8 +129,52 @@ export function openLocalGlb(file: File): Promise<ImportedAsset> {
   return openStoredFile(file, file.name);
 }
 
+const glbTimeoutMs = 25_000;
+const retryableStatuses = new Set([429, 502, 503, 504]);
+
+function retryDelayMs(response: Response, attempt: number): number {
+  const header = response.headers.get('Retry-After');
+  if (header && /^\d+$/.test(header)) return Math.min(8_000, Math.max(500, Number(header) * 1000));
+  return 1_000 * (attempt + 1);
+}
+
 export async function openPolyforkGlb(assetId: string, name: string, signal?: AbortSignal, category?: string): Promise<ImportedAsset> {
-  const response = await fetch(polyforkGlbUrl(assetId), { credentials: 'omit', signal: signal ?? null });
-  if (!response.ok) throw new Error(`PolyFork could not supply this model (HTTP ${String(response.status)}).`);
-  return openBinary(await response.arrayBuffer(), { kind: 'polyfork', assetId, title: name, ...(category ? { category } : {}) }, name, null);
+  const url = polyforkGlbUrl(assetId);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    signal?.throwIfAborted();
+    const timeout = AbortSignal.timeout(glbTimeoutMs);
+    const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    let response: Response;
+    try {
+      response = await fetch(url, { credentials: 'omit', signal: requestSignal });
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (timeout.aborted) {
+        if (attempt < 2) {
+          await abortableDelay(800 * (attempt + 1), signal);
+          continue;
+        }
+        throw new Error('PolyFork model download timed out. Try opening it again.', { cause: error });
+      }
+      throw error;
+    }
+    if (retryableStatuses.has(response.status) && attempt < 2) {
+      void response.body?.cancel();
+      await abortableDelay(retryDelayMs(response, attempt), signal);
+      continue;
+    }
+    if (response.status === 429) throw new Error('PolyFork is limiting model downloads. Try again in a moment.');
+    if (!response.ok) throw new Error(`PolyFork could not supply this model (HTTP ${String(response.status)}).`);
+    let bytes: ArrayBuffer;
+    try {
+      bytes = await response.arrayBuffer();
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (timeout.aborted) throw new Error('PolyFork model download timed out. Try opening it again.', { cause: error });
+      throw error;
+    }
+    signal?.throwIfAborted();
+    return openBinary(bytes, { kind: 'polyfork', assetId, title: name, ...(category ? { category } : {}) }, name, null);
+  }
+  throw new Error('PolyFork could not supply this model.');
 }

@@ -1,5 +1,11 @@
 # Studio defect register
 
+## 2026-11-26 — PolyFork 429 responses locked out catalog loading for 60 seconds and GLB fetches had no retry or timeout
+
+PolyFork catalog responses do not expose `Retry-After` in `Access-Control-Expose-Headers`, so browsers read `null` and triggered a 60-second client-side blackout after a single HTTP 429, leaving categories like Buildings showing only local originals (such as Signal Tower) and blocking manual Retry clicks. Model GLB downloads also lacked timeouts and transient 429/5xx retries, and an unexpected catalog rejection could leave the shelf stuck on `Loading…`. The catalog client now uses short progressive backoff when `Retry-After` is hidden, deduplicates concurrent page requests, clears backoff on explicit Retry, auto-retries after rate-limit cooldowns, recovers the shelf UI on unexpected failures, and retries/times out transient GLB fetch failures.
+
+`src/data/data.test.ts` and `src/data/browse.test.ts` cover CORS-hidden 429 backoff, manual retry clearing, concurrent request deduplication, and `retryAfterMs` reporting. `src/imports/asset.test.ts` covers transient 429/503 retries for `openPolyforkGlb`. `scripts/check-inventory.mjs` exercises both a CORS-hidden 429 on Buildings (verifying automatic recovery alongside Signal Tower) and a transient 429 when opening a PolyFork GLB.
+
 ## 2026-11-26 — Low-pose animations dropped below the viewport and floor grid
 
 Clips whose authored root motion sits below the rest floor (such as Swimming and Treading water) fell partly outside the viewport and behind the floor grid and playback bar because the stage only framed the rest pose. The viewport now samples each clip’s bounding box on selection, shifts the floor, shadow and camera target together while preserving the user’s orbit and zoom, expands the orthographic frame only when a stretched pose exceeds the base frame, and leaves model transforms and exported tracks untouched.

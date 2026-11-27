@@ -1,5 +1,7 @@
 # Devlog
 
+- 2026-11-26 — Fixed PolyFork catalog and model loading stalling after transient rate limits or slow downloads by replacing the 60-second CORS-blind 429 lockout with short progressive backoff and automatic recovery, deduplicating concurrent catalog requests, clearing backoff on manual Retry, and adding timeout and transient retry handling to GLB downloads.
+
 - 2026-11-26 — Kept low-pose animation previews (such as Swimming, Treading water and Slide) centered above the floor grid without altering user orbit or exported motion, and added browser regressions for clip framing, settled static rotor repainting and AI tools editing on imported models.
 
 - 2026-11-26 — Extended AI tools to edit imported assets by prompt or JSON and added viewport redraws after changing a stationary model’s paint.

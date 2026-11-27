@@ -52,7 +52,8 @@ function meshFixture() {
 export async function inventoryFixture(context, project) {
   const glb = meshFixture();
   const downloads = [];
-  let failOnce = false;
+  let failStatus = 0;
+  let glbFailStatus = 0;
   await context.route(origin + '/**', async route => {
     const url = new URL(route.request().url());
     const headers = { 'access-control-allow-origin': '*' };
@@ -62,9 +63,10 @@ export async function inventoryFixture(context, project) {
       const results = rows.filter(row =>
         (!category || row.class === category) && row.title.toLowerCase().includes(query)
       );
-      if (failOnce) {
-        failOnce = false;
-        await route.fulfill({ status: 503, headers, body: 'Unavailable' });
+      if (failStatus) {
+        const status = failStatus;
+        failStatus = 0;
+        await route.fulfill({ status, headers, body: status === 429 ? 'Rate limited' : 'Unavailable' });
         return;
       }
       const perPage = Number(url.searchParams.get('per_page'));
@@ -82,13 +84,23 @@ export async function inventoryFixture(context, project) {
     }
     const mesh = rows.find(row => row.download.glb === url.origin + url.pathname);
     if (mesh) {
+      if (glbFailStatus) {
+        const status = glbFailStatus;
+        glbFailStatus = 0;
+        await route.fulfill({ status, headers, body: 'Retry later' });
+        return;
+      }
       downloads.push(mesh.id);
       await route.fulfill({ headers, contentType: 'model/gltf-binary', body: glb });
       return;
     }
     await route.fulfill({ status: 404, headers });
   });
-  return { downloads, failNext: () => { failOnce = true; } };
+  return {
+    downloads,
+    failNext: (status = 503) => { failStatus = status; },
+    failNextGlb: (status = 429) => { glbFailStatus = status; },
+  };
 }
 
 const grid = '#assetGrid .inv-card';
@@ -234,6 +246,22 @@ export async function verifyBrowsing(page, fixture, out) {
   await waitGrid(page, 4);
 
   await deleteDuringOpen(page);
+
+  // A 429 without CORS-exposed Retry-After must recover automatically (and on Retry) instead of locking out Buildings for 60s.
+  await page.locator('#inventorySearch').fill('');
+  await source(page, 'all').click();
+  fixture.failNext(429);
+  await category(page, 'building').click();
+  await page.locator('#inventoryNotice').waitFor({ state: 'visible' });
+  await open(page, 'Signal Tower').waitFor();
+  assert.match(await page.locator('#inventoryNoticeText').textContent(), /limiting catalog requests/i);
+  await open(page, 'Relay Station 01').waitFor({ timeout: 6000 });
+  await waitGrid(page, 4);
+  assert.ok(await page.locator('#inventoryNotice').isHidden());
+  // Opening a PolyFork GLB recovers automatically from a transient 429 download error.
+  fixture.failNextGlb(429);
+  await open(page, 'Relay Station 01').click();
+  await page.waitForFunction(() => window.forgeStudio.getImportEdits()?.name === 'Relay Station 01', undefined, { timeout: 6000 });
 
   await page.locator('#inventorySearch').fill('');
   await source(page, 'original').click();

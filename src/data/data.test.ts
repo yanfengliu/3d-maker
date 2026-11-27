@@ -2,13 +2,14 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalog, parseRecipe, type Recipe } from './recipe';
 import { readInventory, removeAsset, saveAsset } from './inventory';
-import { searchPolyfork } from './polyfork';
+import { clearPolyforkBackoff, PolyforkRateLimitError, searchPolyfork } from './polyfork';
 
 function starter(): Recipe {
   return { version: 1, template: 'relay-drone', name: 'Relay Drone', primary: '#e8aa36', accent: '#343b40', scale: 1, proportion: 1, detail: true };
 }
 
 afterEach(() => {
+  clearPolyforkBackoff();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -131,5 +132,39 @@ describe('PolyFork search', () => {
     expect(request).toHaveBeenCalledTimes(2);
     vi.advanceTimersByTime(2001);
     expect((await searchPolyfork('z')).assets).toEqual([]);
+  });
+
+  it('uses short progressive backoff when Retry-After is absent over CORS and resets on success or manual retry', async () => {
+    vi.useFakeTimers();
+    const ok = Response.json({ page: 1, per_page: 12, total: 1, assets: [polyforkRow] });
+    const request = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(ok)
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(Response.json({ page: 1, per_page: 12, total: 1, assets: [polyforkRow] }));
+    vi.stubGlobal('fetch', request);
+
+    let firstError: unknown;
+    try { await searchPolyfork('building'); } catch (e) { firstError = e; }
+    expect(firstError).toBeInstanceOf(PolyforkRateLimitError);
+    expect((firstError as PolyforkRateLimitError).retryAfterMs).toBe(2000);
+
+    vi.advanceTimersByTime(2001);
+    let secondError: unknown;
+    try { await searchPolyfork('building'); } catch (e) { secondError = e; }
+    expect(secondError).toBeInstanceOf(PolyforkRateLimitError);
+    expect((secondError as PolyforkRateLimitError).retryAfterMs).toBe(4000);
+
+    vi.advanceTimersByTime(4001);
+    expect((await searchPolyfork('building')).assets).toHaveLength(1);
+
+    // Streak reset after success, and clearPolyforkBackoff allows immediate user-triggered retry.
+    let thirdError: unknown;
+    try { await searchPolyfork('shop'); } catch (e) { thirdError = e; }
+    expect((thirdError as PolyforkRateLimitError).retryAfterMs).toBe(2000);
+    clearPolyforkBackoff();
+    expect((await searchPolyfork('shop')).assets).toHaveLength(1);
+    expect(request).toHaveBeenCalledTimes(5);
   });
 });

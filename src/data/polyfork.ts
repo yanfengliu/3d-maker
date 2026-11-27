@@ -19,7 +19,29 @@ export interface PolyforkPage {
 }
 
 const origin = 'https://polyfork.dev';
+const maxExplicitBackoff = 60_000;
+const implicitBackoffs = [2_000, 4_000, 8_000, 15_000];
 let retryAfter = 0;
+let rateLimitStreak = 0;
+
+export class PolyforkRateLimitError extends Error {
+  readonly retryAfterMs: number;
+  constructor(retryAfterMs: number) {
+    const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+    super(`PolyFork is limiting catalog requests. Try again in ${String(seconds)} seconds.`);
+    this.name = 'PolyforkRateLimitError';
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+export function expirePolyforkCooldown(): void {
+  retryAfter = 0;
+}
+
+export function clearPolyforkBackoff(): void {
+  retryAfter = 0;
+  rateLimitStreak = 0;
+}
 
 function count(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
@@ -44,22 +66,50 @@ function parseAsset(value: unknown): PolyforkAsset | null {
   };
 }
 
-function backoff(value: string | null): number {
-  if (!value) return 60_000;
-  if (/^\d+$/.test(value)) return Number(value) * 1000;
+function parseRetryAfter(value: string | null): number | null {
+  if (!value) return null;
+  if (/^\d+$/.test(value)) return Math.min(maxExplicitBackoff, Math.max(1000, Number(value) * 1000));
   const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? Math.max(1000, timestamp - Date.now()) : 60_000;
+  return Number.isFinite(timestamp) ? Math.min(maxExplicitBackoff, Math.max(1000, timestamp - Date.now())) : null;
 }
 
-function rateLimitMessage(): string {
-  const seconds = Math.max(1, Math.ceil((retryAfter - Date.now()) / 1000));
-  return `PolyFork is limiting catalog requests. Try again in ${String(seconds)} seconds.`;
+function nextBackoff(header: string | null): number {
+  const explicit = parseRetryAfter(header);
+  if (explicit !== null) return explicit;
+  // Browsers cannot read Retry-After across origins unless Access-Control-Expose-Headers lists it.
+  // Use a short progressive cooldown instead of locking out browsing for a full minute.
+  const delay = implicitBackoffs[Math.min(rateLimitStreak, implicitBackoffs.length - 1)] ?? 15_000;
+  rateLimitStreak++;
+  return delay;
+}
+
+export function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0) {
+    signal?.throwIfAborted();
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason instanceof Error ? signal.reason : new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const onAbort = () => {
+      globalThis.clearTimeout(timer);
+      reject(signal?.reason instanceof Error ? signal.reason : new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = globalThis.setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 /** Search on demand. The API and model downloads stay on PolyFork's own origin. */
 export async function searchPolyfork(query: string, signal?: AbortSignal, page = 1, category?: string, perPage = 12): Promise<PolyforkPage> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Choose a positive catalog page number.');
-  if (Date.now() < retryAfter) throw new Error(rateLimitMessage());
+  const remaining = retryAfter - Date.now();
+  if (remaining > 0) throw new PolyforkRateLimitError(remaining);
   const url = new URL('/api/assets', origin);
   url.searchParams.set('free', '1');
   url.searchParams.set('per_page', String(perPage));
@@ -68,8 +118,9 @@ export async function searchPolyfork(query: string, signal?: AbortSignal, page =
   if (category) url.searchParams.set('class', category);
   const response = await fetch(url, { signal: signal ?? null, credentials: 'omit' });
   if (response.status === 429) {
-    retryAfter = Date.now() + backoff(response.headers.get('Retry-After'));
-    throw new Error(rateLimitMessage());
+    const wait = nextBackoff(response.headers.get('Retry-After'));
+    retryAfter = Date.now() + wait;
+    throw new PolyforkRateLimitError(wait);
   }
   if (!response.ok) throw new Error(`PolyFork catalog request failed (HTTP ${String(response.status)}).`);
   const result: unknown = await response.json();
@@ -77,6 +128,8 @@ export async function searchPolyfork(query: string, signal?: AbortSignal, page =
       || !('page' in result) || !count(result.page) || result.page < 1
       || !('per_page' in result) || !count(result.per_page) || result.per_page < 1
       || !('total' in result) || !count(result.total)) throw new Error('PolyFork returned an unreadable catalog page.');
+  retryAfter = 0;
+  rateLimitStreak = 0;
   return {
     page: result.page, perPage: result.per_page, total: result.total,
     assets: result.assets.map(parseAsset).filter((asset): asset is PolyforkAsset => asset !== null),

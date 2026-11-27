@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ImportEntry } from '../imports/library';
 import { browseAssets, categories, localBrowseItems, type BrowseLocals, type BrowseQuery } from './browse';
+import { clearPolyforkBackoff } from './polyfork';
 import { catalog } from './recipe';
 
 const empty: BrowseLocals = { recipes: [], imports: [] };
@@ -57,6 +58,7 @@ function classOutage(totals: Record<string,number>, fails: (source: string, page
 }
 
 afterEach(() => {
+  clearPolyforkBackoff();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -255,5 +257,40 @@ describe('unified asset browsing', () => {
     cancelled.abort();
     await expect(browseAssets(filters, empty, cancelled.signal)).rejects.toThrow();
     expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it('deduplicates concurrent catalog reads and reports short rate-limit cooldowns for automatic recovery', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async raw => {
+      if (!(raw instanceof URL)) throw new Error('Expected a catalog URL.');
+      const page = Number(raw.searchParams.get('page'));
+      const size = Number(raw.searchParams.get('per_page'));
+      await gate;
+      return Response.json({
+        page, per_page: size, total: 1,
+        assets: [{
+          id: 'village-shopfront-d3088e', title: 'Village Shopfront', class: 'building', free: true, triangles: 2208,
+          thumbnail: 'https://polyfork.dev/files/village-shopfront-d3088e/renders/hero.png',
+          download: { glb: 'https://polyfork.dev/cdn/village-shopfront-d3088e.glb' },
+        }],
+      });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const query: BrowseQuery = { ...all, category: 'building', query: 'building' };
+    const first = browseAssets(query, empty);
+    const second = browseAssets(query, empty);
+    release?.();
+    const [a, b] = await Promise.all([first, second]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(a.total).toBe(2);
+    expect(b.items.map(i => i.title)).toEqual(['Signal Tower', 'Village Shopfront']);
+
+    // A 429 without Retry-After exposes a short retryAfterMs instead of a 60s lockout.
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(null, { status: 429 })));
+    const limited = await browseAssets({ ...all, category: 'building', query: 'buildings' }, empty);
+    expect(limited.items.map(i => i.title)).toEqual(['Signal Tower']);
+    expect(limited.remoteError).toMatch(/^PolyFork is limiting/);
+    expect(limited.retryAfterMs).toBe(2000);
   });
 });
