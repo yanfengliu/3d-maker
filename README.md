@@ -8,6 +8,12 @@ Browse and edit 3D assets on one desktop page. The inventory combines six studio
 
 Use Node 24. Run `npm ci`, then `npm run dev`. For a production build and checks, run `npm run verify` and `npm run check:studio`.
 
+## Character animations
+
+Choose a humanoid and open **Inspector → Animation**. Search by motion, pick a clip, then play or scrub it. Compatible PolyFork humanoids can use all 85 downloadable CC0 motions. Field Pilot and Survey Bot also keep their two original cycles. Exporting a GLB includes the entire available set even if you never previewed it. Animals, machines and unsupported rigs retain their embedded clips.
+
+[Studio and PolyFork website comparison](docs/design/polyfork-comparison.md) · [Motion source and credits](docs/dataset.md#character-motion-library)
+
 ## Use an asset in a game
 
 For a finished mesh, choose **Export asset → GLB**. The file contains the edited materials, geometry, skeleton when present, and animation clips. Load it with three.js GLTFLoader or the glTF importer in your engine.

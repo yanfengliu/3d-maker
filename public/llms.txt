@@ -13,7 +13,7 @@ Open the studio and use window.forgeStudio.
 - listInventory() reads the browser's saved inventory.
 - exportGLB() returns a Promise<ArrayBuffer> containing the active asset as a binary glTF file.
 - getImportEdits() and setImportEdits({name, tint, scale, proportion}) read and apply edits to a loaded GLB.
-- listClips() returns clip names and durations. playClip(index) previews a clip.
+- listClips() returns clip names and durations. playClip(index) previews a clip. Compatible humanoids include the packaged downloadable CC0 motion library. Both original characters also retain their two studio cycles. exportGLB() includes all available clips even before listClips() is called.
 - openPolyfork(id, name) loads a free GLB directly from PolyFork and returns a Promise<void>.
 
 To change an asset, read its recipe, replace the requested fields, apply the full recipe and save when the user requests persistence. Both colors take six-digit sRGB hex values. Scale and proportion are numbers in [0.65, 1.5]. The detail field toggles optional secondary parts. Quality selects the authored geometry level, either "standard" or "hd". All six catalog recipes use HD. Version 1 recipes that omit quality render at standard quality.
