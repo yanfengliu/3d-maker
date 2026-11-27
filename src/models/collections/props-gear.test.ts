@@ -67,6 +67,38 @@ describe('props and gear packs metadata', () => {
     expect(gearPack.filter(a => a.browseCategory === 'attachment')).toHaveLength(4);
     expect(allAssets.map(a => a.category)).toEqual(Array.from({ length: 20 }, () => 'Object'));
   });
+
+  it('keeps street-vending-unit CanDisplay unobstructed behind transparent glass and grandfather-clock GlassDoor transparent', () => {
+    const vendDef = propsPack.find(a => a.id === 'street-vending-unit');
+    const clockDef = propsPack.find(a => a.id === 'grandfather-clock');
+    if (!vendDef || !clockDef) throw new Error('Missing expected prop defs');
+
+    const vend = buildPackAsset(vendDef, { quality: 'hd', detail: true });
+    vend.updateMatrixWorld(true);
+    const cans = vend.getObjectByName('CanDisplay');
+    const unit = vend.getObjectByName('VendingUnit');
+    if (!cans || !unit) throw new Error('Missing vending nodes');
+    const canBoxes = meshes(cans).map(can => new T.Box3().setFromObject(can));
+    expect(canBoxes).toHaveLength(12);
+    const opaqueOccluding = meshes(unit).filter(part => {
+      const mats = [part.material].flat();
+      if (mats.every(m => m.transparent && m.opacity < 0.5)) return false;
+      const box3 = new T.Box3().setFromObject(part);
+      return canBoxes.some(cb =>
+        box3.min.x < cb.max.x && box3.max.x > cb.min.x &&
+        box3.min.y < cb.max.y && box3.max.y > cb.min.y &&
+        box3.max.z > cb.min.z + 0.01,
+      );
+    });
+    expect(opaqueOccluding).toHaveLength(0);
+    const glassPanes = meshes(unit).filter(part => [part.material].flat().some(m => m.transparent && m.opacity < 0.5));
+    expect(glassPanes.length).toBeGreaterThan(0);
+
+    const clock = buildPackAsset(clockDef, { quality: 'hd', detail: true });
+    const door = clock.getObjectByName('GlassDoor');
+    if (!door) throw new Error('Missing GlassDoor');
+    expect(meshes(door).some(part => [part.material].flat().some(m => m.transparent && m.opacity < 0.5))).toBe(true);
+  });
 });
 
 describe.each(allAssets)('$code $name ($id)', asset => {
