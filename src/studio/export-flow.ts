@@ -26,7 +26,10 @@ export async function exportStudioGlb(target: ExportTarget, options?: ExportOpti
   if (builtOriginal) {
     const origState = target.originalController?.getState();
     exportCtrl = createAssetController(builtOriginal);
-    for (const [part, val] of Object.entries(origState?.pose ?? {})) exportCtrl.setPart(part, val);
+    const exportMimics = new Set(exportCtrl.capabilities.riggedParts.filter(p => p.mimic).map(p => p.name));
+    for (const [part, val] of Object.entries(origState?.pose ?? {})) {
+      if (!exportMimics.has(part)) exportCtrl.setPart(part, val);
+    }
     for (const part of origState?.hiddenParts ?? []) exportCtrl.setVisible(part, false);
     if (origState?.night && exportCtrl.capabilities.nightZones.length) exportCtrl.setNight(true);
     if (origState?.decalText && exportCtrl.capabilities.decals.length) exportCtrl.setDecalsVisible(true, origState.decalText);

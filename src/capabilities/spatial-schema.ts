@@ -7,6 +7,8 @@ export interface SpatialRestPose {
   at: [number, number, number];
   /** Optional asset-root local XYZ Euler rotation in radians at rest pose. */
   rotation?: [number, number, number];
+  /** Optional asset-root rest scale converting node-local collider sizes into asset-root meters (e.g. `[0.001, 0.001, 0.001]` for mm GLBs). */
+  scale?: [number, number, number];
 }
 
 export interface ColliderSpec {
@@ -102,7 +104,9 @@ function parseRestPose(value: unknown): SpatialRestPose | undefined {
   const at = tuple3(value.at);
   if (!at) return undefined;
   const rotation = tuple3(value.rotation) ?? undefined;
-  return { at, ...(rotation ? { rotation } : {}) };
+  const rawScale = tuple3(value.scale);
+  const scale = rawScale && rawScale[0] > 0 && rawScale[1] > 0 && rawScale[2] > 0 ? rawScale : undefined;
+  return { at, ...(rotation ? { rotation } : {}), ...(scale ? { scale } : {}) };
 }
 
 function humanizeSpatialLabel(raw: string): string {

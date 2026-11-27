@@ -25,7 +25,11 @@ async function exportRawGlb(scene: T.Object3D): Promise<ArrayBuffer> {
     (globalThis as { FileReader?: unknown }).FileReader = NodeFileReader;
   }
   try {
-    return await new GLTFExporter().parseAsync(scene, { binary: true, onlyVisible: true }) as ArrayBuffer;
+    return await new GLTFExporter().parseAsync(scene, {
+      binary: true,
+      onlyVisible: true,
+      ...(scene.animations.length ? { animations: scene.animations } : {}),
+    }) as ArrayBuffer;
   } finally {
     if (prevReader === undefined) delete (globalThis as { FileReader?: unknown }).FileReader;
   }

@@ -7,7 +7,7 @@ import {
   unregisterLiveController,
 } from './compose-tree';
 import { buildDecalMesh, buildNightOverlays, type DecalOverlay } from './overlays';
-import { axisTuple, propagateMimicValues } from './rig-math';
+import { axisTuple, buildClipPoseSchedule, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import { readSand3dCapabilities } from './sand3d';
 import {
   readCapabilities,
@@ -158,11 +158,12 @@ function buildPartTrack(
 ): T.KeyframeTrack {
   const axisVec = axisVector(part.axis);
   if (part.type === 'slide') {
-    const rest = node.position.clone().addScaledVector(axisVec, -current);
+    const slideFactor = slideOffsetFactor(part);
+    const rest = node.position.clone().addScaledVector(axisVec, -current * slideFactor);
     const vals: number[] = [];
     const pos = new T.Vector3();
     for (const v of poseValues) {
-      pos.copy(rest).addScaledVector(axisVec, v);
+      pos.copy(rest).addScaledVector(axisVec, v * slideFactor);
       vals.push(pos.x, pos.y, pos.z);
     }
     return new T.VectorKeyframeTrack(trackNode + '.position', [...times], vals);
@@ -197,42 +198,16 @@ export function synthesizeRigClips(
     const node = findOwnNodeByName(root, part.name, prefix);
     if (!node) continue;
     const current = caps.state?.pose?.[part.name] ?? 0;
-    const far = farRangeEnd(part.range);
-    const times: number[] = [];
-    const poseValues: number[] = [];
-    if (part.type === 'slide') {
-      times.push(0, 0.9, 1.5, 2.4);
-      poseValues.push(0, far, far, 0);
-    } else if (Math.abs(far) >= 359 || part.continuous) {
-      const target = part.continuous && Math.abs(far) < 359 ? 360 : far;
-      const steps = Math.max(8, Math.ceil(Math.abs(target) / 45));
-      for (let i = 0; i <= steps; i++) {
-        times.push((i / steps) * 2.4);
-        poseValues.push((target * i) / steps);
-      }
-    } else {
-      const steps = Math.max(1, Math.ceil(Math.abs(far) / 45));
-      for (let i = 0; i <= steps; i++) {
-        times.push((i / steps) * 0.9);
-        poseValues.push((far * i) / steps);
-      }
-      times.push(1.5);
-      poseValues.push(far);
-      for (let i = 1; i <= steps; i++) {
-        times.push(1.5 + (i / steps) * 0.9);
-        poseValues.push(far * (1 - i / steps));
-      }
-    }
+    const { times, leaderValues, followerValues } = buildClipPoseSchedule(part, caps.riggedParts);
     const tracks: T.KeyframeTrack[] = [
-      buildPartTrack(part, node, resolveTrackNode(node, part.name), current, times, poseValues),
+      buildPartTrack(part, node, resolveTrackNode(node, part.name), current, times, leaderValues),
     ];
-    const followerRatios = propagateMimicValues(caps.riggedParts, part.name, 1);
-    for (const [fName, ratio] of followerRatios) {
+    const currentCoupled = propagateMimicValues(caps.riggedParts, part.name, current);
+    for (const [fName, fVals] of followerValues) {
       const fSpec = caps.riggedParts.find(p => p.name === fName);
       const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
       if (!fSpec || !fNode) continue;
-      const fCur = caps.state?.pose?.[fSpec.name] ?? current * ratio;
-      const fVals = poseValues.map(v => (fSpec.continuous ? v * ratio : clampToRange(fSpec.range, v * ratio)));
+      const fCur = caps.state?.pose?.[fSpec.name] ?? currentCoupled.get(fSpec.name) ?? 0;
       tracks.push(buildPartTrack(fSpec, fNode, resolveTrackNode(fNode, fSpec.name), fCur, times, fVals));
     }
     const verb = part.type === 'slide'
@@ -270,7 +245,7 @@ export function createAssetController(
     const restQuaternion = node.quaternion.clone();
     const axisVec = axisVector(spec.axis);
     if (spec.type === 'slide') {
-      restPosition.addScaledVector(axisVec, -initialVal);
+      restPosition.addScaledVector(axisVec, -initialVal * slideOffsetFactor(spec));
     } else {
       restQuaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVec, -T.MathUtils.degToRad(initialVal))).normalize();
     }
@@ -289,15 +264,22 @@ export function createAssetController(
   let decalLabels: Record<string, string> = {};
   let decalOverlays: DecalOverlay[] = [];
 
-  function applyPoseToNode(binding: PartBinding, target: T.Object3D) {
+  function applyPoseToNode(binding: PartBinding, target: T.Object3D, syncSand3dExtras = false) {
     const { spec, restPosition, restQuaternion, value } = binding;
     const axisVec = axisVector(spec.axis);
     if (spec.type === 'slide') {
-      target.position.copy(restPosition).addScaledVector(axisVec, value);
+      target.position.copy(restPosition).addScaledVector(axisVec, value * slideOffsetFactor(spec));
     } else {
       target.quaternion.copy(restQuaternion)
         .multiply(new T.Quaternion().setFromAxisAngle(axisVec, T.MathUtils.degToRad(value)))
         .normalize();
+    }
+    if (syncSand3dExtras && target.userData.s3d_joint && typeof target.userData.s3d_joint === 'object' && !Array.isArray(target.userData.s3d_joint)) {
+      const siValue = spec.type === 'slide' ? value : T.MathUtils.degToRad(value);
+      target.userData.s3d_joint = {
+        ...(target.userData.s3d_joint as Record<string, unknown>),
+        value: Math.round(siValue * 1e6) / 1e6 || 0,
+      };
     }
     target.updateMatrixWorld(true);
   }
@@ -387,6 +369,9 @@ export function createAssetController(
     setPart(name, value) {
       const binding = bindings.get(name);
       if (!binding) throw new Error('This model has no rigged part named ' + name + '.');
+      if (binding.spec.mimic && bindings.has(binding.spec.mimic.part)) {
+        throw new Error(`Part "${name}" is coupled to "${binding.spec.mimic.part}"; pose "${binding.spec.mimic.part}" instead.`);
+      }
       if (!Number.isFinite(value)) throw new Error('Part pose value must be a finite number.');
       binding.value = binding.spec.continuous ? value : clampToRange(binding.spec.range, value);
       applyPoseToNode(binding, binding.node);
@@ -463,7 +448,7 @@ export function createAssetController(
     applyPoseToClone(cloneRoot) {
       for (const binding of bindings.values()) {
         const cloned = findOwnNodeByName(cloneRoot, binding.spec.name, prefix);
-        if (cloned) applyPoseToNode(binding, cloned);
+        if (cloned) applyPoseToNode(binding, cloned, true);
       }
     },
     syncManifest,

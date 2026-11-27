@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, traverseOwnSubtree } from './compose-tree';
-import { axisTuple, propagateMimicValues } from './rig-math';
+import { axisTuple, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
+import { readSand3dCapabilities } from './sand3d';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -30,9 +31,9 @@ export interface RiggedSweepOptions {
   /** Optional node name prefix for scoped composite children. */
   nodePrefix?: string;
   /** Optional resolver returning external obstacle OBBs for a specific moving part (allows excluding co-moving children). */
-  getObstaclesForPart?: (partName: string, movingNode: T.Object3D) => readonly OrientedBox[];
-  /** Optional resolver returning live world-space OBBs for carried children moving with `movingNode` at the current step. */
-  getCarriedBoxes?: (partName: string, movingNode: T.Object3D) => readonly OrientedBox[];
+  getObstaclesForPart?: (partName: string, movingNode: T.Object3D, movingNodes?: readonly T.Object3D[]) => readonly OrientedBox[];
+  /** Optional resolver returning live world-space OBBs for carried children moving with `movingNode` (or coupled followers) at the current step. */
+  getCarriedBoxes?: (partName: string, movingNode: T.Object3D, movingNodes?: readonly T.Object3D[]) => readonly OrientedBox[];
 }
 
 export interface RiggedSweepIssue {
@@ -52,14 +53,25 @@ function axisVector(axis: RiggedPartSpec['axis']): T.Vector3 {
   return new T.Vector3(...axisTuple(axis));
 }
 
-function measureLocalNodeBox(node: T.Object3D): { at: Vec3Tuple; halfExtents: Vec3Tuple } | null {
+function measureLocalNodeBox(
+  node: T.Object3D,
+  excludeNodes?: ReadonlySet<T.Object3D>,
+): { at: Vec3Tuple; halfExtents: Vec3Tuple } | null {
   node.updateMatrixWorld(true);
   const invNode = node.matrixWorld.clone().invert();
   const box = new T.Box3();
   const v = new T.Vector3();
   const rel = new T.Matrix4();
   traverseOwnSubtree(node, child => {
+    if (child !== node && excludeNodes?.has(child)) return;
     if (child.userData.studioOverlay || !(child instanceof T.Mesh) || !isVisibleInTree(child)) return;
+    if (excludeNodes) {
+      let anc = child.parent;
+      while (anc && anc !== node) {
+        if (excludeNodes.has(anc)) return;
+        anc = anc.parent;
+      }
+    }
     const geo = child.geometry as T.BufferGeometry;
     const pos = geo.getAttribute('position') as T.BufferAttribute | undefined;
     if (!pos || pos.count === 0) return;
@@ -83,7 +95,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
   const steps = Math.max(2, options.steps ?? 7);
   const tolerance = options.tolerance ?? 0.015;
   const defaultObstacles = options.obstacles ?? [];
-  const caps = options.capabilities ?? readCapabilities(root);
+  const caps = options.capabilities ?? readCapabilities(root) ?? readSand3dCapabilities(root);
   if (!caps || !caps.riggedParts.length) return { valid: true, checkedParts: 0, issues: [] };
 
   const prefix = options.nodePrefix ?? '';
@@ -119,6 +131,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     const origPos = node.position.clone();
     const origQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
+    const leaderSlideScale = slideOffsetFactor(part);
     const registeredRest = getRiggedRestPose(node);
     const restPos = registeredRest ? registeredRest.pos.clone() : origPos.clone();
     const restQuat = registeredRest ? registeredRest.quat.clone() : origQuat.clone();
@@ -126,13 +139,13 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
       const currentPose = poseMap[part.name] ?? poseMap[localName] ?? 0;
       if (Math.abs(currentPose) > 1e-9) {
         if (part.type === 'slide') {
-          restPos.addScaledVector(axis, -currentPose);
+          restPos.addScaledVector(axis, -currentPose * leaderSlideScale);
         } else {
           restQuat.multiply(new T.Quaternion().setFromAxisAngle(axis, -T.MathUtils.degToRad(currentPose))).normalize();
         }
       }
     }
-    const followerNames = [...propagateMimicValues(caps.riggedParts, part.name, 1).keys()];
+    const followerNames = listMimicFollowers(caps.riggedParts, part.name);
     const followers = followerNames
       .map(fname => {
         const fSpec = caps.riggedParts.find(p => p.name === fname);
@@ -141,6 +154,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         const fOrigPos = fNode.position.clone();
         const fOrigQuat = fNode.quaternion.clone();
         const fAxis = axisVector(fSpec.axis);
+        const fSlideScale = slideOffsetFactor(fSpec);
         const fReg = getRiggedRestPose(fNode);
         const fRestPos = fReg ? fReg.pos.clone() : fOrigPos.clone();
         const fRestQuat = fReg ? fReg.quat.clone() : fOrigQuat.clone();
@@ -148,7 +162,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         if (!fReg) {
           const fCur = poseMap[fSpec.name] ?? poseMap[fLocal] ?? 0;
           if (Math.abs(fCur) > 1e-9) {
-            if (fSpec.type === 'slide') fRestPos.addScaledVector(fAxis, -fCur);
+            if (fSpec.type === 'slide') fRestPos.addScaledVector(fAxis, -fCur * fSlideScale);
             else fRestQuat.multiply(new T.Quaternion().setFromAxisAngle(fAxis, -T.MathUtils.degToRad(fCur))).normalize();
           }
         }
@@ -156,12 +170,13 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         const fFallback = fCols?.length ? null : measureLocalNodeBox(fNode);
         return {
           spec: fSpec, node: fNode, origPos: fOrigPos, origQuat: fOrigQuat,
-          restPos: fRestPos, restQuat: fRestQuat, axis: fAxis, cols: fCols, fallback: fFallback,
+          restPos: fRestPos, restQuat: fRestQuat, axis: fAxis, slideScale: fSlideScale, cols: fCols, fallback: fFallback,
         };
       })
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
     const authoredColliders = colliderByNode.get(part.name) ?? colliderByNode.get(localName);
-    const fallbackBox = authoredColliders?.length ? null : measureLocalNodeBox(node);
+    const followerNodeSet = followers.length ? new Set(followers.map(f => f.node)) : undefined;
+    const fallbackBox = authoredColliders?.length ? null : measureLocalNodeBox(node, followerNodeSet);
     const partClearanceSpecs = clearanceByPart.get(part.name) ?? clearanceByPart.get(localName) ?? [];
     const clearanceZones = partClearanceSpecs.map(z =>
       buildOrientedBox(root.matrixWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
@@ -174,7 +189,8 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         ...(z.rotation ? { rotation: z.rotation } : {}),
       }),
     );
-    const obstacles = options.getObstaclesForPart ? options.getObstaclesForPart(localName, node) : defaultObstacles;
+    const movingNodes: T.Object3D[] = [node, ...followers.map(f => f.node)];
+    const obstacles = options.getObstaclesForPart ? options.getObstaclesForPart(localName, node, movingNodes) : defaultObstacles;
 
     try {
       for (let s = 0; s < steps; s++) {
@@ -183,7 +199,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         node.position.copy(restPos);
         node.quaternion.copy(restQuat);
         if (part.type === 'slide') {
-          node.position.addScaledVector(axis, value);
+          node.position.addScaledVector(axis, value * leaderSlideScale);
         } else {
           node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         }
@@ -193,7 +209,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
             const fVal = coupled.get(f.spec.name) ?? 0;
             f.node.position.copy(f.restPos);
             f.node.quaternion.copy(f.restQuat);
-            if (f.spec.type === 'slide') f.node.position.addScaledVector(f.axis, fVal);
+            if (f.spec.type === 'slide') f.node.position.addScaledVector(f.axis, fVal * f.slideScale);
             else f.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(f.axis, T.MathUtils.degToRad(fVal)));
           }
           root.updateMatrixWorld(true);
@@ -270,7 +286,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
           }
         }
 
-        const carriedBoxes = options.getCarriedBoxes ? options.getCarriedBoxes(localName, node) : [];
+        const carriedBoxes = options.getCarriedBoxes ? options.getCarriedBoxes(localName, node, movingNodes) : [];
         for (const box of carriedBoxes) {
           for (const obs of obstacles) {
             if (obs.kind === 'clearance' && obs.layer === 'cavity') continue;

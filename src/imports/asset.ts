@@ -3,6 +3,7 @@ import type { GLTFLoader as GltfLoaderClass } from 'three/addons/loaders/GLTFLoa
 import { createAssetController, inspectAsset, type AssetController } from '../capabilities/runtime';
 import {
   readCapabilities,
+  sanitizeMimicLinks,
   type AssetCapabilities,
   type AssetDimensionsSpec,
   type ColorZoneSpec,
@@ -48,7 +49,11 @@ export interface ImportedAsset {
   droppedPaintSlots?: string[];
 }
 
-export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): { edits: ImportEdits; dropped: string[] } {
+export function reconcileSavedEdits(
+  asset: ImportedAsset,
+  saved: ImportEdits,
+  knownRiggedParts?: readonly string[],
+): { edits: ImportEdits; dropped: string[] } {
   const dropped: string[] = [];
   const preserved: Partial<Pick<ImportEdits, 'paint' | 'pose' | 'hiddenParts' | 'night' | 'decalText'>> = {};
   const base: ImportEdits = { name: saved.name, tint: saved.tint, scale: saved.scale, proportion: saved.proportion };
@@ -71,10 +76,10 @@ export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): {
     if (Object.keys(kept).length) base.paint = kept;
     if (Object.keys(keptUnavailable).length) preserved.paint = keptUnavailable;
   }
+  const keptPose: Record<string, number> = {};
+  const unavailablePose: Record<string, number> = {};
   if (saved.pose) {
     const validRigged = new Set(asset.capabilities.riggedParts.map(p => p.name));
-    const keptPose: Record<string, number> = {};
-    const unavailablePose: Record<string, number> = {};
     for (const [name, value] of Object.entries(saved.pose)) {
       if (validRigged.has(name) && Number.isFinite(value)) keptPose[name] = value;
       else {
@@ -82,9 +87,18 @@ export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): {
         if (asset.metadataUnavailable && Number.isFinite(value)) unavailablePose[name] = value;
       }
     }
-    if (Object.keys(keptPose).length) base.pose = keptPose;
-    if (Object.keys(unavailablePose).length) preserved.pose = unavailablePose;
   }
+  // Preserve authored GLB poses for joints that were unknown when the inventory entry was originally saved.
+  const authoredPose = asset.edits.pose;
+  if (authoredPose) {
+    const knownSet = knownRiggedParts ? new Set(knownRiggedParts) : null;
+    for (const [name, value] of Object.entries(authoredPose)) {
+      if (name in keptPose) continue;
+      if (knownSet ? !knownSet.has(name) : saved.pose === undefined) keptPose[name] = value;
+    }
+  }
+  if (Object.keys(keptPose).length) base.pose = keptPose;
+  if (Object.keys(unavailablePose).length) preserved.pose = unavailablePose;
   if (saved.hiddenParts?.length) {
     const validDetach = new Set(asset.capabilities.detachableParts.map(p => p.name));
     const unavailableHidden: string[] = [];
@@ -143,7 +157,7 @@ function validatePose(value: unknown): Record<string, number> | undefined {
     if (!name.trim() || typeof angle !== 'number' || !Number.isFinite(angle)) {
       throw new Error('Invalid part pose value for ' + name + '.');
     }
-    if (Math.abs(angle) > 1e-6) result[name] = Math.round(angle * 1000) / 1000;
+    if (Math.abs(angle) > 1e-6) result[name] = Math.round(angle * 10000) / 10000;
   }
   return Object.keys(result).length ? result : undefined;
 }
@@ -245,22 +259,19 @@ export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void 
 
   asset.controller.resetParts();
   const clampedPose: Record<string, number> = {};
-  const poseEntries = Object.entries(edits.pose ?? {});
   const mimicByName = new Map(asset.capabilities.riggedParts.map(p => [p.name, p.mimic]));
-  const poseKeys = new Set(poseEntries.map(([k]) => k));
-  // Apply independent leaders before mimic followers so coupled joints stay deterministically driven by their leader.
-  const orderedPose = [
-    ...poseEntries.filter(([name]) => !mimicByName.get(name)),
-    ...poseEntries.filter(([name]) => Boolean(mimicByName.get(name))),
-  ];
-  for (const [name, value] of orderedPose) {
+  // Only apply independent leaders; coupled mimic followers are strictly derived from their leader (even when leader = 0).
+  for (const [name, value] of Object.entries(edits.pose ?? {})) {
     const mimic = mimicByName.get(name);
-    if (mimic && poseKeys.has(mimic.part)) continue;
+    if (mimic && riggedSet.has(mimic.part)) continue;
     asset.controller.setPart(name, value);
   }
   for (const part of asset.capabilities.riggedParts) {
     const liveVal = asset.controller.getPart(part.name);
-    if (Math.abs(liveVal) > 1e-6) clampedPose[part.name] = Math.round(liveVal * 1000) / 1000;
+    if (Math.abs(liveVal) > 1e-6) {
+      const prec = part.type === 'slide' ? 10000 : 1000;
+      clampedPose[part.name] = Math.round(liveVal * prec) / prec;
+    }
   }
   if (Object.keys(clampedPose).length) edits.pose = clampedPose;
   else delete edits.pose;
@@ -349,7 +360,7 @@ function checkResources(bytes: ArrayBuffer): void {
 function intersectWithNodes(group: Group, caps: AssetCapabilities): AssetCapabilities {
   return {
     ...structuredClone(caps),
-    riggedParts: caps.riggedParts.filter(part => Boolean(group.getObjectByName(part.name))),
+    riggedParts: sanitizeMimicLinks(caps.riggedParts.filter(part => Boolean(group.getObjectByName(part.name)))),
     detachableParts: caps.detachableParts.filter(part => Boolean(group.getObjectByName(part.name))),
   };
 }

@@ -11,6 +11,8 @@ export interface ImportEntry {
   edits: ImportEdits;
   /** Cached baseline capabilities so saved PolyFork remixes keep edits even if PolyFork metadata is temporarily unreachable. */
   capabilities?: AssetCapabilities;
+  /** Rigged part names known when this entry was saved, so legacy saves preserve authored GLB poses for newly discovered joints. */
+  knownRiggedParts?: string[];
 }
 
 function connect(): Promise<IDBDatabase> {
@@ -68,6 +70,7 @@ export async function saveImport(asset: ImportedAsset, id?: string): Promise<Imp
   } : asset.edits;
   const edits = validateEdits(mergedEdits);
   const capabilities = capabilitySnapshot(asset);
+  const knownRiggedParts = asset.capabilities.riggedParts.map(p => p.name);
   const entry: ImportEntry = {
     id: id ?? crypto.randomUUID(),
     name: edits.name,
@@ -75,6 +78,7 @@ export async function saveImport(asset: ImportedAsset, id?: string): Promise<Imp
     source: { ...asset.source },
     updatedAt: new Date().toISOString(),
     ...(capabilities ? { capabilities } : {}),
+    ...(knownRiggedParts.length ? { knownRiggedParts } : {}),
   };
   if (asset.source.kind === 'local' && !asset.originalFile) throw new Error('The original file is missing.');
   const saved = await transact(['entries', 'files'], 'readwrite', tx => {
@@ -128,7 +132,8 @@ export async function openSavedImport(id: string, signal?: AbortSignal): Promise
     if (!file) throw new Error('The saved GLB file is missing.');
     asset = await openStoredFile(file, source.filename);
   }
-  const { edits, dropped } = reconcileSavedEdits(asset, entry.edits);
+  const knownRigged = entry.knownRiggedParts ?? entry.capabilities?.riggedParts.map(p => p.name);
+  const { edits, dropped } = reconcileSavedEdits(asset, entry.edits, knownRigged);
   applyImportEdits(asset, edits);
   if (dropped.length) asset.droppedPaintSlots = dropped;
   return asset;

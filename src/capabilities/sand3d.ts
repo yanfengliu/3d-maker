@@ -1,5 +1,13 @@
 import * as T from 'three';
-import { axisTuple, parseAxisSpec, sanitizeMimicLinks, type Axis, type AxisVector, type RiggedMimicSpec } from './rig-math';
+import {
+  axisTuple,
+  parseAxisSpec,
+  sanitizeMimicLinks,
+  slideOffsetFactor,
+  type Axis,
+  type AxisVector,
+  type RiggedMimicSpec,
+} from './rig-math';
 import { humanizeLabel, readEmbeddedDecals, type AssetCapabilities, type RiggedPartSpec } from './schema';
 import { deriveSpatialMetadata } from './spatial-derive';
 
@@ -7,6 +15,8 @@ const RAD_TO_DEG = 180 / Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
 const MAX_SAND3D_JOINTS = 64;
 const MAX_NAME_LEN = 80;
+const MAX_ROTATE_DEG = 36000;
+const MAX_SLIDE_M = 1000;
 
 interface RawSand3dJoint {
   node: T.Object3D;
@@ -15,6 +25,7 @@ interface RawSand3dJoint {
   kind: 'revolute' | 'continuous' | 'prismatic';
   type: 'rotate' | 'slide';
   axis: Axis | AxisVector;
+  slideScale?: number;
   range?: [number, number];
   value: number;
   continuous: boolean;
@@ -49,31 +60,74 @@ function readAxisTuple(value: unknown): [number, number, number] | null {
 }
 
 /**
- * Convert Sand3D's node-local Y-up joint axis into Form Foundry's motion axis:
- * - For `revolute`/`continuous`, conjugates across reflection (`det < 0`) so mirrored parts swing symmetrically.
- * - For `prismatic`, rotates by the pivot node's constant rest orientation (plus reflection sign) into parent space
- *   so `node.position = restPos + axis * value` matches `M_rest * T(axis_local * value)` identically.
+ * Canonicalize any pivot carrying negative `scale.y` or `scale.z` into Three.js's exact `Matrix4.decompose()`
+ * convention (only `scale.x` may be negative when `det < 0`) without altering its local transform matrix.
+ * Guarantees mirrored hinges behave identically on first import AND after binary GLB export/reload.
  */
-function convertSand3dAxis(node: T.Object3D, rawAxis: [number, number, number], isSlide: boolean): Axis | AxisVector | null {
+function canonicalizePivotTrs(node: T.Object3D): void {
+  if (node.scale.y >= 0 && node.scale.z >= 0) return;
+  node.updateMatrix();
+  node.matrix.decompose(node.position, node.quaternion, node.scale);
+  node.updateMatrixWorld(true);
+}
+
+/**
+ * Convert Sand3D's node-local Y-up joint axis into Form Foundry's motion axis (plus optional `slideScale`
+ * converting asset-root metres into `node.parent`'s local translation units for mm-scaled Sand3D GLBs):
+ * - For `revolute`/`continuous`, conjugates across the canonicalized sign matrix (`det(S) * S_sign * rawAxis`).
+ * - For `prismatic`, maps the node's unit world direction back through `parent`'s linear inverse so
+ *   `node.position = restPos + axis * (value * slideScale)` translates by exact metres in asset-root space.
+ */
+function convertSand3dAxis(
+  node: T.Object3D,
+  rawAxis: [number, number, number],
+  isSlide: boolean,
+  baseInv: T.Matrix4,
+): { axis: Axis | AxisVector; slideScale?: number } | null {
+  canonicalizePivotTrs(node);
+  if (isSlide) {
+    const nodeRel = new T.Matrix4().multiplyMatrices(baseInv, node.matrixWorld);
+    const parentRel = node.parent
+      ? new T.Matrix4().multiplyMatrices(baseInv, node.parent.matrixWorld)
+      : new T.Matrix4();
+    const lNode = new T.Matrix3().setFromMatrix4(nodeRel);
+    const lParent = new T.Matrix3().setFromMatrix4(parentRel);
+    const dirInAsset = new T.Vector3(rawAxis[0], rawAxis[1], rawAxis[2]).applyMatrix3(lNode);
+    if (dirInAsset.lengthSq() < 1e-18) return null;
+    dirInAsset.normalize();
+    let stepInParent: T.Vector3;
+    if (Math.abs(lParent.determinant()) > 1e-18) {
+      stepInParent = dirInAsset.clone().applyMatrix3(lParent.clone().invert());
+    } else {
+      const sx = node.scale.x < 0 ? -1 : 1;
+      const sy = node.scale.y < 0 ? -1 : 1;
+      const sz = node.scale.z < 0 ? -1 : 1;
+      stepInParent = new T.Vector3(sx * rawAxis[0], sy * rawAxis[1], sz * rawAxis[2]).applyQuaternion(node.quaternion);
+    }
+    const mag = stepInParent.length();
+    if (!Number.isFinite(mag) || mag < 1e-9 || mag > 1e6) return null;
+    const axis = parseAxisSpec([stepInParent.x / mag, stepInParent.y / mag, stepInParent.z / mag]);
+    if (!axis) return null;
+    const slideScale = Math.abs(mag - 1) > 1e-4 ? Number(mag.toPrecision(6)) : undefined;
+    return slideScale !== undefined ? { axis, slideScale } : { axis };
+  }
   const sx = node.scale.x < 0 ? -1 : 1;
   const sy = node.scale.y < 0 ? -1 : 1;
   const sz = node.scale.z < 0 ? -1 : 1;
   const det = sx * sy * sz;
-  const vec = new T.Vector3(rawAxis[0], rawAxis[1], rawAxis[2]);
-  if (isSlide) {
-    vec.set(sx * rawAxis[0], sy * rawAxis[1], sz * rawAxis[2]).applyQuaternion(node.quaternion);
-  } else if (det < 0) {
-    vec.set(-sx * rawAxis[0], -sy * rawAxis[1], -sz * rawAxis[2]);
-  }
-  return parseAxisSpec([vec.x, vec.y, vec.z]);
+  // Universal O(3) conjugation: S * Rot(u, theta) * S^-1 = Rot(det(S) * S * u, theta).
+  const axis = parseAxisSpec([det * sx * rawAxis[0], det * sy * rawAxis[1], det * sz * rawAxis[2]]);
+  return axis ? { axis } : null;
 }
 
 function pickUniqueNodeName(root: T.Object3D, node: T.Object3D, preferred: string, used: Set<string>): string {
-  if (node.name && root.getObjectByName(node.name) === node && !used.has(node.name)) {
+  const existingSanitized = node.name ? T.PropertyBinding.sanitizeNodeName(node.name) : '';
+  if (node.name && existingSanitized === node.name && root.getObjectByName(node.name) === node && !used.has(node.name)) {
     used.add(node.name);
     return node.name;
   }
-  const base = (preferred.trim() || 'joint').slice(0, MAX_NAME_LEN - 6);
+  const rawBase = T.PropertyBinding.sanitizeNodeName(preferred.trim()) || 'joint';
+  const base = rawBase.slice(0, MAX_NAME_LEN - 6);
   let candidate = base;
   let suffix = 2;
   while (used.has(candidate) || (root.getObjectByName(candidate) && root.getObjectByName(candidate) !== node)) {
@@ -131,6 +185,9 @@ export function readSand3dCapabilities(
   const extrasToPartName = new Map<string, string>();
   const sand3dNodes: T.Object3D[] = [];
 
+  root.updateMatrixWorld(true);
+  const baseInv = root.parent ? root.parent.matrixWorld.clone().invert() : new T.Matrix4();
+
   root.traverse(node => {
     const raw: unknown = node.userData.s3d_joint;
     if (!isRecord(raw) || typeof raw.type !== 'string') return;
@@ -141,8 +198,8 @@ export function readSand3dCapabilities(
     const rawAxis = readAxisTuple(raw.axis);
     if (!rawAxis) return;
     const isSlide = raw.type === 'prismatic';
-    const axis = convertSand3dAxis(node, rawAxis, isSlide);
-    if (!axis) return;
+    const converted = convertSand3dAxis(node, rawAxis, isSlide, baseInv);
+    if (!converted) return;
 
     const extrasName = typeof raw.name === 'string' && raw.name.trim()
       ? raw.name.trim().slice(0, MAX_NAME_LEN)
@@ -151,21 +208,27 @@ export function readSand3dCapabilities(
     if (!extrasToPartName.has(extrasName)) extrasToPartName.set(extrasName, partName);
 
     const scale = isSlide ? 1 : RAD_TO_DEG;
+    const boundLimit = isSlide ? MAX_SLIDE_M : MAX_ROTATE_DEG;
     const lowerRaw = finiteNum(raw.lower);
     const upperRaw = finiteNum(raw.upper);
     let range: [number, number] | undefined;
-    if (lowerRaw !== undefined && upperRaw !== undefined && Math.abs(upperRaw - lowerRaw) > 1e-9) {
-      range = isSlide ? [r4(lowerRaw), r4(upperRaw)] : [r3(lowerRaw * scale), r3(upperRaw * scale)];
+    if (lowerRaw !== undefined && upperRaw !== undefined) {
+      const lo = isSlide ? r4(lowerRaw) : r3(lowerRaw * scale);
+      const hi = isSlide ? r4(upperRaw) : r3(upperRaw * scale);
+      if (Number.isFinite(lo) && Number.isFinite(hi) && Math.abs(lo) <= boundLimit && Math.abs(hi) <= boundLimit && Math.abs(hi - lo) > 1e-9) {
+        range = [lo, hi];
+      }
     }
 
     const valueRaw = finiteNum(raw.value) ?? 0;
-    const value = isSlide ? r4(valueRaw) : r3(valueRaw * scale);
+    const rawScaledVal = isSlide ? r4(valueRaw) : r3(valueRaw * scale);
+    const value = Number.isFinite(rawScaledVal) && Math.abs(rawScaledVal) <= boundLimit ? rawScaledVal : 0;
 
     let mimicJoint: string | undefined;
     let mimicMultiplier: number | undefined;
     if (isRecord(raw.mimic) && typeof raw.mimic.joint === 'string' && raw.mimic.joint.trim()) {
       const mult = finiteNum(raw.mimic.multiplier);
-      if (mult !== undefined && Math.abs(mult) > 1e-12) {
+      if (mult !== undefined && Math.abs(mult) > 1e-12 && Math.abs(mult) <= 1e6) {
         mimicJoint = raw.mimic.joint.trim();
         mimicMultiplier = mult;
       }
@@ -177,7 +240,8 @@ export function readSand3dCapabilities(
       extrasName,
       kind: raw.type,
       type: isSlide ? 'slide' : 'rotate',
-      axis,
+      axis: converted.axis,
+      ...(converted.slideScale !== undefined ? { slideScale: converted.slideScale } : {}),
       ...(range ? { range } : {}),
       value,
       continuous: raw.type === 'continuous',
@@ -191,34 +255,52 @@ export function readSand3dCapabilities(
   const builtParts: RiggedPartSpec[] = [];
   const rawBySpecName = new Map<string, RawSand3dJoint>();
 
-  for (const j of rawJoints) {
-    let mimic: RiggedMimicSpec | undefined;
-    let leader: RawSand3dJoint | undefined;
-    if (j.mimicJoint && j.mimicMultiplier !== undefined) {
-      const leaderName = extrasToPartName.get(j.mimicJoint) ?? (byPartName.has(j.mimicJoint) ? j.mimicJoint : undefined);
-      leader = leaderName ? byPartName.get(leaderName) : undefined;
-      if (leader && leader.partName !== j.partName) {
-        let mult = j.mimicMultiplier;
-        if (leader.type === 'rotate' && j.type === 'slide') mult = j.mimicMultiplier * DEG_TO_RAD;
-        else if (leader.type === 'slide' && j.type === 'rotate') mult = j.mimicMultiplier * RAD_TO_DEG;
-        mimic = { part: leader.partName, multiplier: Number(mult.toPrecision(12)) };
-      }
-    }
+  const resolveMimic = (j: RawSand3dJoint): { mimic?: RiggedMimicSpec; leader?: RawSand3dJoint } => {
+    if (!j.mimicJoint || j.mimicMultiplier === undefined) return {};
+    const leaderName = extrasToPartName.get(j.mimicJoint) ?? (byPartName.has(j.mimicJoint) ? j.mimicJoint : undefined);
+    const leader = leaderName ? byPartName.get(leaderName) : undefined;
+    if (!leader || leader.partName === j.partName) return {};
+    let mult = j.mimicMultiplier;
+    if (leader.type === 'rotate' && j.type === 'slide') mult = j.mimicMultiplier * DEG_TO_RAD;
+    else if (leader.type === 'slide' && j.type === 'rotate') mult = j.mimicMultiplier * RAD_TO_DEG;
+    if (!Number.isFinite(mult) || Math.abs(mult) < 1e-12) return {};
+    return { leader, mimic: { part: leader.partName, multiplier: Number(mult.toPrecision(12)) } };
+  };
 
-    const continuous = j.continuous || Boolean(leader?.continuous);
+  // Recursively resolve ranges & continuous flags so multi-level mimic chains (A -> B -> C) inherit bounds in any node order.
+  const resolvedBounds = new Map<string, { range?: [number, number]; continuous: boolean }>();
+  const resolveBounds = (j: RawSand3dJoint, visiting = new Set<string>()): { range?: [number, number]; continuous: boolean } => {
+    const cached = resolvedBounds.get(j.partName);
+    if (cached) return cached;
+    if (visiting.has(j.partName)) return { ...(j.range ? { range: j.range } : {}), continuous: j.continuous };
+    visiting.add(j.partName);
+    const { mimic, leader } = resolveMimic(j);
+    const leaderInfo = leader ? resolveBounds(leader, visiting) : undefined;
+    const continuous = j.continuous || Boolean(leaderInfo?.continuous);
     let range = j.range;
     if (!range) {
-      if (mimic && leader) {
-        const lRange = leader.range ?? (leader.continuous ? [-360, 360] : [0, 0]);
-        const a = lRange[0] * mimic.multiplier;
-        const b = lRange[1] * mimic.multiplier;
-        if (Math.abs(b - a) > 1e-9) {
-          range = j.type === 'slide' ? [r4(Math.min(a, b)), r4(Math.max(a, b))] : [r3(Math.min(a, b)), r3(Math.max(a, b))];
+      if (mimic && leaderInfo) {
+        const lRange = leaderInfo.range ?? (leaderInfo.continuous ? [-360, 360] : undefined);
+        if (lRange) {
+          const boundLimit = j.type === 'slide' ? MAX_SLIDE_M : MAX_ROTATE_DEG;
+          const a = lRange[0] * mimic.multiplier;
+          const b = lRange[1] * mimic.multiplier;
+          if (Number.isFinite(a) && Number.isFinite(b) && Math.abs(a) <= boundLimit && Math.abs(b) <= boundLimit && Math.abs(b - a) > 1e-9) {
+            range = j.type === 'slide' ? [r4(Math.min(a, b)), r4(Math.max(a, b))] : [r3(Math.min(a, b)), r3(Math.max(a, b))];
+          }
         }
       } else if (j.kind === 'continuous') {
         range = [-360, 360];
       }
     }
+    const out = { ...(range ? { range } : {}), continuous };
+    resolvedBounds.set(j.partName, out);
+    return out;
+  };
+
+  for (const j of rawJoints) {
+    const { mimic } = resolveMimic(j);
+    const { range, continuous } = resolveBounds(j);
     if (!range || Math.abs(range[1] - range[0]) <= 1e-9) continue;
 
     const unitDesc = j.type === 'slide' ? 'm' : '°';
@@ -234,6 +316,7 @@ export function readSand3dCapabilities(
       type: j.type,
       axis: j.axis,
       range,
+      ...(j.slideScale !== undefined ? { slideScale: j.slideScale } : {}),
       ...(continuous ? { continuous: true } : {}),
       ...(mimic ? { mimic } : {}),
       describe: desc,
@@ -254,7 +337,7 @@ export function readSand3dCapabilities(
     savedTransforms.push({ node: raw.node, pos: raw.node.position.clone(), quat: raw.node.quaternion.clone() });
     const axisVec = new T.Vector3(...axisTuple(spec.axis));
     if (spec.type === 'slide') {
-      raw.node.position.addScaledVector(axisVec, -raw.value);
+      raw.node.position.addScaledVector(axisVec, -raw.value * slideOffsetFactor(spec));
     } else {
       raw.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVec, -raw.value * DEG_TO_RAD)).normalize();
     }

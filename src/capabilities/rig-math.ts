@@ -15,6 +15,11 @@ export interface RiggedPartSpec {
   /** Cardinal axis (`'x' | 'y' | 'z'`) or normalized 3D local unit vector `[nx, ny, nz]`. */
   axis: Axis | AxisVector;
   range: [number, number];
+  /**
+   * Optional factor converting asset-root metres into `node.parent`'s local translation units for `slide` joints
+   * (e.g. `1000` when a Sand3D millimetre GLB carries a `0.001` ancestor root scale). Defaults to `1`.
+   */
+  slideScale?: number;
   /** True for unbounded endless spin joints (e.g. Sand3D `continuous` drums, wheels, dials). */
   continuous?: boolean;
   /** Optional coupled leader joint that drives this part automatically. */
@@ -23,6 +28,24 @@ export interface RiggedPartSpec {
 }
 
 const CARDINAL_AXES = new Set<Axis>(['x', 'y', 'z']);
+const MAX_RANGE_ABS = 1e6;
+const MAX_SLIDE_SCALE = 1e6;
+
+export function slideOffsetFactor(spec: Pick<RiggedPartSpec, 'slideScale'>): number {
+  return spec.slideScale !== undefined && Number.isFinite(spec.slideScale) && spec.slideScale > 0
+    ? spec.slideScale
+    : 1;
+}
+
+export function clampPartValue(
+  part: { range?: readonly [number, number]; continuous?: boolean },
+  value: number,
+): number {
+  if (part.continuous || !part.range) return value;
+  const lo = Math.min(part.range[0], part.range[1]);
+  const hi = Math.max(part.range[0], part.range[1]);
+  return Math.min(hi, Math.max(lo, value));
+}
 
 function round6(n: number): number {
   return Math.round(n * 1e6) / 1e6 || 0;
@@ -91,16 +114,52 @@ export function sanitizeMimicLinks<T extends { name: string; mimic?: RiggedMimic
   });
 }
 
-/**
- * Propagate a leader pose change down all transitive `mimic` follower chains in deterministic topological order.
- * Returns a map of `followerName -> computedValue` (excluding the leader itself).
- */
-export function propagateMimicValues(
+/** List every transitive `mimic` follower name driven by `leaderName` in deterministic topological order. */
+export function listMimicFollowers(
   parts: readonly { name: string; mimic?: RiggedMimicSpec }[],
   leaderName: string,
+): string[] {
+  const byLeader = new Map<string, string[]>();
+  for (const part of parts) {
+    if (!part.mimic) continue;
+    let list = byLeader.get(part.mimic.part);
+    if (!list) {
+      list = [];
+      byLeader.set(part.mimic.part, list);
+    }
+    list.push(part.name);
+  }
+  const out: string[] = [];
+  const queue: string[] = [leaderName];
+  const visited = new Set<string>([leaderName]);
+  while (queue.length) {
+    const cur = queue.shift();
+    if (!cur) continue;
+    for (const child of byLeader.get(cur) ?? []) {
+      if (visited.has(child)) continue;
+      visited.add(child);
+      out.push(child);
+      queue.push(child);
+    }
+  }
+  return out;
+}
+
+/**
+ * Propagate a leader pose change down all transitive `mimic` follower chains in deterministic topological order.
+ * Clamps intermediate and leaf non-continuous stops when `range` is provided so multi-level chains agree everywhere.
+ */
+export function propagateMimicValues(
+  parts: readonly { name: string; range?: readonly [number, number]; continuous?: boolean; mimic?: RiggedMimicSpec }[],
+  leaderName: string,
   leaderValue: number,
+  options?: { clamp?: boolean },
 ): Map<string, number> {
-  const followersByLeader = new Map<string, { name: string; multiplier: number }[]>();
+  const clamp = options?.clamp !== false;
+  const followersByLeader = new Map<
+    string,
+    { name: string; multiplier: number; range?: readonly [number, number]; continuous?: boolean }[]
+  >();
   for (const part of parts) {
     if (!part.mimic) continue;
     let list = followersByLeader.get(part.mimic.part);
@@ -108,7 +167,12 @@ export function propagateMimicValues(
       list = [];
       followersByLeader.set(part.mimic.part, list);
     }
-    list.push({ name: part.name, multiplier: part.mimic.multiplier });
+    list.push({
+      name: part.name,
+      multiplier: part.mimic.multiplier,
+      ...(part.range ? { range: part.range } : {}),
+      ...(part.continuous ? { continuous: true } : {}),
+    });
   }
 
   const out = new Map<string, number>();
@@ -120,12 +184,83 @@ export function propagateMimicValues(
     for (const child of followersByLeader.get(cur.name) ?? []) {
       if (visited.has(child.name)) continue;
       visited.add(child.name);
-      const nextVal = cur.value * child.multiplier;
+      const rawNext = cur.value * child.multiplier;
+      const nextVal = clamp ? clampPartValue(child, rawNext) : rawNext;
       out.set(child.name, nextVal);
       queue.push({ name: child.name, value: nextVal });
     }
   }
   return out;
+}
+
+const MAX_CLIP_LEG_STEPS = 64;
+const MAX_CLIP_SPIN_STEPS = 128;
+
+export interface ClipPoseSchedule {
+  times: number[];
+  leaderValues: number[];
+  followerValues: Map<string, number[]>;
+}
+
+/**
+ * Build synchronized keyframe times and pose curves for a leader joint plus all transitive mimic followers.
+ * Subdivides open/close legs whenever the leader OR any rotating follower exceeds 45° so quaternion tracks
+ * never collapse a 360° follower spin into a no-op, while bounding keyframe count for malformed ranges.
+ */
+export function buildClipPoseSchedule(
+  part: RiggedPartSpec,
+  allParts: readonly RiggedPartSpec[],
+): ClipPoseSchedule {
+  const far = Math.abs(part.range[1]) >= Math.abs(part.range[0]) ? part.range[1] : part.range[0];
+  const isContinuousCycle = part.type === 'rotate' && (Math.abs(far) >= 359 || Boolean(part.continuous));
+  const target = isContinuousCycle && part.continuous && Math.abs(far) < 359 ? 360 : far;
+
+  const followerNames = listMimicFollowers(allParts, part.name);
+  const byName = new Map(allParts.map(p => [p.name, p]));
+  const startCoupled = propagateMimicValues(allParts, part.name, 0);
+  const endCoupled = propagateMimicValues(allParts, part.name, target);
+
+  let maxDegSpan = part.type === 'rotate' ? Math.abs(target) : 0;
+  for (const fName of followerNames) {
+    const fSpec = byName.get(fName);
+    if (!fSpec || fSpec.type !== 'rotate') continue;
+    const fSpan = Math.abs((endCoupled.get(fName) ?? 0) - (startCoupled.get(fName) ?? 0));
+    if (fSpan > maxDegSpan) maxDegSpan = fSpan;
+  }
+
+  const times: number[] = [];
+  const leaderValues: number[] = [];
+  if (isContinuousCycle) {
+    const steps = Math.min(MAX_CLIP_SPIN_STEPS, Math.max(8, Math.ceil(maxDegSpan / 45)));
+    for (let i = 0; i <= steps; i++) {
+      times.push((i / steps) * 2.4);
+      leaderValues.push((target * i) / steps);
+    }
+  } else {
+    const steps = Math.min(MAX_CLIP_LEG_STEPS, Math.max(1, Math.ceil(maxDegSpan / 45)));
+    for (let i = 0; i <= steps; i++) {
+      times.push((i / steps) * 0.9);
+      leaderValues.push((target * i) / steps);
+    }
+    times.push(1.5);
+    leaderValues.push(target);
+    for (let i = 1; i <= steps; i++) {
+      times.push(1.5 + (i / steps) * 0.9);
+      leaderValues.push(target * (1 - i / steps));
+    }
+  }
+
+  const followerValues = new Map<string, number[]>();
+  for (const fName of followerNames) followerValues.set(fName, []);
+  if (followerNames.length) {
+    for (const v of leaderValues) {
+      const coupled = propagateMimicValues(allParts, part.name, v);
+      for (const fName of followerNames) {
+        followerValues.get(fName)?.push(coupled.get(fName) ?? 0);
+      }
+    }
+  }
+  return { times, leaderValues, followerValues };
 }
 
 function trimField(value: unknown, maxLen: number): string | undefined {
@@ -138,7 +273,9 @@ function parseRange2(value: unknown): [number, number] | null {
   if (!Array.isArray(value) || value.length !== 2) return null;
   const a = Number(value[0]);
   const b = Number(value[1]);
-  return Number.isFinite(a) && Number.isFinite(b) && a !== b ? [a, b] : null;
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a) <= MAX_RANGE_ABS && Math.abs(b) <= MAX_RANGE_ABS && a !== b
+    ? [a, b]
+    : null;
 }
 
 /** Parse and sanitize an untrusted `riggedParts` JSON array (validating axes, ranges, continuous flags, and acyclic mimic links). */
@@ -165,6 +302,12 @@ export function parseRiggedPartsList(
     const label = trimField(rec.label, limits.maxNameLen) ?? humanize(name);
     const describe = trimField(rec.describe, limits.maxDescLen);
     const continuous = rec.continuous === true ? true : undefined;
+    const rawSlideScale = typeof rec.slideScale === 'number' && Number.isFinite(rec.slideScale) && rec.slideScale > 0 && rec.slideScale <= MAX_SLIDE_SCALE
+      ? rec.slideScale
+      : undefined;
+    const slideScale = type === 'slide' && rawSlideScale !== undefined && Math.abs(rawSlideScale - 1) > 1e-6
+      ? rawSlideScale
+      : undefined;
     let mimic: RiggedMimicSpec | undefined;
     if (rec.mimic && typeof rec.mimic === 'object' && !Array.isArray(rec.mimic)) {
       const m = rec.mimic as Record<string, unknown>;
@@ -180,6 +323,7 @@ export function parseRiggedPartsList(
       type,
       axis,
       range,
+      ...(slideScale !== undefined ? { slideScale } : {}),
       ...(continuous ? { continuous } : {}),
       ...(mimic ? { mimic } : {}),
       ...(describe ? { describe } : {}),

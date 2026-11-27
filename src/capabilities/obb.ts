@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { isAssetRootHidden } from './compose-scope';
 import { findOwnNodeByName, hasHiddenAncestor, isHiddenPartName, mountLocalMatrix } from './compose-tree';
+import { readSand3dCapabilities } from './sand3d';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -365,7 +366,13 @@ function appendResolvedVolumes(
           }));
         } else {
           if (!spec.restPose) continue;
-          volumes.push(buildOrientedBox(rootWorld, spec.restPose.at, colliderHalfExtents(spec), {
+          const restHalf = colliderHalfExtents(spec);
+          if (spec.restPose.scale) {
+            restHalf[0] *= Math.abs(spec.restPose.scale[0]);
+            restHalf[1] *= Math.abs(spec.restPose.scale[1]);
+            restHalf[2] *= Math.abs(spec.restPose.scale[2]);
+          }
+          volumes.push(buildOrientedBox(rootWorld, spec.restPose.at, restHalf, {
             id: `${ownerId}:collider:${volName}`, name: volName, ownerId, kind: 'collider', layer, part: spec.node,
             ...(spec.restPose.rotation ? { rotation: spec.restPose.rotation } : {}),
           }));
@@ -413,7 +420,7 @@ export function resolveAssetVolumes(
   const includeColliders = options.includeColliders ?? true;
   const includeClearanceZones = options.includeClearanceZones ?? true;
   const includeNoneLayer = options.includeNoneLayer ?? false;
-  const caps = item.capabilities ?? (item.object ? readCapabilities(item.object) ?? undefined : undefined);
+  const caps = item.capabilities ?? (item.object ? (readCapabilities(item.object) ?? readSand3dCapabilities(item.object) ?? undefined) : undefined);
   if (!caps) return [];
 
   if (item.object) item.object.updateMatrixWorld(true);

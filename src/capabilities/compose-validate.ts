@@ -12,6 +12,7 @@ import {
   type PlacementValidationResult,
   type ScenePlacementItem,
 } from './obb';
+import { listMimicFollowers } from './rig-math';
 import { readCapabilities, type AssetCapabilities } from './schema';
 import { checkRiggedSweep, type RiggedSweepReport } from './sweep';
 
@@ -264,8 +265,11 @@ export function validateComposite(
   const isCarriedByClearancePart = (zoneOwner: FlatChildEntry, zoneName: string, other: FlatChildEntry): boolean => {
     const zone = zoneOwner.spec.capabilities.clearanceZones?.find(z => z.name === zoneName);
     if (!zone?.part) return false;
-    const partNode = findOwnNodeByName(zoneOwner.inner, zone.part, zoneOwner.spec.nodePrefix);
-    return Boolean(partNode && isDescendantOrSelf(other.slot, partNode));
+    const partNames = [zone.part, ...listMimicFollowers(zoneOwner.spec.capabilities.riggedParts, zone.part)];
+    return partNames.some(pname => {
+      const partNode = findOwnNodeByName(zoneOwner.inner, pname, zoneOwner.spec.nodePrefix);
+      return Boolean(partNode && isDescendantOrSelf(other.slot, partNode));
+    });
   };
 
   const rawPlacement = validateScenePlacement(items, { tolerance: margin });
@@ -306,12 +310,13 @@ export function validateComposite(
       tolerance: Math.max(0.015, margin),
       capabilities: entry.spec.capabilities,
       ...(entry.spec.nodePrefix ? { nodePrefix: entry.spec.nodePrefix } : {}),
-      getObstaclesForPart: (_localPartName, movingNode) => {
+      getObstaclesForPart: (_localPartName, movingNode, movingNodes) => {
+        const activeNodes = movingNodes ?? [movingNode];
         const result: OrientedBox[] = [];
         for (const other of entries) {
           if (other.id === entry.id) continue;
-          // Exclude carried loads (they sweep WITH movingNode via getCarriedBoxes).
-          if (isDescendantOrSelf(other.slot, movingNode)) continue;
+          // Exclude carried loads (they sweep WITH movingNode or its coupled mimic followers via getCarriedBoxes).
+          if (activeNodes.some(mn => isDescendantOrSelf(other.slot, mn))) continue;
           // Exclude only the direct welded/joined host that `entry` itself is bolted onto; fixed welded stops on a stationary frame remain obstacles!
           if (entry.parentId === other.id && entry.spec.mount.coupling !== 'surface') continue;
           const vols = volumesById.get(other.id);
@@ -319,11 +324,12 @@ export function validateComposite(
         }
         return result;
       },
-      getCarriedBoxes: (_localPartName, movingNode) => {
+      getCarriedBoxes: (_localPartName, movingNode, movingNodes) => {
+        const activeNodes = movingNodes ?? [movingNode];
         const carried: OrientedBox[] = [];
         for (const other of entries) {
           if (other.id === entry.id) continue;
-          if (!isDescendantOrSelf(other.slot, movingNode)) continue;
+          if (!activeNodes.some(mn => isDescendantOrSelf(other.slot, mn))) continue;
           carried.push(...resolveLiveOwnColliders(other));
         }
         return carried;

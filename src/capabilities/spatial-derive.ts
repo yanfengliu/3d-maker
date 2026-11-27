@@ -1,11 +1,12 @@
 import * as T from 'three';
-import { axisTuple, propagateMimicValues } from './rig-math';
+import { axisTuple, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import type {
   ClearanceZoneSpec,
   ColliderLayer,
   ColliderSpec,
   DetachablePartSpec,
   RiggedPartSpec,
+  SpatialRestPose,
   SurfaceSpec,
 } from './schema';
 
@@ -26,7 +27,7 @@ function roundVec3(x: number, y: number, z: number): [number, number, number] {
 }
 
 function isSpinnerPart(part: RiggedPartSpec, allParts?: readonly RiggedPartSpec[]): boolean {
-  if (allParts && [...propagateMimicValues(allParts, part.name, 1).keys()].some(name => allParts.find(p => p.name === name)?.type === 'slide')) {
+  if (allParts && listMimicFollowers(allParts, part.name).some(name => allParts.find(p => p.name === name)?.type === 'slide')) {
     return false;
   }
   return Boolean(part.continuous) || (part.type === 'rotate' && Math.abs(part.range[1] - part.range[0]) >= 350);
@@ -42,9 +43,9 @@ function axisVector(axis: RiggedPartSpec['axis']): T.Vector3 {
   return new T.Vector3(...axisTuple(axis));
 }
 
-function isDescendantOfAny(obj: T.Object3D, ancestors: ReadonlySet<T.Object3D>): boolean {
+function isDescendantOfAny(obj: T.Object3D, ancestors: ReadonlySet<T.Object3D>, stopAt?: T.Object3D): boolean {
   let cur: T.Object3D | null = obj;
-  while (cur) {
+  while (cur && cur !== stopAt) {
     if (ancestors.has(cur)) return true;
     cur = cur.parent;
   }
@@ -61,7 +62,7 @@ function computeBoxInFrame(
   const rel = new T.Matrix4();
   root.traverse(child => {
     if (child.userData.studioOverlay || !(child instanceof T.Mesh)) return;
-    if (excludeRoots && isDescendantOfAny(child, excludeRoots)) return;
+    if (excludeRoots && isDescendantOfAny(child, excludeRoots, root)) return;
     const mesh = child as TypedMesh;
     const pos = mesh.geometry.getAttribute('position') as T.BufferAttribute | undefined;
     if (!pos || pos.count === 0) return;
@@ -88,11 +89,15 @@ function boxCorners(box: T.Box3): T.Vector3[] {
   ];
 }
 
+function p6(n: number): number {
+  return Number(Math.abs(n).toPrecision(6));
+}
+
 function computeRestPose(
   node: T.Object3D,
   localCenter: T.Vector3,
   invRoot: T.Matrix4,
-): { at: [number, number, number]; rotation?: [number, number, number] } {
+): SpatialRestPose {
   const rel = new T.Matrix4().multiplyMatrices(invRoot, node.matrixWorld);
   const worldCenter = localCenter.clone().applyMatrix4(rel);
   const pos = new T.Vector3();
@@ -101,9 +106,13 @@ function computeRestPose(
   rel.decompose(pos, quat, scl);
   const euler = new T.Euler().setFromQuaternion(quat, 'XYZ');
   const hasRot = Math.abs(euler.x) > 1e-3 || Math.abs(euler.y) > 1e-3 || Math.abs(euler.z) > 1e-3;
+  const ax = Math.abs(scl.x), ay = Math.abs(scl.y), az = Math.abs(scl.z);
+  const hasScale = ax > 1e-9 && ay > 1e-9 && az > 1e-9
+    && (Math.abs(ax - 1) > 1e-4 || Math.abs(ay - 1) > 1e-4 || Math.abs(az - 1) > 1e-4);
   return {
     at: roundVec3(worldCenter.x, worldCenter.y, worldCenter.z),
     ...(hasRot ? { rotation: roundVec3(euler.x, euler.y, euler.z) } : {}),
+    ...(hasScale ? { scale: [p6(ax), p6(ay), p6(az)] } : {}),
   };
 }
 
@@ -281,47 +290,64 @@ export function deriveSpatialMetadata(
   for (const { part, node } of activeRigged) {
     node.updateMatrixWorld(true);
     const invNode = node.matrixWorld.clone().invert();
-    const localBox = computeBoxInFrame(node, invNode);
-    if (localBox.isEmpty()) continue;
-    const localCenter = localBox.getCenter(new T.Vector3());
-    const localSize = localBox.getSize(new T.Vector3());
-    const safeSize: [number, number, number] = [
-      Math.max(0.01, localSize.x),
-      Math.max(0.01, localSize.y),
-      Math.max(0.01, localSize.z),
-    ];
-    colliders.push({
-      name: part.name,
-      shape: 'box',
-      at: roundVec3(localCenter.x, localCenter.y, localCenter.z),
-      size: roundVec3(safeSize[0], safeSize[1], safeSize[2]),
-      node: part.name,
-      restPose: computeRestPose(node, localCenter, invRoot),
-      layer: colliderLayerForPart(part, riggedParts),
-      ...(part.describe ? { describe: part.describe } : {}),
-    });
+    const localBox = computeBoxInFrame(node, invNode, dynamicNodes);
+    if (!localBox.isEmpty()) {
+      const localCenter = localBox.getCenter(new T.Vector3());
+      const localSize = localBox.getSize(new T.Vector3());
+      const restPose = computeRestPose(node, localCenter, invRoot);
+      const sx = restPose.scale?.[0] ?? 1, sy = restPose.scale?.[1] ?? 1, sz = restPose.scale?.[2] ?? 1;
+      const safeSize: [number, number, number] = [
+        Math.max(0.01 / Math.max(1e-4, sx), localSize.x),
+        Math.max(0.01 / Math.max(1e-4, sy), localSize.y),
+        Math.max(0.01 / Math.max(1e-4, sz), localSize.z),
+      ];
+      colliders.push({
+        name: part.name,
+        shape: 'box',
+        at: roundVec3(localCenter.x, localCenter.y, localCenter.z),
+        size: roundVec3(safeSize[0], safeSize[1], safeSize[2]),
+        node: part.name,
+        restPose,
+        layer: colliderLayerForPart(part, riggedParts),
+        ...(part.describe ? { describe: part.describe } : {}),
+      });
+    }
 
     // Skip deriving an independent clearance zone for a mimic follower (swept with its leader below).
     if (part.mimic) continue;
 
-    // Sweep the node-local bounding box across 13 evenly spaced poses (driving any mimic followers in lockstep).
+    // Sweep the leader + every mimic follower bounding box across evenly spaced poses in lockstep.
     const restPos = node.position.clone();
     const restQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
-    const followerNames = [...propagateMimicValues(riggedParts, part.name, 1).keys()];
+    const leaderSlideScale = slideOffsetFactor(part);
+    const followerNames = listMimicFollowers(riggedParts, part.name);
     const followerStates = followerNames
       .map(fname => {
         const fSpec = riggedParts.find(p => p.name === fname);
         const fNode = root.getObjectByName(fname);
         if (!fSpec || !fNode) return null;
-        return { spec: fSpec, node: fNode, restPos: fNode.position.clone(), restQuat: fNode.quaternion.clone(), axis: axisVector(fSpec.axis) };
+        fNode.updateMatrixWorld(true);
+        const fBox = computeBoxInFrame(fNode, fNode.matrixWorld.clone().invert(), dynamicNodes);
+        return {
+          spec: fSpec,
+          node: fNode,
+          restPos: fNode.position.clone(),
+          restQuat: fNode.quaternion.clone(),
+          axis: axisVector(fSpec.axis),
+          slideScale: slideOffsetFactor(fSpec),
+          corners: fBox.isEmpty() ? [] : boxCorners(fBox),
+        };
       })
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
-    const corners = boxCorners(localBox);
+    const corners = localBox.isEmpty() ? [] : boxCorners(localBox);
+    if (!corners.length && !followerStates.some(fs => fs.corners.length > 0)) continue;
+
     const sweepBox = new T.Box3();
     const rel = new T.Matrix4();
     const pt = new T.Vector3();
-    const sampleCount = 13;
+    const span = part.type === 'rotate' ? Math.abs(part.range[1] - part.range[0]) : 0;
+    const sampleCount = Math.min(37, Math.max(13, span > 180 ? Math.ceil(span / 20) + 1 : 13));
     try {
       for (let i = 0; i < sampleCount; i++) {
         const t = i / (sampleCount - 1);
@@ -329,7 +355,7 @@ export function deriveSpatialMetadata(
         node.position.copy(restPos);
         node.quaternion.copy(restQuat);
         if (part.type === 'slide') {
-          node.position.addScaledVector(axis, value);
+          node.position.addScaledVector(axis, value * leaderSlideScale);
         } else {
           node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         }
@@ -339,15 +365,25 @@ export function deriveSpatialMetadata(
             const fVal = coupled.get(fs.spec.name) ?? 0;
             fs.node.position.copy(fs.restPos);
             fs.node.quaternion.copy(fs.restQuat);
-            if (fs.spec.type === 'slide') fs.node.position.addScaledVector(fs.axis, fVal);
+            if (fs.spec.type === 'slide') fs.node.position.addScaledVector(fs.axis, fVal * fs.slideScale);
             else fs.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(fs.axis, T.MathUtils.degToRad(fVal)));
           }
         }
         root.updateMatrixWorld(true);
-        rel.multiplyMatrices(invRoot, node.matrixWorld);
-        for (const corner of corners) {
-          pt.copy(corner).applyMatrix4(rel);
-          if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) sweepBox.expandByPoint(pt);
+        if (corners.length) {
+          rel.multiplyMatrices(invRoot, node.matrixWorld);
+          for (const corner of corners) {
+            pt.copy(corner).applyMatrix4(rel);
+            if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) sweepBox.expandByPoint(pt);
+          }
+        }
+        for (const fs of followerStates) {
+          if (!fs.corners.length) continue;
+          rel.multiplyMatrices(invRoot, fs.node.matrixWorld);
+          for (const corner of fs.corners) {
+            pt.copy(corner).applyMatrix4(rel);
+            if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) sweepBox.expandByPoint(pt);
+          }
         }
       }
     } finally {
@@ -382,13 +418,19 @@ export function deriveSpatialMetadata(
     if (localBox.isEmpty()) continue;
     const localCenter = localBox.getCenter(new T.Vector3());
     const localSize = localBox.getSize(new T.Vector3());
+    const restPose = computeRestPose(node, localCenter, invRoot);
+    const sx = restPose.scale?.[0] ?? 1, sy = restPose.scale?.[1] ?? 1, sz = restPose.scale?.[2] ?? 1;
     colliders.push({
       name: part.name,
       shape: 'box',
       at: roundVec3(localCenter.x, localCenter.y, localCenter.z),
-      size: roundVec3(Math.max(0.01, localSize.x), Math.max(0.01, localSize.y), Math.max(0.01, localSize.z)),
+      size: roundVec3(
+        Math.max(0.01 / Math.max(1e-4, sx), localSize.x),
+        Math.max(0.01 / Math.max(1e-4, sy), localSize.y),
+        Math.max(0.01 / Math.max(1e-4, sz), localSize.z),
+      ),
       node: part.name,
-      restPose: computeRestPose(node, localCenter, invRoot),
+      restPose,
       layer: 'solid',
       ...(part.describe ? { describe: part.describe } : {}),
     });
