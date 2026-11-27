@@ -1,5 +1,7 @@
 import { type BufferGeometry, type Material, Mesh, type Group, type Object3D } from 'three';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
+import type { CompositeChildSpec } from '../capabilities/compose-schema';
+import { findOwnNodeByName, getLiveController, type ExportPoseProvider } from '../capabilities/compose-tree';
 import { inspectAsset, isSynthesizedClip, synthesizeRigClips, type AssetController } from '../capabilities/runtime';
 import { writeCapabilities } from '../capabilities/schema';
 
@@ -8,7 +10,11 @@ export interface ExportOptions {
 }
 
 /** Capture the rig at rest, preserving detachable subtrees, active part poses, capability manifest, and optional part clips. */
-export function cloneForExport(source: Group, options?: ExportOptions, controller?: AssetController | null) {
+export function cloneForExport(
+  source: Group,
+  options?: ExportOptions,
+  controller?: AssetController | ExportPoseProvider | null,
+) {
   const root = clone(source);
   const materials = new Map<Material, Material>();
   const paintedGeometry = new Map<BufferGeometry, BufferGeometry>();
@@ -52,11 +58,12 @@ export function cloneForExport(source: Group, options?: ExportOptions, controlle
   for (const overlay of overlays) overlay.removeFromParent();
   root.animations = source.animations.map((clip) => clip.clone());
 
-  const capabilities = controller ? controller.syncManifest() : inspectAsset(source);
+  const activeController = controller === undefined ? getLiveController(source) : controller;
+  const capabilities = activeController ? activeController.syncManifest() : inspectAsset(source);
   // Re-apply authoritative rigged part poses onto the clone so animation mixer resets never bake stale transforms.
-  controller?.applyPoseToClone(root);
+  activeController?.applyPoseToClone(root);
 
-  // Keep declared detachable subtrees (including composite children) in exported GLB even while hidden.
+  // Keep declared detachable subtrees (including nested composite children) in exported GLB even while hidden.
   const ensureVisible = (node: Object3D | undefined) => {
     let cur: Object3D | null = node ?? null;
     while (cur) {
@@ -64,23 +71,56 @@ export function cloneForExport(source: Group, options?: ExportOptions, controlle
       cur = cur === root ? null : cur.parent;
     }
   };
-  for (const part of capabilities.detachableParts) ensureVisible(root.getObjectByName(part.name));
-  for (const child of capabilities.children ?? []) {
-    const prefix = child.nodePrefix ?? '';
-    for (const part of child.capabilities.detachableParts) {
-      ensureVisible((prefix ? root.getObjectByName(prefix + part.name) : undefined) ?? root.getObjectByName(part.name));
+  for (const part of capabilities.detachableParts) ensureVisible(findOwnNodeByName(root, part.name));
+  const walkChildren = (
+    children: readonly CompositeChildSpec[],
+    scopeRoot: Object3D,
+    pathPrefix: string,
+    onChild: (child: CompositeChildSpec, inner: Object3D, childPath: string) => void,
+  ) => {
+    for (const child of children) {
+      const slot = scopeRoot.getObjectByName(child.slotNode);
+      if (!slot) continue;
+      const inner = slot.children[0] ?? slot;
+      const childPath = pathPrefix ? `${pathPrefix}/${child.id}` : child.id;
+      onChild(child, inner, childPath);
+      if (child.capabilities.children?.length) {
+        walkChildren(child.capabilities.children, inner, childPath, onChild);
+      }
     }
+  };
+  if (capabilities.children?.length) {
+    walkChildren(capabilities.children, root, '', (child, inner) => {
+      for (const part of child.capabilities.detachableParts) {
+        ensureVisible(findOwnNodeByName(inner, part.name, child.nodePrefix));
+      }
+    });
   }
 
   const synthNames = new Set(capabilities.clips?.filter(c => c.synthesized).map(c => c.name));
-  if (options?.includePartClips && capabilities.riggedParts.length) {
+  if (options?.includePartClips) {
     const existing = new Set(root.animations.map(clip => clip.name));
-    for (const clip of synthesizeRigClips(root, capabilities)) {
-      if (!existing.has(clip.name)) {
-        root.animations.push(clip);
-        existing.add(clip.name);
-        synthNames.add(clip.name);
+    if (capabilities.riggedParts.length) {
+      for (const clip of synthesizeRigClips(root, capabilities)) {
+        if (!existing.has(clip.name)) {
+          root.animations.push(clip);
+          existing.add(clip.name);
+          synthNames.add(clip.name);
+        }
       }
+    }
+    if (capabilities.children?.length) {
+      walkChildren(capabilities.children, root, '', (child, inner, childPath) => {
+        if (!child.capabilities.riggedParts.length) return;
+        for (const clip of synthesizeRigClips(inner, child.capabilities, child.nodePrefix)) {
+          clip.name = `${childPath}: ${clip.name}`;
+          if (!existing.has(clip.name)) {
+            root.animations.push(clip);
+            existing.add(clip.name);
+            synthNames.add(clip.name);
+          }
+        }
+      });
     }
   }
   if (root.animations.length) {

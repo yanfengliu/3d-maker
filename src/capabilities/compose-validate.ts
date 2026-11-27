@@ -1,7 +1,13 @@
 import * as T from 'three';
+import type { CompositeChildSpec } from './compose-schema';
+import { findOwnNodeByName, surfaceBasis, traverseOwnSubtree } from './compose-tree';
 import {
+  buildOrientedBox,
+  colliderHalfExtents,
+  isVisibleInTree,
   resolveAssetVolumes,
   validateScenePlacement,
+  type OrientedBox,
   type PlacementValidationResult,
   type ScenePlacementItem,
 } from './obb';
@@ -12,7 +18,7 @@ export interface CompositeSurfaceIssue {
   childId: string;
   hostId: string;
   surface: string;
-  kind: 'missing-surface' | 'footprint-overflow' | 'clearance-exceeded';
+  kind: 'missing-surface' | 'footprint-overflow' | 'clearance-exceeded' | 'surface-penetration';
   detail: string;
 }
 
@@ -23,17 +29,114 @@ export interface CompositeValidationResult {
   sweeps: Record<string, RiggedSweepReport>;
 }
 
+interface FlatChildEntry {
+  id: string;
+  parentId?: string;
+  spec: CompositeChildSpec;
+  slot: T.Object3D;
+  inner: T.Object3D;
+}
+
+function isDescendantOrSelf(candidate: T.Object3D, ancestor: T.Object3D): boolean {
+  let cur: T.Object3D | null = candidate;
+  while (cur) {
+    if (cur === ancestor) return true;
+    cur = cur.parent;
+  }
+  return false;
+}
+
+function flattenCompositeChildren(
+  root: T.Object3D,
+  children: readonly CompositeChildSpec[],
+  pathPrefix: string,
+  out: FlatChildEntry[],
+): void {
+  for (const child of children) {
+    const slot = root.getObjectByName(child.slotNode);
+    if (!slot) continue;
+    const inner = slot.children[0] ?? slot;
+    const qualifiedId = pathPrefix ? `${pathPrefix}/${child.id}` : child.id;
+    const parentId = child.mount.parent
+      ? (pathPrefix ? `${pathPrefix}/${child.mount.parent}` : child.mount.parent)
+      : undefined;
+    out.push({
+      id: qualifiedId,
+      ...(parentId ? { parentId } : {}),
+      spec: child,
+      slot,
+      inner,
+    });
+    if (child.capabilities.children?.length) {
+      flattenCompositeChildren(inner, child.capabilities.children, qualifiedId, out);
+    }
+  }
+}
+
+function makeLeafCapabilities(caps: AssetCapabilities, prefix: string): AssetCapabilities {
+  const leaf: AssetCapabilities = structuredClone(caps);
+  delete leaf.children;
+  if (prefix) {
+    for (const col of leaf.colliders ?? []) {
+      if (col.node && !col.node.startsWith(prefix)) col.node = `${prefix}${col.node}`;
+    }
+    for (const p of leaf.riggedParts) {
+      if (!p.name.startsWith(prefix)) p.name = `${prefix}${p.name}`;
+    }
+    for (const z of leaf.clearanceZones ?? []) {
+      if (z.part && !z.part.startsWith(prefix)) z.part = `${prefix}${z.part}`;
+    }
+  }
+  return leaf;
+}
+
+function resolveLiveOwnColliders(entry: FlatChildEntry): OrientedBox[] {
+  const leafCaps = entry.spec.capabilities;
+  if (!leafCaps.colliders?.length) return [];
+  const prefix = entry.spec.nodePrefix ?? '';
+  const hiddenSet = new Set(leafCaps.state?.hiddenParts ?? []);
+  const boxes: OrientedBox[] = [];
+  for (const spec of leafCaps.colliders) {
+    const layer = spec.layer ?? 'solid';
+    if (layer === 'none') continue;
+    if (spec.node) {
+      if (hiddenSet.has(spec.node)) continue;
+      const node = findOwnNodeByName(entry.inner, spec.node, prefix);
+      if (!node || !isVisibleInTree(node)) continue;
+      boxes.push(buildOrientedBox(node.matrixWorld, spec.at, colliderHalfExtents(spec), {
+        id: `${entry.id}:carried:${spec.name}`,
+        name: spec.name,
+        ownerId: entry.id,
+        kind: 'collider',
+        layer,
+        part: spec.node,
+        ...(spec.rotation ? { rotation: spec.rotation } : {}),
+      }));
+    } else {
+      boxes.push(buildOrientedBox(entry.inner.matrixWorld, spec.at, colliderHalfExtents(spec), {
+        id: `${entry.id}:carried:${spec.name}`,
+        name: spec.name,
+        ownerId: entry.id,
+        kind: 'collider',
+        layer,
+        ...(spec.rotation ? { rotation: spec.rotation } : {}),
+      }));
+    }
+  }
+  return boxes;
+}
+
 /**
- * Deterministically validate all surface footprints/headroom, sibling/wall OBB overlaps, and per-child
- * rigged-part sweep arcs across an assembled composite asset.
+ * Deterministically validate all surface footprints/penetration/headroom, sibling/wall OBB overlaps,
+ * and per-child rigged-part sweep arcs (including carried loads) across an assembled composite asset.
  */
 export function validateComposite(
   root: T.Object3D,
   options: { margin?: number; sweepSteps?: number } = {},
 ): CompositeValidationResult {
   const caps = readCapabilities(root);
-  const children = caps?.children ?? [];
-  if (!children.length) {
+  const topChildren = caps?.children ?? [];
+  if (!topChildren.length) {
     return {
       valid: true,
       surfaceIssues: [],
@@ -45,108 +148,127 @@ export function validateComposite(
   root.updateMatrixWorld(true);
   const margin = options.margin ?? 0.01;
   const surfaceIssues: CompositeSurfaceIssue[] = [];
-  const childById = new Map(children.map(c => [c.id, c]));
-  const childRootById = new Map<string, T.Object3D>();
-  for (const child of children) {
-    const slot = root.getObjectByName(child.slotNode);
-    if (!slot) continue;
-    childRootById.set(child.id, slot.children[0] ?? slot);
-  }
+  const entries: FlatChildEntry[] = [];
+  flattenCompositeChildren(root, topChildren, '', entries);
+  const entryById = new Map(entries.map(e => [e.id, e]));
 
-  // 1. Validate surface seating (footprint bounds and vertical clearanceY headroom).
-  for (const child of children) {
-    if (!child.mount.surface || !child.mount.parent) continue;
-    const host = childById.get(child.mount.parent);
-    const hostRoot = childRootById.get(child.mount.parent);
-    const childRoot = childRootById.get(child.id);
-    if (!host || !hostRoot || !childRoot) continue;
-    const surf = host.capabilities.surfaces?.find(s => s.name === child.mount.surface);
+  // 1. Validate surface seating in the real orthonormal surface frame (footprint, penetration, and clearanceY headroom).
+  for (const entry of entries) {
+    const { mount } = entry.spec;
+    if (!mount.surface || !entry.parentId) continue;
+    const host = entryById.get(entry.parentId);
+    if (!host) continue;
+    const surf = host.spec.capabilities.surfaces?.find(s => s.name === mount.surface);
     if (!surf) {
       surfaceIssues.push({
-        childId: child.id,
+        childId: entry.id,
         hostId: host.id,
-        surface: child.mount.surface,
+        surface: mount.surface,
         kind: 'missing-surface',
-        detail: `Host "${host.id}" has no declared surface "${child.mount.surface}"`,
+        detail: `Host "${host.id}" has no declared surface "${mount.surface}"`,
       });
       continue;
     }
-    const invHost = hostRoot.matrixWorld.clone().invert();
-    const boxInHost = new T.Box3();
-    const v = new T.Vector3();
+
+    const invHost = host.inner.matrixWorld.clone().invert();
+    const { u, n, v } = surfaceBasis(surf.normal);
+    const surfOrigin = new T.Vector3(...surf.at);
+    const pt = new T.Vector3();
     const rel = new T.Matrix4();
-    childRoot.traverse(node => {
+    let minU = Infinity, maxU = -Infinity;
+    let minN = Infinity, maxN = -Infinity;
+    let minV = Infinity, maxV = -Infinity;
+
+    traverseOwnSubtree(entry.inner, node => {
       if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
       const geo = node.geometry as T.BufferGeometry;
-      const pos = geo.getAttribute('position') as T.BufferAttribute | undefined;
+      const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
       if (!pos) return;
       rel.multiplyMatrices(invHost, node.matrixWorld);
       for (let i = 0; i < pos.count; i++) {
-        v.fromBufferAttribute(pos, i).applyMatrix4(rel);
-        if (Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)) boxInHost.expandByPoint(v);
+        pt.fromBufferAttribute(pos, i).applyMatrix4(rel);
+        if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y) || !Number.isFinite(pt.z)) continue;
+        pt.sub(surfOrigin);
+        const pu = pt.dot(u);
+        const pn = pt.dot(n);
+        const pv = pt.dot(v);
+        if (pu < minU) minU = pu;
+        if (pu > maxU) maxU = pu;
+        if (pn < minN) minN = pn;
+        if (pn > maxN) maxN = pn;
+        if (pv < minV) minV = pv;
+        if (pv > maxV) maxV = pv;
       }
     });
-    if (boxInHost.isEmpty()) continue;
+    if (!Number.isFinite(minU)) continue;
+
     const halfW = surf.size[0] * 0.5 + margin;
     const halfD = surf.size[1] * 0.5 + margin;
-    if (
-      boxInHost.min.x < surf.at[0] - halfW ||
-      boxInHost.max.x > surf.at[0] + halfW ||
-      boxInHost.min.z < surf.at[2] - halfD ||
-      boxInHost.max.z > surf.at[2] + halfD
-    ) {
+    if (minU < -halfW || maxU > halfW || minV < -halfD || maxV > halfD) {
       surfaceIssues.push({
-        childId: child.id,
+        childId: entry.id,
         hostId: host.id,
         surface: surf.name,
         kind: 'footprint-overflow',
-        detail: `Child "${child.id}" extends past surface "${surf.name}" (${surf.size[0].toFixed(2)}x${surf.size[1].toFixed(2)}m)`,
+        detail: `Child "${entry.id}" extends past surface "${surf.name}" (${surf.size[0].toFixed(2)}x${surf.size[1].toFixed(2)}m)`,
       });
     }
-    if (surf.clearanceY !== undefined && boxInHost.max.y > surf.at[1] + surf.clearanceY + margin) {
+    if (minN < -margin) {
       surfaceIssues.push({
-        childId: child.id,
+        childId: entry.id,
+        hostId: host.id,
+        surface: surf.name,
+        kind: 'surface-penetration',
+        detail: `Child "${entry.id}" penetrates ${Math.abs(minN).toFixed(3)}m below surface "${surf.name}"`,
+      });
+    }
+    if (surf.clearanceY !== undefined && maxN > surf.clearanceY + margin) {
+      surfaceIssues.push({
+        childId: entry.id,
         hostId: host.id,
         surface: surf.name,
         kind: 'clearance-exceeded',
-        detail: `Child "${child.id}" top (${(boxInHost.max.y - surf.at[1]).toFixed(2)}m) exceeds "${surf.name}" clearanceY (${surf.clearanceY.toFixed(2)}m)`,
+        detail: `Child "${entry.id}" top (${maxN.toFixed(2)}m) exceeds "${surf.name}" clearanceY (${surf.clearanceY.toFixed(2)}m)`,
       });
     }
   }
 
-  // 2. Build scene placement items with scoped node names for live OBB overlap checks.
+  // 2. Build scene placement items with leaf-only scoped capabilities for live OBB overlap checks.
   const items: ScenePlacementItem[] = [];
-  const hostPairs = new Set<string>();
-  const scopedCapsById = new Map<string, AssetCapabilities>();
-  for (const child of children) {
-    const inner = childRootById.get(child.id);
-    if (!inner) continue;
-    const prefix = child.nodePrefix ?? '';
-    const scopedCaps: AssetCapabilities = structuredClone(child.capabilities);
-    if (prefix) {
-      for (const col of scopedCaps.colliders ?? []) {
-        if (col.node && !col.node.startsWith(prefix)) col.node = `${prefix}${col.node}`;
-      }
-      for (const p of scopedCaps.riggedParts) {
-        if (!p.name.startsWith(prefix)) p.name = `${prefix}${p.name}`;
-      }
-      for (const z of scopedCaps.clearanceZones ?? []) {
-        if (z.part && !z.part.startsWith(prefix)) z.part = `${prefix}${z.part}`;
-      }
-    }
-    scopedCapsById.set(child.id, scopedCaps);
-    items.push({ id: child.id, object: inner, capabilities: scopedCaps });
-    if (child.mount.parent) {
-      const pairKey = [child.id, child.mount.parent].sort().join('::');
-      hostPairs.add(pairKey);
-    }
+  const leafCapsById = new Map<string, AssetCapabilities>();
+  for (const entry of entries) {
+    const leafCaps = makeLeafCapabilities(entry.spec.capabilities, entry.spec.nodePrefix ?? '');
+    leafCapsById.set(entry.id, leafCaps);
+    items.push({ id: entry.id, object: entry.inner, capabilities: leafCaps });
   }
+
+  const findDirectMountEdge = (idA: string, idB: string): { child: FlatChildEntry; host: FlatChildEntry } | undefined => {
+    const a = entryById.get(idA);
+    const b = entryById.get(idB);
+    if (!a || !b) return undefined;
+    if (a.parentId === b.id) return { child: a, host: b };
+    if (b.parentId === a.id) return { child: b, host: a };
+    return undefined;
+  };
 
   const rawPlacement = validateScenePlacement(items, { tolerance: margin });
   const overlaps = rawPlacement.overlaps.filter(overlap => {
-    const pairKey = [overlap.itemA, overlap.itemB].sort().join('::');
-    if (!hostPairs.has(pairKey)) return true;
-    return overlap.kind === 'clearance-blocked';
+    const edge = findDirectMountEdge(overlap.itemA, overlap.itemB);
+    if (!edge) return true;
+    if (overlap.kind === 'collision') {
+      // Only welded/joined seams legitimately touch or interpenetrate their direct host; surface-mounted penetration is a real defect.
+      return edge.child.spec.mount.coupling === 'surface';
+    }
+    if (overlap.kind === 'clearance-blocked') {
+      // A child physically mounted onto a host's moving rigged part moves WITH that part and does not block its own clearance zone.
+      const hostVolName = overlap.itemA === edge.host.id ? overlap.volumeA : overlap.volumeB;
+      const zone = edge.host.spec.capabilities.clearanceZones?.find(z => z.name === hostVolName);
+      if (zone?.part) {
+        const partNode = findOwnNodeByName(edge.host.inner, zone.part, edge.host.spec.nodePrefix);
+        if (partNode && isDescendantOrSelf(edge.child.slot, partNode)) return false;
+      }
+    }
+    return true;
   });
   const placement: PlacementValidationResult = {
     valid: overlaps.length === 0,
@@ -154,34 +276,40 @@ export function validateComposite(
     overlaps,
   };
 
-  // 3. Sweep every child's rigged parts against all non-host sibling colliders (and host surface bodies).
+  // 3. Sweep every child's rigged parts against all non-carried external colliders, including carried loads moving with the part.
   const volumesById = new Map(
     items.map(item => [item.id, resolveAssetVolumes(item, { includeClearanceZones: false })]),
   );
   const sweeps: Record<string, RiggedSweepReport> = {};
-  for (const child of children) {
-    const inner = childRootById.get(child.id);
-    const scopedCaps = scopedCapsById.get(child.id);
-    if (!inner || !scopedCaps || !scopedCaps.riggedParts.length) continue;
-    const obstacles = items
-      .filter(other => other.id !== child.id)
-      .flatMap(other => {
-        const pairKey = [child.id, other.id].sort().join('::');
-        if (hostPairs.has(pairKey) && child.mount.coupling !== 'surface') return [];
-        return volumesById.get(other.id) ?? [];
-      });
-    const prevManifest = inner.userData.formFoundry as unknown;
-    inner.userData.formFoundry = scopedCaps;
-    try {
-      sweeps[child.id] = checkRiggedSweep(inner, {
-        steps: options.sweepSteps ?? 7,
-        tolerance: Math.max(0.015, margin),
-        obstacles,
-      });
-    } finally {
-      if (prevManifest === undefined) delete inner.userData.formFoundry;
-      else inner.userData.formFoundry = prevManifest;
-    }
+  for (const entry of entries) {
+    if (!entry.spec.capabilities.riggedParts.length) continue;
+    sweeps[entry.id] = checkRiggedSweep(entry.inner, {
+      steps: options.sweepSteps ?? 7,
+      tolerance: Math.max(0.015, margin),
+      capabilities: entry.spec.capabilities,
+      ...(entry.spec.nodePrefix ? { nodePrefix: entry.spec.nodePrefix } : {}),
+      getObstaclesForPart: (_localPartName, movingNode) => {
+        const result: OrientedBox[] = [];
+        for (const other of entries) {
+          if (other.id === entry.id) continue;
+          if (isDescendantOrSelf(other.slot, movingNode)) continue;
+          const edge = findDirectMountEdge(entry.id, other.id);
+          if (edge && edge.child.spec.mount.coupling !== 'surface') continue;
+          const vols = volumesById.get(other.id);
+          if (vols) result.push(...vols);
+        }
+        return result;
+      },
+      getCarriedBoxes: (_localPartName, movingNode) => {
+        const carried: OrientedBox[] = [];
+        for (const other of entries) {
+          if (other.id === entry.id) continue;
+          if (!isDescendantOrSelf(other.slot, movingNode)) continue;
+          carried.push(...resolveLiveOwnColliders(other));
+        }
+        return carried;
+      },
+    });
   }
 
   const sweepsValid = Object.values(sweeps).every(r => r.valid);

@@ -6,10 +6,11 @@ export { catalog, getModelParamSpecs, listVariations, parseRecipe, resolveVariat
 export type { CatalogEntry, ModelVariationEntry, Recipe, TemplateId, VariationSummary } from './data/recipe';
 export { createAssetController, inspectAsset, synthesizeRigClips } from './capabilities/runtime';
 export type { AssetController } from './capabilities/runtime';
-export { validateComposite } from './capabilities/compose';
+export { computeCompositeBodies, validateComposite } from './capabilities/compose';
 export type {
   ComposeAssetOptions,
   CompositePartInput,
+  CompositeRigidBodySpec,
   CompositeSurfaceIssue,
   CompositeValidationResult,
 } from './capabilities/compose';

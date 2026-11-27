@@ -64,7 +64,7 @@ export interface SurfaceSpec {
 const maxColliders = 64;
 const maxClearanceZones = 32;
 const maxSurfaces = 32;
-const maxNameLen = 80;
+const maxNameLen = 160;
 const maxDescLen = 280;
 
 const shapes = new Set<ColliderShape>(['box', 'capsule', 'cylinder']);

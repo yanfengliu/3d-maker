@@ -46,9 +46,10 @@ export interface CompositeChildSpec {
 }
 
 export const COMPOSITE_CHILD_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,59}$/;
+export const MAX_COMPOSITE_CHILDREN = 64;
+export const MAX_SCOPED_NAME_LEN = 160;
 
-const maxChildren = 64;
-const maxLabelLen = 80;
+const maxLabelLen = MAX_SCOPED_NAME_LEN;
 const couplings = new Set<PhysicsCoupling>(['weld', 'surface', 'joint']);
 const jointTypes = new Set<CompositeJointType>(['hinge', 'slider', 'ball']);
 const axes = new Set<Axis>(['x', 'y', 'z']);
@@ -126,7 +127,7 @@ export function parseCompositeChildren(
   const out: CompositeChildSpec[] = [];
   const seen = new Set<string>();
   for (const row of value) {
-    if (out.length >= maxChildren) break;
+    if (out.length >= MAX_COMPOSITE_CHILDREN) break;
     if (!isRecord(row) || typeof row.id !== 'string') continue;
     const id = row.id.trim();
     if (!COMPOSITE_CHILD_ID_PATTERN.test(id) || seen.has(id)) continue;

@@ -2,18 +2,29 @@ import * as T from 'three';
 import type { Recipe } from '../data/recipe';
 import {
   COMPOSITE_CHILD_ID_PATTERN,
+  MAX_COMPOSITE_CHILDREN,
   type CompositeChildSpec,
   type CompositeMountSpec,
   type PhysicsCoupling,
 } from './compose-schema';
+import {
+  computeCompositeBodies,
+  computeCompositePhysics,
+  findOwnNodeByName,
+  measureCompositeLocalBox,
+  surfaceBasis,
+  traverseOwnSubtree,
+  type CompositeRigidBodySpec,
+} from './compose-tree';
 import { inspectAsset } from './runtime';
 import {
   writeCapabilities,
   type AssetCapabilities,
-  type AssetPhysicsSpec,
   type SurfaceSpec,
 } from './schema';
 
+export { computeCompositeBodies };
+export type { CompositeRigidBodySpec };
 export { validateComposite } from './compose-validate';
 export type { CompositeSurfaceIssue, CompositeValidationResult } from './compose-validate';
 
@@ -44,75 +55,135 @@ function r3(n: number): number {
   return Math.round((n + 1e-9) * 1000) / 1000 || 0;
 }
 
-function prefixTrackName(trackName: string, prefix: string): string {
-  const dot = trackName.indexOf('.');
-  if (dot <= 0) return trackName;
-  const nodeName = trackName.slice(0, dot);
-  if (nodeName.startsWith(prefix)) return trackName;
-  return `${prefix}${nodeName}${trackName.slice(dot)}`;
+function rewriteTrackName(
+  trackName: string,
+  childRootName: string,
+  prefix: string,
+  renamedNames: ReadonlySet<string>,
+  uuids: ReadonlySet<string>,
+): string {
+  const parsed = T.PropertyBinding.parseTrackName(trackName) as { nodeName?: string };
+  const nodeName = parsed.nodeName ?? '';
+  if (!nodeName) {
+    // Root-relative track (e.g. `.position`) must target the child root node, never the outer composite root.
+    if (!childRootName) return trackName;
+    return trackName.startsWith('.') ? `${childRootName}${trackName}` : `${childRootName}.${trackName}`;
+  }
+  if (uuids.has(nodeName)) {
+    // Preserve anonymous UUID bindings intact so GLTFExporter resolves them to the unnamed mesh.
+    return trackName;
+  }
+  if (renamedNames.has(nodeName) && !nodeName.startsWith(prefix)) {
+    const idx = trackName.indexOf(nodeName);
+    if (idx >= 0) {
+      return `${trackName.slice(0, idx)}${prefix}${nodeName}${trackName.slice(idx + nodeName.length)}`;
+    }
+  }
+  return trackName;
 }
 
-/** Rename named nodes and animation tracks inside a child subtree so multiple identical children never collide. */
-export function scopeChildSubtree(childRoot: T.Object3D, childId: string, prefix: string): void {
-  childRoot.traverse(node => {
-    node.userData.compositeChild = childId;
-    if (!node.name) return;
-    if (!node.name.startsWith(prefix)) {
-      node.userData.localName = node.name;
-      node.name = `${prefix}${node.name}`;
-    }
-  });
-  for (const clip of childRoot.animations) {
-    for (const track of clip.tracks) {
-      track.name = prefixTrackName(track.name, prefix);
+function scopeNestedChildSpecs(children: CompositeChildSpec[], prefix: string): void {
+  for (const sub of children) {
+    if (!sub.slotNode.startsWith(prefix)) sub.slotNode = `${prefix}${sub.slotNode}`;
+    sub.nodePrefix = sub.nodePrefix
+      ? (sub.nodePrefix.startsWith(prefix) ? sub.nodePrefix : `${prefix}${sub.nodePrefix}`)
+      : prefix;
+    if (sub.capabilities.children?.length) {
+      scopeNestedChildSpecs(sub.capabilities.children, prefix);
     }
   }
 }
 
-function measureLocalMinY(root: T.Object3D): number {
-  root.updateMatrixWorld(true);
-  const invRoot = root.matrixWorld.clone().invert();
-  const v = new T.Vector3();
-  const rel = new T.Matrix4();
-  let minY = Infinity;
-  root.traverse(node => {
-    if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
-    const geo = node.geometry as T.BufferGeometry;
-    const pos = geo.getAttribute('position') as T.BufferAttribute | undefined;
-    if (!pos) return;
-    rel.multiplyMatrices(invRoot, node.matrixWorld);
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(rel);
-      if (Number.isFinite(v.y) && v.y < minY) minY = v.y;
-    }
+function pickUniquePrefix(childRoot: T.Object3D, id: string, usedNames: ReadonlySet<string>): string {
+  const candidateNames: string[] = [];
+  childRoot.traverse(node => {
+    if (node.name) candidateNames.push(node.name);
   });
-  return Number.isFinite(minY) ? minY : 0;
+  let attempt = 0;
+  for (;;) {
+    const prefix = attempt === 0 ? `${id}__` : `${id}__${String(attempt)}__`;
+    const collides = candidateNames.some(name => usedNames.has(name.startsWith(prefix) ? name : `${prefix}${name}`));
+    if (!collides) return prefix;
+    attempt++;
+  }
 }
 
-function measureLocalBox(root: T.Object3D): T.Box3 {
-  root.updateMatrixWorld(true);
-  const invRoot = root.matrixWorld.clone().invert();
-  const box = new T.Box3();
-  const v = new T.Vector3();
-  const rel = new T.Matrix4();
-  root.traverse(node => {
-    if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
-    const geo = node.geometry as T.BufferGeometry;
-    const pos = geo.getAttribute('position') as T.BufferAttribute | undefined;
-    if (!pos) return;
-    rel.multiplyMatrices(invRoot, node.matrixWorld);
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(rel);
-      if (Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)) box.expandByPoint(v);
+/**
+ * Strip embedded manifests from a child subtree, clone its animation clips so shared clones never cross-mutate,
+ * and optionally prefix named nodes and non-UUID track bindings with `prefix`.
+ */
+export function scopeChildSubtree(
+  childRoot: T.Object3D,
+  childId: string,
+  prefix: string,
+  childCaps?: AssetCapabilities,
+): void {
+  // Always clone clips first because Object3D.clone() shares AnimationClip references across siblings.
+  childRoot.animations = childRoot.animations.map(clip => clip.clone());
+
+  const originalNames = new Set<string>();
+  const uuids = new Set<string>();
+  let needsRootName = false;
+  for (const clip of childRoot.animations) {
+    for (const track of clip.tracks) {
+      const parsed = T.PropertyBinding.parseTrackName(track.name) as { nodeName?: string };
+      if (!parsed.nodeName) needsRootName = true;
+    }
+  }
+  if (needsRootName && !childRoot.name) childRoot.name = 'Root';
+
+  childRoot.traverse(node => {
+    node.userData.compositeChild = childId;
+    if ('formFoundry' in node.userData) delete node.userData.formFoundry;
+    uuids.add(node.uuid);
+    if (!node.name) return;
+    originalNames.add(node.name);
+    if (node.userData.localName === undefined) node.userData.localName = node.name;
+    if (prefix && !node.name.startsWith(prefix)) {
+      node.name = `${prefix}${node.name}`;
     }
   });
-  return box;
+
+  for (const clip of childRoot.animations) {
+    for (const track of clip.tracks) {
+      track.name = rewriteTrackName(track.name, childRoot.name, prefix, originalNames, uuids);
+    }
+  }
+
+  if (prefix && childCaps?.children?.length) {
+    scopeNestedChildSpecs(childCaps.children, prefix);
+  }
+}
+
+function measureMinAlongNormalInHost(
+  childRoot: T.Object3D,
+  hostRootWorldInv: T.Matrix4,
+  normalInHost: T.Vector3,
+): number {
+  const v = new T.Vector3();
+  const rel = new T.Matrix4();
+  let minProj = Infinity;
+  traverseOwnSubtree(childRoot, node => {
+    if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
+    const geo = node.geometry as T.BufferGeometry;
+    const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
+    if (!pos) return;
+    rel.multiplyMatrices(hostRootWorldInv, node.matrixWorld);
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(rel);
+      if (!Number.isFinite(v.x) || !Number.isFinite(v.y) || !Number.isFinite(v.z)) continue;
+      const proj = v.dot(normalInHost);
+      if (proj < minProj) minProj = proj;
+    }
+  });
+  return Number.isFinite(minProj) ? minProj : 0;
 }
 
 function applySlotTransform(
   slot: T.Object3D,
   mount: CompositeMountSpec,
   childRoot: T.Object3D,
+  hostRoot?: T.Object3D,
   hostSurface?: SurfaceSpec,
 ): void {
   const scale = mount.scale ?? 1;
@@ -123,42 +194,34 @@ function applySlotTransform(
   slot.rotation.set(rot[0], rot[1], rot[2]);
 
   const offset = mount.at ?? [0, 0, 0];
-  if (hostSurface) {
-    const childMinY = measureLocalMinY(childRoot);
-    const scaleY = typeof scale === 'number' ? scale : scale[1];
-    slot.position.set(
-      hostSurface.at[0] + offset[0],
-      hostSurface.at[1] - childMinY * scaleY + offset[1],
-      hostSurface.at[2] + offset[2],
-    );
+  if (hostSurface && hostRoot && slot.parent) {
+    const { u, n, v } = surfaceBasis(hostSurface.normal);
+    const desiredInHost = new T.Vector3(...hostSurface.at)
+      .addScaledVector(u, offset[0])
+      .addScaledVector(n, offset[1])
+      .addScaledVector(v, offset[2]);
+
+    hostRoot.updateMatrixWorld(true);
+    const parentInv = slot.parent.matrixWorld.clone().invert();
+    const desiredWorld = desiredInHost.clone().applyMatrix4(hostRoot.matrixWorld);
+    slot.position.copy(desiredWorld.applyMatrix4(parentInv));
+    hostRoot.updateMatrixWorld(true);
+
+    // Measure the ALREADY-rotated and scaled child vertices in host root space and shift along surface normal so it sits flush.
+    const hostInv = hostRoot.matrixWorld.clone().invert();
+    const minProj = measureMinAlongNormalInHost(childRoot, hostInv, n);
+    const targetProj = desiredInHost.dot(n);
+    const deltaN = targetProj - minProj;
+    if (Number.isFinite(deltaN) && Math.abs(deltaN) > 1e-7) {
+      const shiftedInHost = desiredInHost.clone().addScaledVector(n, deltaN);
+      const shiftedWorld = shiftedInHost.applyMatrix4(hostRoot.matrixWorld);
+      slot.position.copy(shiftedWorld.applyMatrix4(parentInv));
+      slot.updateMatrixWorld(true);
+    }
   } else {
     slot.position.set(offset[0], offset[1], offset[2]);
+    slot.updateMatrixWorld(true);
   }
-}
-
-function computeCompositePhysics(
-  children: readonly CompositeChildSpec[],
-  overrideBody?: 'static' | 'dynamic',
-): AssetPhysicsSpec {
-  const primary = children[0];
-  const primaryBody = overrideBody ?? primary?.capabilities.physics?.body ?? 'static';
-  let weldedMass = 0;
-  let hasMass = false;
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    if (!child) continue;
-    const m = child.capabilities.physics?.massKg;
-    if (typeof m !== 'number' || !Number.isFinite(m) || m <= 0) continue;
-    // Sum mass for the base body and every child rigidly welded onto it (surface/joint children keep independent bodies).
-    if (i === 0 || child.mount.coupling === 'weld') {
-      weldedMass += m;
-      hasMass = true;
-    }
-  }
-  return {
-    body: primaryBody,
-    ...(hasMass ? { massKg: r3(weldedMass) } : {}),
-  };
 }
 
 /**
@@ -169,6 +232,11 @@ function computeCompositePhysics(
 export function composeAsset(options: ComposeAssetOptions): T.Group {
   if (!options.name.trim()) throw new Error('Composite asset requires a non-empty name.');
   if (!options.parts.length) throw new Error('Composite asset requires at least one child part.');
+  if (options.parts.length > MAX_COMPOSITE_CHILDREN) {
+    throw new Error(
+      `Composite asset supports at most ${String(MAX_COMPOSITE_CHILDREN)} direct children; received ${String(options.parts.length)}. Nest sub-assemblies instead.`,
+    );
+  }
 
   const root = new T.Group();
   root.name = options.name.trim();
@@ -176,6 +244,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
   const slotById = new Map<string, T.Group>();
   const childRootById = new Map<string, T.Object3D>();
   const childSpecById = new Map<string, CompositeChildSpec>();
+  const usedNodeNames = new Set<string>([root.name]);
   const children: CompositeChildSpec[] = [];
   const compositeClips: T.AnimationClip[] = [];
 
@@ -222,8 +291,10 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     const slot = new T.Group();
     slot.name = slotName;
     slot.userData.compositeSlot = id;
+    usedNodeNames.add(slotName);
 
     let hostParent: T.Object3D = root;
+    let hostRoot: T.Object3D | undefined;
     let hostSurface: SurfaceSpec | undefined;
     if (mount.parent) {
       const parentSpec = childSpecById.get(mount.parent);
@@ -231,9 +302,9 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
       if (!parentSpec || !parentObj) {
         throw new Error(`Part "${id}" references unknown or later-declared parent "${mount.parent}". Declare parent parts first.`);
       }
+      hostRoot = parentObj;
       if (mount.attachNode) {
-        const prefixed = parentSpec.nodePrefix ? `${parentSpec.nodePrefix}${mount.attachNode}` : mount.attachNode;
-        const target = parentObj.getObjectByName(prefixed) ?? parentObj.getObjectByName(mount.attachNode);
+        const target = findOwnNodeByName(parentObj, mount.attachNode, parentSpec.nodePrefix);
         if (!target) {
           throw new Error(`Part "${id}" attachNode "${mount.attachNode}" not found inside parent "${mount.parent}".`);
         }
@@ -246,13 +317,15 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
       }
     }
 
-    const prefix = scopeNames ? `${id}__` : undefined;
-    if (prefix) scopeChildSubtree(childRoot, id, prefix);
-    else childRoot.userData.compositeChild = id;
+    const prefix = scopeNames ? pickUniquePrefix(childRoot, id, usedNodeNames) : undefined;
+    scopeChildSubtree(childRoot, id, prefix ?? '', childCaps);
+    childRoot.traverse(node => {
+      if (node.name) usedNodeNames.add(node.name);
+    });
 
     slot.add(childRoot);
-    applySlotTransform(slot, mount, childRoot, hostSurface);
     hostParent.add(slot);
+    applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface);
 
     // Collect scoped composite-level clips so a single GLB export preserves every child's animations without collisions.
     for (const clip of childRoot.animations) {
@@ -277,8 +350,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
   }
 
   root.animations = compositeClips;
-  root.updateMatrixWorld(true);
-  const overall = measureLocalBox(root);
+  const overall = measureCompositeLocalBox(root);
   const size = overall.isEmpty() ? new T.Vector3(1, 1, 1) : overall.getSize(new T.Vector3());
 
   const capabilities: AssetCapabilities = {
@@ -312,7 +384,8 @@ export function reseatCompositeSlot(
   childRoot: T.Object3D,
   mount: CompositeMountSpec,
   hostCaps?: AssetCapabilities,
+  hostRoot?: T.Object3D,
 ): void {
   const hostSurface = mount.surface ? hostCaps?.surfaces?.find(s => s.name === mount.surface) : undefined;
-  applySlotTransform(slot, mount, childRoot, hostSurface);
+  applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface);
 }

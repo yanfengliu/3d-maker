@@ -15,7 +15,12 @@ export type * from './compose-schema';
 export type * from './ik-schema';
 export type * from './param-schema';
 export type * from './spatial-schema';
-export { COMPOSITE_CHILD_ID_PATTERN, parseCompositeChildren } from './compose-schema';
+export {
+  COMPOSITE_CHILD_ID_PATTERN,
+  MAX_COMPOSITE_CHILDREN,
+  MAX_SCOPED_NAME_LEN,
+  parseCompositeChildren,
+} from './compose-schema';
 export { parseIkSpec } from './ik-schema';
 export { parseModelParamSpecs, parseRecipeParams, resolveModelParams } from './param-schema';
 export { parseClearanceZones, parseColliders, parseSurfaces } from './spatial-schema';
@@ -131,7 +136,7 @@ const maxNightZones = 32;
 const maxDecals = 32;
 const maxPresets = 32;
 const maxClips = 256;
-const maxNameLen = 80;
+const maxNameLen = 160;
 const maxDescLen = 280;
 
 /** Canonical identifier pattern shared by colorZones, presets, and `zone-<name>` paint slots. */
@@ -458,9 +463,19 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
   return found;
 }
 
-/** Write a clean JSON snapshot of capabilities onto the root node, clearing stale wrapper-level copies only. */
+/** Write a clean JSON snapshot of capabilities onto the canonical manifest host node without duplicating extras. */
 export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
-  for (const child of root.children) {
+  const singleChild = root.children.length === 1 ? root.children[0] : undefined;
+  const host =
+    !('formFoundry' in root.userData)
+    && singleChild
+    && 'formFoundry' in singleChild.userData
+    && !singleChild.userData.compositeSlot
+    && !singleChild.userData.compositeChild
+      ? singleChild
+      : root;
+  if (host !== root && 'formFoundry' in root.userData) delete root.userData.formFoundry;
+  for (const child of host.children) {
     if (!child.userData.compositeChild && !child.userData.compositeSlot && 'formFoundry' in child.userData) {
       delete child.userData.formFoundry;
     }
@@ -470,5 +485,5 @@ export function writeCapabilities(root: Object3D, capabilities: AssetCapabilitie
       }
     }
   }
-  root.userData.formFoundry = structuredClone(capabilities);
+  host.userData.formFoundry = structuredClone(capabilities);
 }

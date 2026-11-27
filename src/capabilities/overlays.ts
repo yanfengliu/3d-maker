@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { traverseOwnSubtree } from './compose-tree';
 import type { DecalSlotSpec, NightZoneSpec } from './schema';
 
 export interface NightOverlay {
@@ -35,7 +36,7 @@ export function buildNightOverlays(root: T.Object3D, zones: NightZoneSpec[]): Ni
   });
   const overlays: NightOverlay[] = [];
   const hosts: T.Mesh[] = [];
-  root.traverse(node => {
+  traverseOwnSubtree(root, node => {
     if (node.userData.studioOverlay) return;
     if (node instanceof T.Mesh && !(node instanceof T.SkinnedMesh)) hosts.push(node as T.Mesh);
   });

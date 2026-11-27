@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { findOwnNodeByName } from './compose-tree';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -139,6 +140,41 @@ export function buildOrientedBox(
   const ax: Vec3Tuple = [col0[0] / sx, col0[1] / sx, col0[2] / sx];
   const ay: Vec3Tuple = [col1[0] / sy, col1[1] / sy, col1[2] / sy];
   const az: Vec3Tuple = [col2[0] / sz, col2[1] / sz, col2[2] / sz];
+  const sheared =
+    Math.abs(dot(ax, ay)) > 1e-4 || Math.abs(dot(ay, az)) > 1e-4 || Math.abs(dot(az, ax)) > 1e-4;
+  if (sheared) {
+    const c0: Vec3Tuple = [col0[0] * Math.abs(halfExtents[0]), col0[1] * Math.abs(halfExtents[0]), col0[2] * Math.abs(halfExtents[0])];
+    const c1: Vec3Tuple = [col1[0] * Math.abs(halfExtents[1]), col1[1] * Math.abs(halfExtents[1]), col1[2] * Math.abs(halfExtents[1])];
+    const c2: Vec3Tuple = [col2[0] * Math.abs(halfExtents[2]), col2[1] * Math.abs(halfExtents[2]), col2[2] * Math.abs(halfExtents[2])];
+    const ox = new T.Vector3(...ax).normalize();
+    const oyRaw = new T.Vector3(...ay).addScaledVector(ox, -dot(ay, [ox.x, ox.y, ox.z]));
+    const oy = oyRaw.lengthSq() > 1e-8
+      ? oyRaw.normalize()
+      : new T.Vector3().crossVectors(Math.abs(ox.y) < 0.9 ? new T.Vector3(0, 1, 0) : new T.Vector3(1, 0, 0), ox).normalize();
+    const oz = new T.Vector3().crossVectors(ox, oy).normalize();
+    const oxT: Vec3Tuple = [ox.x, ox.y, ox.z];
+    const oyT: Vec3Tuple = [oy.x, oy.y, oy.z];
+    const ozT: Vec3Tuple = [oz.x, oz.y, oz.z];
+    const ohx = Math.abs(dot(c0, oxT)) + Math.abs(dot(c1, oxT)) + Math.abs(dot(c2, oxT));
+    const ohy = Math.abs(dot(c0, oyT)) + Math.abs(dot(c1, oyT)) + Math.abs(dot(c2, oyT));
+    const ohz = Math.abs(dot(c0, ozT)) + Math.abs(dot(c1, ozT)) + Math.abs(dot(c2, ozT));
+    const rx = Math.abs(c0[0]) + Math.abs(c1[0]) + Math.abs(c2[0]);
+    const ry = Math.abs(c0[1]) + Math.abs(c1[1]) + Math.abs(c2[1]);
+    const rz = Math.abs(c0[2]) + Math.abs(c1[2]) + Math.abs(c2[2]);
+    return {
+      id: meta.id,
+      name: meta.name,
+      ownerId: meta.ownerId,
+      kind: meta.kind,
+      layer: meta.layer,
+      ...(meta.part ? { part: meta.part } : {}),
+      center: [cx, cy, cz],
+      halfExtents: [ohx, ohy, ohz],
+      axes: [oxT, oyT, ozT],
+      aabbMin: [cx - rx, cy - ry, cz - rz],
+      aabbMax: [cx + rx, cy + ry, cz + rz],
+    };
+  }
   const hx = Math.abs(halfExtents[0]) * sx;
   const hy = Math.abs(halfExtents[1]) * sy;
   const hz = Math.abs(halfExtents[2]) * sz;
@@ -261,6 +297,119 @@ export function obbContainedIn(inner: OrientedBox, outer: OrientedBox, tolerance
   return true;
 }
 
+function isHiddenName(hiddenSet: ReadonlySet<string>, name: string, prefix = ''): boolean {
+  if (hiddenSet.has(name)) return true;
+  if (prefix && name.startsWith(prefix) && hiddenSet.has(name.slice(prefix.length))) return true;
+  return false;
+}
+
+function appendResolvedVolumes(
+  volumes: OrientedBox[],
+  ownerId: string,
+  namePrefix: string,
+  object: T.Object3D | undefined,
+  caps: AssetCapabilities,
+  rootWorld: T.Matrix4,
+  hiddenOverride: readonly string[] | undefined,
+  nodePrefix: string,
+  includeColliders: boolean,
+  includeClearanceZones: boolean,
+  includeNoneLayer: boolean,
+): void {
+  if (caps.children?.length && object) {
+    for (const child of caps.children) {
+      const slot = object.getObjectByName(child.slotNode);
+      if (!slot || !isVisibleInTree(slot)) continue;
+      const inner = slot.children[0] ?? slot;
+      if (!isVisibleInTree(inner)) continue;
+      appendResolvedVolumes(
+        volumes,
+        ownerId,
+        `${namePrefix}${child.id}/`,
+        inner,
+        child.capabilities,
+        inner.matrixWorld,
+        undefined,
+        child.nodePrefix ?? '',
+        includeColliders,
+        includeClearanceZones,
+        includeNoneLayer,
+      );
+    }
+  }
+
+  const hiddenSet = new Set(hiddenOverride ?? caps.state?.hiddenParts ?? []);
+
+  if (includeColliders && caps.colliders) {
+    for (const spec of caps.colliders) {
+      const layer = spec.layer ?? 'solid';
+      if (!includeNoneLayer && layer === 'none') continue;
+      const volName = `${namePrefix}${spec.name}`;
+      if (spec.node) {
+        if (isHiddenName(hiddenSet, spec.node, nodePrefix)) continue;
+        if (object) {
+          const node = findOwnNodeByName(object, spec.node, nodePrefix);
+          if (!node || !isVisibleInTree(node)) continue;
+          volumes.push(buildOrientedBox(node.matrixWorld, spec.at, colliderHalfExtents(spec), {
+            id: `${ownerId}:collider:${volName}`,
+            name: volName,
+            ownerId,
+            kind: 'collider',
+            layer,
+            part: spec.node,
+            ...(spec.rotation ? { rotation: spec.rotation } : {}),
+          }));
+        } else {
+          if (!spec.restPose) continue;
+          volumes.push(buildOrientedBox(rootWorld, spec.restPose.at, colliderHalfExtents(spec), {
+            id: `${ownerId}:collider:${volName}`,
+            name: volName,
+            ownerId,
+            kind: 'collider',
+            layer,
+            part: spec.node,
+            ...(spec.restPose.rotation ? { rotation: spec.restPose.rotation } : {}),
+          }));
+        }
+      } else {
+        volumes.push(buildOrientedBox(rootWorld, spec.at, colliderHalfExtents(spec), {
+          id: `${ownerId}:collider:${volName}`,
+          name: volName,
+          ownerId,
+          kind: 'collider',
+          layer,
+          ...(spec.rotation ? { rotation: spec.rotation } : {}),
+        }));
+      }
+    }
+  }
+
+  if (includeClearanceZones && caps.clearanceZones) {
+    for (const zone of caps.clearanceZones) {
+      const volName = `${namePrefix}${zone.name}`;
+      if (zone.part && isHiddenName(hiddenSet, zone.part, nodePrefix)) continue;
+      if (zone.part && object) {
+        const node = findOwnNodeByName(object, zone.part, nodePrefix);
+        if (node && !isVisibleInTree(node)) continue;
+      }
+      volumes.push(buildOrientedBox(
+        rootWorld,
+        zone.at,
+        [zone.size[0] * 0.5, zone.size[1] * 0.5, zone.size[2] * 0.5],
+        {
+          id: `${ownerId}:clearance:${volName}`,
+          name: volName,
+          ownerId,
+          kind: 'clearance',
+          layer: zone.kind,
+          ...(zone.part ? { part: zone.part } : {}),
+          ...(zone.rotation ? { rotation: zone.rotation } : {}),
+        },
+      ));
+    }
+  }
+}
+
 /** Resolve all world-space collider and clearance OBBs for a live Three.js object or headless JSON descriptor. */
 export function resolveAssetVolumes(
   item: ScenePlacementItem,
@@ -274,76 +423,20 @@ export function resolveAssetVolumes(
 
   if (item.object) item.object.updateMatrixWorld(true);
   const rootWorld = item.object ? item.object.matrixWorld : itemWorldMatrix(item);
-  const hiddenSet = new Set(item.hiddenParts ?? caps.state?.hiddenParts ?? []);
   const volumes: OrientedBox[] = [];
-
-  if (includeColliders && caps.colliders) {
-    for (const spec of caps.colliders) {
-      const layer = spec.layer ?? 'solid';
-      if (!includeNoneLayer && layer === 'none') continue;
-      if (spec.node) {
-        if (item.object) {
-          const node = item.object.getObjectByName(spec.node);
-          if (!node || !isVisibleInTree(node)) continue;
-          volumes.push(buildOrientedBox(node.matrixWorld, spec.at, colliderHalfExtents(spec), {
-            id: `${item.id}:collider:${spec.name}`,
-            name: spec.name,
-            ownerId: item.id,
-            kind: 'collider',
-            layer,
-            part: spec.node,
-            ...(spec.rotation ? { rotation: spec.rotation } : {}),
-          }));
-        } else {
-          if (hiddenSet.has(spec.node) || !spec.restPose) continue;
-          volumes.push(buildOrientedBox(rootWorld, spec.restPose.at, colliderHalfExtents(spec), {
-            id: `${item.id}:collider:${spec.name}`,
-            name: spec.name,
-            ownerId: item.id,
-            kind: 'collider',
-            layer,
-            part: spec.node,
-            ...(spec.restPose.rotation ? { rotation: spec.restPose.rotation } : {}),
-          }));
-        }
-      } else {
-        volumes.push(buildOrientedBox(rootWorld, spec.at, colliderHalfExtents(spec), {
-          id: `${item.id}:collider:${spec.name}`,
-          name: spec.name,
-          ownerId: item.id,
-          kind: 'collider',
-          layer,
-          ...(spec.rotation ? { rotation: spec.rotation } : {}),
-        }));
-      }
-    }
-  }
-
-  if (includeClearanceZones && caps.clearanceZones) {
-    for (const zone of caps.clearanceZones) {
-      if (zone.part && item.object) {
-        const node = item.object.getObjectByName(zone.part);
-        if (node && !isVisibleInTree(node)) continue;
-      } else if (zone.part && hiddenSet.has(zone.part)) {
-        continue;
-      }
-      volumes.push(buildOrientedBox(
-        rootWorld,
-        zone.at,
-        [zone.size[0] * 0.5, zone.size[1] * 0.5, zone.size[2] * 0.5],
-        {
-          id: `${item.id}:clearance:${zone.name}`,
-          name: zone.name,
-          ownerId: item.id,
-          kind: 'clearance',
-          layer: zone.kind,
-          ...(zone.part ? { part: zone.part } : {}),
-          ...(zone.rotation ? { rotation: zone.rotation } : {}),
-        },
-      ));
-    }
-  }
-
+  appendResolvedVolumes(
+    volumes,
+    item.id,
+    '',
+    item.object,
+    caps,
+    rootWorld,
+    item.hiddenParts,
+    '',
+    includeColliders,
+    includeClearanceZones,
+    includeNoneLayer,
+  );
   return volumes;
 }
 

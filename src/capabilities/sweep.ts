@@ -1,6 +1,8 @@
 import * as T from 'three';
+import { findOwnNodeByName, traverseOwnSubtree } from './compose-tree';
 import {
   readCapabilities,
+  type AssetCapabilities,
   type ClearanceZoneSpec,
   type ColliderSpec,
   type RiggedPartSpec,
@@ -22,6 +24,14 @@ export interface RiggedSweepOptions {
   tolerance?: number;
   /** Optional external world-space obstacle OBBs to test against the moving part. */
   obstacles?: readonly OrientedBox[];
+  /** Optional explicit capabilities override (avoids mutating `root.userData.formFoundry`). */
+  capabilities?: AssetCapabilities;
+  /** Optional node name prefix for scoped composite children. */
+  nodePrefix?: string;
+  /** Optional resolver returning external obstacle OBBs for a specific moving part (allows excluding co-moving children). */
+  getObstaclesForPart?: (partName: string, movingNode: T.Object3D) => readonly OrientedBox[];
+  /** Optional resolver returning live world-space OBBs for carried children moving with `movingNode` at the current step. */
+  getCarriedBoxes?: (partName: string, movingNode: T.Object3D) => readonly OrientedBox[];
 }
 
 export interface RiggedSweepIssue {
@@ -47,7 +57,7 @@ function measureLocalNodeBox(node: T.Object3D): { at: Vec3Tuple; halfExtents: Ve
   const box = new T.Box3();
   const v = new T.Vector3();
   const rel = new T.Matrix4();
-  node.traverse(child => {
+  traverseOwnSubtree(node, child => {
     if (child.userData.studioOverlay || !(child instanceof T.Mesh) || !isVisibleInTree(child)) return;
     const geo = child.geometry as T.BufferGeometry;
     const pos = geo.getAttribute('position') as T.BufferAttribute | undefined;
@@ -71,9 +81,13 @@ function measureLocalNodeBox(node: T.Object3D): { at: Vec3Tuple; halfExtents: Ve
 export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions = {}): RiggedSweepReport {
   const steps = Math.max(2, options.steps ?? 7);
   const tolerance = options.tolerance ?? 0.015;
-  const obstacles = options.obstacles ?? [];
-  const caps = readCapabilities(root);
+  const defaultObstacles = options.obstacles ?? [];
+  const caps = options.capabilities ?? readCapabilities(root);
   if (!caps || !caps.riggedParts.length) return { valid: true, checkedParts: 0, issues: [] };
+
+  const prefix = options.nodePrefix ?? '';
+  const hiddenSet = new Set(caps.state?.hiddenParts ?? []);
+  const poseMap = caps.state?.pose ?? {};
 
   root.updateMatrixWorld(true);
   const clearanceByPart = new Map<string, ClearanceZoneSpec[]>();
@@ -95,15 +109,28 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
   let checkedParts = 0;
 
   for (const part of caps.riggedParts) {
-    const node = root.getObjectByName(part.name);
+    const localName = prefix && part.name.startsWith(prefix) ? part.name.slice(prefix.length) : part.name;
+    if (hiddenSet.has(part.name) || hiddenSet.has(localName)) continue;
+    const node = findOwnNodeByName(root, part.name, prefix);
     if (!node || !isVisibleInTree(node)) continue;
     checkedParts++;
-    const restPos = node.position.clone();
-    const restQuat = node.quaternion.clone();
+    const origPos = node.position.clone();
+    const origQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
-    const authoredColliders = colliderByNode.get(part.name);
+    const currentPose = poseMap[part.name] ?? poseMap[localName] ?? 0;
+    const restPos = origPos.clone();
+    const restQuat = origQuat.clone();
+    if (Math.abs(currentPose) > 1e-9) {
+      if (part.type === 'slide') {
+        restPos.addScaledVector(axis, -currentPose);
+      } else {
+        restQuat.multiply(new T.Quaternion().setFromAxisAngle(axis, -T.MathUtils.degToRad(currentPose))).normalize();
+      }
+    }
+    const authoredColliders = colliderByNode.get(part.name) ?? colliderByNode.get(localName);
     const fallbackBox = authoredColliders?.length ? null : measureLocalNodeBox(node);
-    const clearanceZones = (clearanceByPart.get(part.name) ?? []).map(z =>
+    const partClearanceSpecs = clearanceByPart.get(part.name) ?? clearanceByPart.get(localName) ?? [];
+    const clearanceZones = partClearanceSpecs.map(z =>
       buildOrientedBox(root.matrixWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
         id: `sweep:clearance:${z.name}`,
         name: z.name,
@@ -114,6 +141,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         ...(z.rotation ? { rotation: z.rotation } : {}),
       }),
     );
+    const obstacles = options.getObstaclesForPart ? options.getObstaclesForPart(localName, node) : defaultObstacles;
 
     try {
       for (let s = 0; s < steps; s++) {
@@ -180,10 +208,26 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
             }
           }
         }
+
+        const carriedBoxes = options.getCarriedBoxes ? options.getCarriedBoxes(localName, node) : [];
+        for (const box of carriedBoxes) {
+          for (const obs of obstacles) {
+            if (obs.kind === 'clearance' && obs.layer === 'cavity') continue;
+            const hit = obbOverlap(box, obs, -tolerance);
+            if (hit.overlaps) {
+              issues.push({
+                part: part.name,
+                kind: 'obstacle-blocked',
+                value: Math.round(value * 1000) / 1000,
+                detail: `Carried ${box.ownerId}:${box.name} blocked by ${obs.ownerId}:${obs.name} (penetration ${hit.penetration.toFixed(3)}m) at pose ${value.toFixed(2)}`,
+              });
+            }
+          }
+        }
       }
     } finally {
-      node.position.copy(restPos);
-      node.quaternion.copy(restQuat);
+      node.position.copy(origPos);
+      node.quaternion.copy(origQuat);
       node.updateMatrixWorld(true);
     }
   }

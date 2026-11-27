@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { findOwnNodeByName, registerLiveController, unregisterLiveController } from './compose-tree';
 import { buildDecalMesh, buildNightOverlays, type DecalOverlay } from './overlays';
 import {
   readCapabilities,
@@ -130,12 +131,18 @@ export function inspectAsset(root: T.Object3D, animations?: readonly T.Animation
 }
 
 /** Synthesize standard glTF-compatible AnimationClips for every rigged part (relative to quaternion rest pose). */
-export function synthesizeRigClips(root: T.Object3D, capabilities?: AssetCapabilities): T.AnimationClip[] {
+export function synthesizeRigClips(
+  root: T.Object3D,
+  capabilities?: AssetCapabilities,
+  nodePrefix?: string,
+): T.AnimationClip[] {
   const caps = capabilities ?? inspectAsset(root);
+  const prefix = nodePrefix ?? '';
   const clips: T.AnimationClip[] = [];
   for (const part of caps.riggedParts) {
-    const node = root.getObjectByName(part.name);
+    const node = findOwnNodeByName(root, part.name, prefix);
     if (!node) continue;
+    const trackNode = node.name || (prefix ? `${prefix}${part.name}` : part.name);
     const current = caps.state?.pose?.[part.name] ?? 0;
     const far = farRangeEnd(part.range);
     if (part.type === 'slide') {
@@ -144,7 +151,7 @@ export function synthesizeRigClips(root: T.Object3D, capabilities?: AssetCapabil
       const moved = rest.clone();
       moved[part.axis] += far;
       const track = new T.VectorKeyframeTrack(
-        part.name + '.position',
+        trackNode + '.position',
         [0, 0.9, 1.5, 2.4],
         [rest.x, rest.y, rest.z, moved.x, moved.y, moved.z, moved.x, moved.y, moved.z, rest.x, rest.y, rest.z],
       );
@@ -172,11 +179,16 @@ export function synthesizeRigClips(root: T.Object3D, capabilities?: AssetCapabil
       pushAngle(1.5, far);
       for (let i = 1; i <= steps; i++) pushAngle(1.5 + (i / steps) * 0.9, far * (1 - i / steps));
     }
-    const track = new T.QuaternionKeyframeTrack(part.name + '.quaternion', times, values);
+    const track = new T.QuaternionKeyframeTrack(trackNode + '.quaternion', times, values);
     const verb = /door|gate|lid|hatch|window|drawer/i.test(part.name + ' ' + (part.describe ?? '')) ? 'Open ' : 'Move ';
     clips.push(markSynthesizedClip(new T.AnimationClip(verb + part.label.toLowerCase(), 2.4, [track])));
   }
   return clips;
+}
+
+export interface AssetControllerInternalOptions {
+  skipRootWrite?: boolean;
+  onChange?: () => void;
 }
 
 /** Build a runtime controller for any model so studio UI, games, and AI code drive parts identically. */
@@ -184,10 +196,12 @@ export function createAssetController(
   root: T.Object3D,
   initialCapabilities?: AssetCapabilities,
   nodePrefix?: string,
+  options?: AssetControllerInternalOptions,
 ): AssetController {
   const capabilities = structuredClone(initialCapabilities ?? inspectAsset(root));
+  const initialState = capabilities.state ? structuredClone(capabilities.state) : undefined;
   const prefix = nodePrefix ?? '';
-  const findNode = (name: string) => (prefix ? root.getObjectByName(prefix + name) : undefined) ?? root.getObjectByName(name);
+  const findNode = (name: string) => findOwnNodeByName(root, name, prefix);
   const bindings = new Map<string, PartBinding>();
   for (const spec of capabilities.riggedParts) {
     const node = findNode(spec.name);
@@ -273,6 +287,7 @@ export function createAssetController(
     };
   }
 
+  let initializing = true;
   function syncManifest(): AssetCapabilities {
     const state = getState();
     if (Object.keys(state).length) capabilities.state = state;
@@ -282,7 +297,8 @@ export function createAssetController(
     } else if (!capabilities.clips?.length) {
       delete capabilities.clips;
     }
-    writeCapabilities(root, capabilities);
+    if (!options?.skipRootWrite) writeCapabilities(root, capabilities);
+    if (!initializing) options?.onChange?.();
     return structuredClone(capabilities);
   }
 
@@ -369,8 +385,7 @@ export function createAssetController(
     },
     applyPoseToClone(cloneRoot) {
       for (const binding of bindings.values()) {
-        const cloned = (prefix ? cloneRoot.getObjectByName(prefix + binding.spec.name) : undefined)
-          ?? cloneRoot.getObjectByName(binding.spec.name);
+        const cloned = findOwnNodeByName(cloneRoot, binding.spec.name, prefix);
         if (cloned) applyPoseToNode(binding, cloned);
       }
     },
@@ -378,16 +393,26 @@ export function createAssetController(
     dispose() {
       clearNightOverlays();
       clearDecalOverlays();
+      if (!options?.skipRootWrite) unregisterLiveController(root, controller);
     },
   };
 
-  if (capabilities.state?.hiddenParts) {
-    for (const name of capabilities.state.hiddenParts) {
-      if (detachables.has(name)) controller.setVisible(name, false);
+  if (initialState?.hiddenParts) {
+    for (const name of initialState.hiddenParts) {
+      const node = detachables.get(name);
+      if (node) {
+        hiddenParts.add(name);
+        node.visible = false;
+      }
     }
   }
-  if (capabilities.state?.night) controller.setNight(true);
-  if (capabilities.state?.decalText) decalLabels = { ...capabilities.state.decalText };
+  if (initialState?.night) {
+    nightOn = true;
+    for (const overlay of nightOverlays) overlay.mesh.visible = true;
+  }
+  if (initialState?.decalText) decalLabels = { ...initialState.decalText };
   syncManifest();
+  initializing = false;
+  if (!options?.skipRootWrite) registerLiveController(root, controller);
   return controller;
 }
