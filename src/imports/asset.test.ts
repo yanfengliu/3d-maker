@@ -142,14 +142,19 @@ describe('imported GLB assets', () => {
   it('retries transient 429 and 503 responses when opening a PolyFork GLB', async () => {
     vi.useFakeTimers();
     const bytes = await modelFile().arrayBuffer();
-    const fetcher = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(null, { status: 429 }))
-      .mockResolvedValueOnce(new Response(null, { status: 503 }))
-      .mockResolvedValueOnce(new Response(bytes));
+    let glbCalls = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(raw => {
+      const url = typeof raw === 'string' ? raw : raw instanceof URL ? raw.href : raw.url;
+      if (!url.endsWith('.glb')) return Promise.resolve(new Response(null, { status: 404 }));
+      glbCalls++;
+      if (glbCalls === 1) return Promise.resolve(new Response(null, { status: 429 }));
+      if (glbCalls === 2) return Promise.resolve(new Response(null, { status: 503 }));
+      return Promise.resolve(new Response(bytes));
+    });
     const pending = openPolyforkGlb('retry-shop', 'Village Shopfront', undefined, 'building');
     await vi.advanceTimersByTimeAsync(3500);
     const asset = await pending;
-    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(glbCalls).toBe(3);
     expect(asset.source).toEqual({ kind: 'polyfork', assetId: 'retry-shop', title: 'Village Shopfront', category: 'building' });
     vi.useRealTimers();
   });

@@ -2,12 +2,12 @@ import * as T from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalog } from '../data/recipe';
 import { buildPolyforkCapabilities, clearPolyforkDetailCache, fetchPolyforkDetail } from '../data/polyfork-detail';
-import { applyImportEdits, listPaintSlots, openPolyforkGlb } from '../imports/asset';
-import { colorwayPaintPatch } from '../imports/paint';
+import { applyImportEdits, listPaintSlots, openPolyforkGlb, reconcileSavedEdits } from '../imports/asset';
+import { colorwayPaintPatch, pickPaintSlot } from '../imports/paint';
 import { buildModel } from '../models';
 import { cloneForExport } from '../studio/export';
 import { createAssetController, inspectAsset, synthesizeRigClips } from './runtime';
-import { readCapabilities, type AssetCapabilities } from './schema';
+import { parseCapabilities, readCapabilities, writeCapabilities, type AssetCapabilities } from './schema';
 
 function linearByte(srgbByte: number): number {
   const c = srgbByte / 255;
@@ -191,30 +191,151 @@ describe('self-describing asset capabilities and runtime controller', () => {
     expect(planter?.visible).toBe(false);
     expect(asset.controller.isNight()).toBe(true);
 
-    // Export clone strips studio overlays, embeds extras.formFoundry, and synthesizes accurate 0->80->0 rig clips even while posed open.
-    const exported = cloneForExport(asset.group, { includePartClips: true });
+    // Export clone strips studio overlays, keeps hidden detachable subtrees, embeds extras.formFoundry, and synthesizes clips.
+    const exported = cloneForExport(asset.group, { includePartClips: true }, asset.controller);
     let overlayCount = 0;
     exported.root.traverse(node => { if (node.userData.studioOverlay) overlayCount++; });
     expect(overlayCount).toBe(0);
+    expect(exported.root.getObjectByName('planter')?.visible).toBe(true);
     expect(exported.root.animations.map(c => c.name)).toEqual(['Open door']);
     const manifest = readCapabilities(exported.root);
     expect(manifest?.state).toMatchObject({ pose: { door: 80 }, hiddenParts: ['planter'], night: true, decalText: { fascia: 'BAKERY' } });
+    expect(manifest?.clips?.[0]).toMatchObject({ name: 'Open door', synthesized: true });
+    expect(manifest?.colorZones?.find(z => z.name === 'paint')?.color).toBe('#47582c');
 
-    // Re-creating a controller on the exported-while-open clone must NOT double-rotate the door, and closePart must return rotation.y to 0!
+    // Re-creating a controller on the exported-while-open clone must NOT double-rotate the door, restores hidden planter, and closes cleanly.
     const reimportedCtrl = createAssetController(exported.root);
     const exportedDoor = exported.root.getObjectByName('door');
     expect(reimportedCtrl.getPart('door')).toBe(80);
+    expect(reimportedCtrl.isVisible('planter')).toBe(false);
+    reimportedCtrl.setVisible('planter', true);
+    expect(exported.root.getObjectByName('planter')?.visible).toBe(true);
     expect(exportedDoor?.rotation.y).toBeCloseTo(T.MathUtils.degToRad(80), 4);
     reimportedCtrl.closePart('door');
     expect(exportedDoor?.rotation.y).toBeCloseTo(0, 4);
 
     // Synthesized clips on a posed model still start at rest quaternion (identity) and reach +80 deg.
     const clips = synthesizeRigClips(asset.group, asset.capabilities);
-    expect(Array.from(clips[0]?.tracks[0]?.values.slice(0, 4) ?? [])).toEqual([0, 0, 0, 1]);
+    const startQ = Array.from(clips[0]?.tracks[0]?.values.slice(0, 4) ?? []);
+    expect(new T.Quaternion(startQ[0], startQ[1], startQ[2], startQ[3]).angleTo(new T.Quaternion())).toBeLessThan(1e-6);
+
+    // Dimensions update with scale/proportion edits.
+    applyImportEdits(asset, { ...asset.edits, scale: 1.5, proportion: 0.8 });
+    expect(asset.capabilities.dimensions?.sizeM).toEqual({ x: 6, y: 3.6, z: 6.585 });
+
+    // Legacy pre-upgrade `vertex-*` paint keys migrate onto semantic `zone-*` slots instead of dropping.
+    const legacyDoorId = [...asset.palette.legacyMap.entries()].find(([, zone]) => zone === 'zone-paint')?.[0];
+    expect(legacyDoorId).toMatch(/^vertex-1-[\da-f]{6}$/);
+    const legacyReconciled = reconcileSavedEdits(asset, {
+      name: 'Legacy Shop', tint: '#ffffff', scale: 1, proportion: 1,
+      paint: { [legacyDoorId ?? '']: '#aa2233' },
+    });
+    expect(legacyReconciled.dropped).toEqual([]);
+    expect(legacyReconciled.edits.paint).toEqual({ 'zone-paint': '#aa2233' });
+
+    // 3D face picking resolves the door triangle to zone-paint.
+    const doorMesh = asset.group.getObjectByName('door-leaf');
+    expect(doorMesh instanceof T.Mesh && pickPaintSlot(asset.palette, doorMesh as T.Mesh, 0, 0)).toBe('zone-paint');
 
     reimportedCtrl.dispose();
     exported.dispose();
     asset.controller.dispose();
+  });
+
+  it('handles quaternion hinges past 90 deg, 180 deg rest yaw, yawed X-hinges, and multi-step 360 deg clips', () => {
+    const root = new T.Group();
+    const dish = new T.Group(); dish.name = 'DishMount'; root.add(dish);
+    const flipped = new T.Group(); flipped.name = 'RearGate'; flipped.quaternion.setFromAxisAngle(new T.Vector3(0, 1, 0), Math.PI); root.add(flipped);
+    const yawedLid = new T.Group(); yawedLid.name = 'YawedLid'; yawedLid.quaternion.setFromAxisAngle(new T.Vector3(0, 1, 0), Math.PI / 2); root.add(yawedLid);
+    const caps: AssetCapabilities = {
+      version: 1, name: 'Hinge Rig',
+      riggedParts: [
+        { name: 'DishMount', label: 'Dish', type: 'rotate', axis: 'y', range: [0, 360] },
+        { name: 'RearGate', label: 'Rear gate', type: 'rotate', axis: 'y', range: [0, 200] },
+        { name: 'YawedLid', label: 'Yawed lid', type: 'rotate', axis: 'x', range: [0, 90] },
+      ],
+      detachableParts: [], nightZones: [], decals: [],
+    };
+    writeCapabilities(root, caps);
+    const ctrl = createAssetController(root);
+    ctrl.setPart('DishMount', 120);
+    ctrl.setPart('RearGate', 200);
+    ctrl.setPart('YawedLid', 90);
+
+    // Export posed at 120/200/90 deg, re-wrap with a new controller (simulating GLB round-trip), and verify exact close to rest!
+    const snap = cloneForExport(root, { includePartClips: true }, ctrl);
+    const ctrl2 = createAssetController(snap.root);
+    expect(ctrl2.getPart('DishMount')).toBe(120);
+    expect(ctrl2.getPart('RearGate')).toBe(200);
+    ctrl2.closePart('DishMount');
+    ctrl2.closePart('RearGate');
+    ctrl2.closePart('YawedLid');
+    expect(snap.root.getObjectByName('DishMount')?.quaternion.angleTo(new T.Quaternion())).toBeLessThan(1e-4);
+    expect(snap.root.getObjectByName('RearGate')?.quaternion.angleTo(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), Math.PI))).toBeLessThan(1e-4);
+    expect(snap.root.getObjectByName('YawedLid')?.quaternion.angleTo(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), Math.PI / 2))).toBeLessThan(1e-4);
+
+    // Verify 360 deg synthesized clip samples intermediate rotations (not a 0-deg shortest-arc no-op).
+    const dishClip = snap.root.animations.find(c => c.name === 'Move dish');
+    expect(dishClip).toBeDefined();
+    expect(dishClip?.tracks[0]?.times.length).toBeGreaterThanOrEqual(9);
+    const mid = dishClip?.tracks[0]?.values.slice(8, 12) ?? [];
+    expect(new T.Quaternion(mid[0], mid[1], mid[2], mid[3]).angleTo(new T.Quaternion())).toBeGreaterThan(1.4);
+
+    // Verify togglePart on 0..360 toggles to 180 instead of identical-looking 360.
+    expect(ctrl2.togglePart('DishMount')).toBe(180);
+
+    // Verify inspectAsset(root, animations) parses clips and synthesized flags from manifest & external animations.
+    const parsed = parseCapabilities(snap.root.userData.formFoundry);
+    expect(parsed?.clips?.every(c => c.synthesized === true)).toBe(true);
+    const withoutOwnClips = snap.root.clone();
+    withoutOwnClips.animations = [];
+    expect(inspectAsset(withoutOwnClips, snap.root.animations).clips?.length).toBe(3);
+
+    ctrl2.dispose();
+    snap.dispose();
+    ctrl.dispose();
+  });
+
+  it('uses tight sRGB night matching (excluding dark ironwork), preserves offline fallback capabilities, and isolates distant colors', async () => {
+    const bytes = shopfrontGlb();
+    const fallbackCaps: AssetCapabilities = {
+      version: 1, name: 'Village Shopfront',
+      riggedParts: [{ name: 'door', label: 'Door', type: 'rotate', axis: 'y', range: [0, 80] }],
+      detachableParts: [{ name: 'planter', label: 'Planter' }],
+      nightZones: [{ name: 'pane', label: 'Pane', color: '#ffc46b', intensity: 0.8, albedo: '#34322d' }],
+      decals: [{ name: 'fascia', at: [0.5, 1.9, 0.1], normal: [0, 0, 1], up: [0, 1, 0], size: [1.3, 0.22] }],
+      colorZones: [{ name: 'paint', label: 'Joinery paint', color: '#4678a8' }],
+    };
+    // Simulate PolyFork metadata outage (429 on /api/assets) while GLB loads and cached capabilities fallback is supplied.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(raw => {
+      const url = typeof raw === 'string' ? raw : raw instanceof URL ? raw.href : raw.url;
+      if (url.endsWith('.glb')) return Promise.resolve(new Response(bytes));
+      return Promise.resolve(new Response(null, { status: 429 }));
+    });
+    const offlineAsset = await openPolyforkGlb('village-shopfront-d3088e', 'Village Shopfront', undefined, 'building', fallbackCaps);
+    expect(offlineAsset.metadataUnavailable).toBeUndefined();
+    expect(offlineAsset.capabilities.riggedParts.map(p => p.name)).toEqual(['door']);
+    expect(offlineAsset.capabilities.detachableParts.map(p => p.name)).toEqual(['planter']);
+    // Distant terracotta planter (#c0463e) must NOT be hijacked into blue zone-paint (#4678a8); it gets its own vertex slot.
+    const slots = listPaintSlots(offlineAsset);
+    expect(slots.some(s => s.id === 'zone-paint')).toBe(true);
+    expect(slots.some(s => s.id.startsWith('vertex-2-'))).toBe(true);
+
+    // Tight sRGB night matching: dark ironwork (#1a1a1a) must NOT glow when pane albedo is #34322d.
+    const iron = new T.Mesh(new T.BufferGeometry(), new T.MeshBasicMaterial());
+    iron.geometry.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
+    const lin = new T.Color('#1a1a1a');
+    iron.geometry.setAttribute('color', new T.Float32BufferAttribute([lin.r, lin.g, lin.b, lin.r, lin.g, lin.b, lin.r, lin.g, lin.b], 3));
+    const host = new T.Group();
+    host.add(iron);
+    const ironCtrl = createAssetController(host, {
+      version: 1, name: 'Iron', riggedParts: [], detachableParts: [], decals: [],
+      nightZones: [{ name: 'pane', label: 'Pane', color: '#ffc46b', intensity: 0.8, albedo: '#34322d' }],
+    });
+    ironCtrl.setNight(true);
+    expect(iron.children.length).toBe(0);
+    ironCtrl.dispose();
+    offlineAsset.controller.dispose();
   });
 
   it('falls back cleanly when PolyFork detail metadata is unavailable or non-JSON', async () => {

@@ -103,18 +103,13 @@ export class Viewport {
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.9;
     host.append(this.renderer.domElement);
-    this.renderer.domElement.setAttribute(
-      'aria-label',
-      'Interactive 3D model. Drag to orbit and scroll to zoom.',
-    );
+    this.renderer.domElement.setAttribute('aria-label', 'Interactive 3D model. Drag to orbit and scroll to zoom.');
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = false;
     this.controls.maxPolarAngle = Math.PI * 0.95;
     this.controls.minZoom = 0.24;
     this.controls.maxZoom = 9;
-    this.controls.addEventListener('change', () => {
-      this.invalidate();
-    });
+    this.controls.addEventListener('change', () => { this.invalidate(); });
     const room = new RoomEnvironment();
     const generator = new T.PMREMGenerator(this.renderer);
     this.scene.environment = generator.fromScene(room, 0.04).texture;
@@ -132,38 +127,20 @@ export class Viewport {
     if (!thumbnail) {
       this.scene.fog = new T.FogExp2(0xe7e8e1, 0.039);
       this.scene.add(this.grid, this.ground);
-      new ResizeObserver(() => {
-        this.resize();
-      }).observe(host);
-      this.renderer.domElement.addEventListener('pointerdown', event => {
-        this.pointerDownPos = { x: event.clientX, y: event.clientY };
-      });
+      new ResizeObserver(() => { this.resize(); }).observe(host);
+      this.renderer.domElement.addEventListener('pointerdown', e => { this.pointerDownPos = { x: e.clientX, y: e.clientY }; });
       this.renderer.domElement.addEventListener('pointerup', event => {
         if (!this.pickHandler || !this.model || !this.pointerDownPos) return;
-        const dx = event.clientX - this.pointerDownPos.x;
-        const dy = event.clientY - this.pointerDownPos.y;
+        const dx = event.clientX - this.pointerDownPos.x, dy = event.clientY - this.pointerDownPos.y;
         this.pointerDownPos = null;
         if (dx * dx + dy * dy > 16) return;
         const rect = this.renderer.domElement.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
-        const ndc = new T.Vector2(
-          ((event.clientX - rect.left) / rect.width) * 2 - 1,
-          -((event.clientY - rect.top) / rect.height) * 2 + 1,
-        );
-        this.raycaster.setFromCamera(ndc, this.camera);
+        this.raycaster.setFromCamera(new T.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1), this.camera);
         const meshes: T.Mesh[] = [];
-        this.model.traverse(node => {
-          if (node.userData.studioOverlay || !node.visible) return;
-          if (node instanceof T.Mesh) meshes.push(node as T.Mesh);
-        });
+        this.model.traverseVisible(node => { if (!node.userData.studioOverlay && node instanceof T.Mesh) meshes.push(node as T.Mesh); });
         const [hit] = this.raycaster.intersectObjects(meshes, false);
-        if (hit && hit.object instanceof T.Mesh) {
-          this.pickHandler({
-            mesh: hit.object as T.Mesh,
-            faceIndex: hit.faceIndex ?? -1,
-            materialIndex: hit.face?.materialIndex ?? 0,
-          });
-        }
+        if (hit && hit.object instanceof T.Mesh) this.pickHandler({ mesh: hit.object as T.Mesh, faceIndex: hit.faceIndex ?? -1, materialIndex: hit.face?.materialIndex ?? 0 });
       });
     }
     this.resize();
@@ -428,7 +405,19 @@ export class Viewport {
     if (!this.thumbnailMode) this.applyFraming(this.action?.getClip() ?? null, false);
     else this.invalidate();
   }
+  /** Drop cached animation bindings without snapping manually posed rigged parts back to load-time transforms. */
+  syncExternalPose() {
+    this.playing = false;
+    if (this.action && this.mixer && this.model) {
+      const clip = this.action.getClip();
+      this.mixer.uncacheAction(clip, this.model);
+      this.mixer.uncacheClip(clip);
+      this.action = null;
+    }
+    this.invalidate();
+  }
   play(on: boolean) {
+    if (on && !this.action && this.model?.animations[this.clipIndex]) this.bindClip(this.clipIndex);
     this.playing = on && this.action !== null;
     if (this.action) this.action.paused = !this.playing;
     this.lastTime = 0;
@@ -439,6 +428,7 @@ export class Viewport {
     this.invalidate();
   }
   seek(frac: number) {
+    if (!this.action && this.model?.animations[this.clipIndex]) this.bindClip(this.clipIndex);
     if (!this.action || !this.mixer) return;
     if (!this.thumbnailMode && this.framedClip !== this.action.getClip()) {
       this.applyFraming(this.action.getClip(), false);

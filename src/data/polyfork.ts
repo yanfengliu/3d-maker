@@ -43,6 +43,16 @@ export function clearPolyforkBackoff(): void {
   rateLimitStreak = 0;
 }
 
+export function isPolyforkRateLimited(): boolean {
+  return retryAfter - Date.now() > 0;
+}
+
+export function recordPolyforkRateLimit(retryAfterHeader: string | null): number {
+  const wait = nextBackoff(retryAfterHeader);
+  retryAfter = Date.now() + wait;
+  return wait;
+}
+
 function count(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }

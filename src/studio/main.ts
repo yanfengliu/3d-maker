@@ -5,6 +5,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { cloneForExport, type ExportOptions } from './export';
 import { addCharacterAnimations } from '../animation/library';
 import { createAssetController, type AssetController } from '../capabilities/runtime';
+import { readCapabilities } from '../capabilities/schema';
 import { catalog, parseRecipe, type Recipe } from '../data/recipe';
 import { saveAsset } from '../data/inventory';
 import {
@@ -136,7 +137,8 @@ function swap(model: T.Group, refit: boolean) {
     model.animations.push(...previous.animations.slice(model.animations.length));
   }
   stage.setModel(model, refit);
-  if (refit) stage.play(autoplay);
+  const firstClipSynthesized = Boolean(readCapabilities(model)?.clips?.[0]?.synthesized);
+  if (refit) stage.play(autoplay && !firstClipSynthesized);
   if (clip) {
     const next = model.animations.findIndex(candidate => candidate.name === clip.name);
     if (next >= 0) {
@@ -149,14 +151,25 @@ function swap(model: T.Group, refit: boolean) {
   if (refit) el<HTMLSelectElement>('view').value = 'Perspective';
 }
 
+function reapplyOriginalPose(ctrl: AssetController, pose?: Record<string, number>) {
+  if (!pose || !Object.keys(pose).length) return;
+  for (const [part, value] of Object.entries(pose)) {
+    if (ctrl.capabilities.riggedParts.some(p => p.name === part)) ctrl.setPart(part, value);
+  }
+  if (!stage.playing) stage.syncExternalPose();
+}
+
 function edit(patch: Partial<Recipe & ImportEdits>) {
   try {
     if (recipe) {
+      const prevPose = originalController?.getState().pose;
       recipe = parseRecipe({ ...recipe, ...patch });
       const built = buildModel(recipe);
       originalController?.dispose();
       originalController = createAssetController(built);
       swap(built, false);
+      reapplyOriginalPose(originalController, prevPose);
+      ui.refreshRig();
     } else if (imported) {
       applyImportEdits(imported, { ...imported.edits, ...patch });
       if (patch.scale !== undefined || patch.proportion !== undefined) stage.place(false);
@@ -205,11 +218,14 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
   ui.renderControls();
   shelf.markSelection();
   if (asset.droppedPaintSlots?.length) {
-    notify(`Skipped ${String(asset.droppedPaintSlots.length)} outdated saved color override(s) that no longer match this model.`);
+    notify(asset.metadataUnavailable
+      ? 'PolyFork metadata was temporarily unavailable; some saved edits could not be restored.'
+      : `Skipped ${String(asset.droppedPaintSlots.length)} outdated saved color override(s) that no longer match this model.`);
   }
 }
 
 function save(): Promise<string> {
+  stopPartPreviewAnimation();
   const target = selection;
   const draft = recipe ? { ...recipe } : null;
   const file = imported ? { ...imported, edits: structuredClone(imported.edits) } : null;
@@ -249,18 +265,19 @@ function remix(newName?: string) {
 
 async function exportGLB(options?: ExportOptions): Promise<ArrayBuffer> {
   const source = imported?.group;
-  const snapshot = source ? stage.restClone(() => cloneForExport(source, options)) : null;
+  const snapshot = source ? stage.restClone(() => cloneForExport(source, options, imported?.controller)) : null;
   const builtOriginal = recipe ? buildModel(recipe) : null;
+  let exportCtrl: AssetController | null = null;
   if (builtOriginal) {
     const origPose = originalController?.getState().pose;
+    exportCtrl = createAssetController(builtOriginal);
     if (origPose) {
-      const exportCtrl = createAssetController(builtOriginal);
       for (const [part, val] of Object.entries(origPose)) exportCtrl.setPart(part, val);
-      exportCtrl.dispose();
     }
     addCharacterAnimations(builtOriginal);
   }
-  const originalSnap = builtOriginal ? cloneForExport(builtOriginal, options) : null;
+  const originalSnap = builtOriginal ? cloneForExport(builtOriginal, options, exportCtrl) : null;
+  exportCtrl?.dispose();
   const model = originalSnap?.root ?? snapshot?.root;
   if (!model) throw new Error('Choose an asset to export.');
   try {
@@ -317,11 +334,13 @@ function applyRecipe(input: unknown) {
   const next = parseRecipe(input);
   if (!recipe || next.template !== recipe.template) { choose(next); return; }
   openSequence++;
+  const prevPose = originalController?.getState().pose;
   const model = buildModel(next);
   originalController?.dispose();
   originalController = createAssetController(model);
   recipe = next;
   swap(model, false);
+  reapplyOriginalPose(originalController, prevPose);
   toolbar();
   ui.renderControls();
 }
@@ -333,7 +352,12 @@ const paintSlots = () => imported ? listPaintSlots(imported) : [];
 
 function setImportEdits(edits: ImportEdits) {
   if (!imported) throw new Error('Open an imported GLB first.');
+  stopPartPreviewAnimation();
   const previous = imported.edits;
+  if (JSON.stringify(previous.pose ?? {}) !== JSON.stringify(edits.pose ?? {})) {
+    stage.syncExternalPose();
+    showPlayback(false);
+  }
   applyImportEdits(imported, edits);
   if (previous.scale !== edits.scale || previous.proportion !== edits.proportion) stage.place(false);
   else stage.invalidate();

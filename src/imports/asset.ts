@@ -1,7 +1,13 @@
 import { Color, Group } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createAssetController, inspectAsset, type AssetController } from '../capabilities/runtime';
-import { readCapabilities, type AssetCapabilities } from '../capabilities/schema';
+import {
+  readCapabilities,
+  type AssetCapabilities,
+  type AssetDimensionsSpec,
+  type ColorZoneSpec,
+  type NightZoneSpec,
+} from '../capabilities/schema';
 import { abortableDelay } from '../data/polyfork';
 import { buildPolyforkCapabilities, fetchPolyforkDetail } from '../data/polyfork-detail';
 import { applyPalette, buildPalette, validatePaint, type ImportPalette } from './paint';
@@ -27,6 +33,10 @@ export interface ImportedAsset {
   palette: ImportPalette;
   capabilities: AssetCapabilities;
   controller: AssetController;
+  baseDimensions?: AssetDimensionsSpec;
+  baseColorZones?: ColorZoneSpec[];
+  baseNightZones: NightZoneSpec[];
+  metadataUnavailable?: boolean;
   droppedPaintSlots?: string[];
 }
 
@@ -36,8 +46,16 @@ export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): {
   if (saved.paint) {
     const kept: Record<string, string> = {};
     for (const [id, hex] of Object.entries(saved.paint)) {
-      if (asset.palette.slots.has(id)) kept[id] = hex;
-      else dropped.push(id);
+      if (asset.palette.slots.has(id)) {
+        kept[id] = hex;
+      } else {
+        const migrated = asset.palette.legacyMap.get(id);
+        if (migrated && asset.palette.slots.has(migrated)) {
+          if (!(migrated in kept)) kept[migrated] = hex;
+        } else {
+          dropped.push(id);
+        }
+      }
     }
     if (Object.keys(kept).length) base.paint = kept;
   }
@@ -46,20 +64,29 @@ export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): {
     const keptPose: Record<string, number> = {};
     for (const [name, value] of Object.entries(saved.pose)) {
       if (validRigged.has(name) && Number.isFinite(value)) keptPose[name] = value;
+      else dropped.push('pose:' + name);
     }
     if (Object.keys(keptPose).length) base.pose = keptPose;
   }
   if (saved.hiddenParts?.length) {
     const validDetach = new Set(asset.capabilities.detachableParts.map(p => p.name));
-    const keptHidden = saved.hiddenParts.filter(name => validDetach.has(name));
+    const keptHidden = saved.hiddenParts.filter(name => {
+      if (validDetach.has(name)) return true;
+      dropped.push('part:' + name);
+      return false;
+    });
     if (keptHidden.length) base.hiddenParts = [...new Set(keptHidden)];
   }
-  if (saved.night && asset.capabilities.nightZones.length) base.night = true;
+  if (saved.night) {
+    if (asset.capabilities.nightZones.length) base.night = true;
+    else dropped.push('night');
+  }
   if (saved.decalText) {
     const validDecals = new Set(asset.capabilities.decals.map(d => d.name));
     const keptText: Record<string, string> = {};
     for (const [name, text] of Object.entries(saved.decalText)) {
       if (validDecals.has(name) && text.trim()) keptText[name] = text.trim().slice(0, 60);
+      else if (text.trim()) dropped.push('decal:' + name);
     }
     if (Object.keys(keptText).length) base.decalText = keptText;
   }
@@ -138,6 +165,13 @@ export function validateEdits(edits: ImportEdits): ImportEdits {
   };
 }
 
+function recordsEqual(a?: Readonly<Record<string, string>>, b?: Readonly<Record<string, string>>): boolean {
+  const keysA = a ? Object.keys(a) : [];
+  const keysB = b ? Object.keys(b) : [];
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(key => a?.[key] === b?.[key]);
+}
+
 export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void {
   const edits = validateEdits(next);
   // Validate part names before mutating anything so rejected edits leave the scene clean.
@@ -154,11 +188,29 @@ export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void 
     if (!decalSet.has(name)) throw new Error('This model has no decal area named ' + name + '.');
   }
 
+  const paintChanged = !recordsEqual(asset.edits.paint, edits.paint);
+  const decalsChanged = !recordsEqual(asset.edits.decalText, edits.decalText);
   applyPalette(asset.palette, new Color(edits.tint), asset.edits.paint, edits.paint);
-  // Keep night zone albedos synchronized when a user repaints a zone so exported GLBs stay self-consistent.
-  for (const zone of asset.capabilities.nightZones) {
-    const slot = asset.palette.slots.get('zone-' + zone.name);
-    if (slot) zone.albedo = (edits.paint?.[slot.id] ?? slot.color).toLowerCase();
+
+  // Keep exported colorZones aligned with current painted colors so re-imported GLBs cluster cleanly.
+  if (asset.baseColorZones && asset.capabilities.colorZones) {
+    for (let i = 0; i < asset.capabilities.colorZones.length; i++) {
+      const zone = asset.capabilities.colorZones[i];
+      const baseZone = asset.baseColorZones[i];
+      if (!zone || !baseZone) continue;
+      zone.color = (edits.paint?.['zone-' + zone.name] ?? baseZone.color).toLowerCase();
+    }
+  }
+  // Keep night zone albedos synchronized only when the user explicitly repaints that zone, preserving upstream albedos otherwise.
+  for (let i = 0; i < asset.capabilities.nightZones.length; i++) {
+    const zone = asset.capabilities.nightZones[i];
+    const baseZone = asset.baseNightZones[i];
+    if (!zone || !baseZone) continue;
+    const override = edits.paint?.['zone-' + zone.name];
+    zone.albedo = (override ?? baseZone.albedo).toLowerCase();
+  }
+  if (paintChanged && asset.capabilities.nightZones.length) {
+    asset.controller.refreshNightOverlays();
   }
 
   asset.controller.resetParts();
@@ -178,14 +230,28 @@ export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void 
   if (nightOn) edits.night = true;
   else delete edits.night;
 
-  if (edits.decalText && Object.keys(edits.decalText).length) {
-    asset.controller.setDecalsVisible(true, edits.decalText);
-  } else if (asset.controller.areDecalsVisible()) {
-    asset.controller.setDecalsVisible(true, {});
+  if (decalsChanged) {
+    if (edits.decalText && Object.keys(edits.decalText).length) {
+      asset.controller.setDecalsVisible(true, edits.decalText);
+    } else if (asset.controller.areDecalsVisible()) {
+      asset.controller.setDecalsVisible(true, {});
+    }
   }
 
   // The transform sits outside the imported scene, including its animated root and skeleton.
   asset.group.scale.set(edits.scale, edits.scale * edits.proportion, edits.scale);
+  if (asset.baseDimensions) {
+    const round = (n: number) => Math.round(n * 1000) / 1000;
+    asset.capabilities.dimensions = {
+      sizeM: {
+        x: round(asset.baseDimensions.sizeM.x * edits.scale),
+        y: round(asset.baseDimensions.sizeM.y * edits.scale * edits.proportion),
+        z: round(asset.baseDimensions.sizeM.z * edits.scale),
+      },
+      originY: round(asset.baseDimensions.originY * edits.scale * edits.proportion),
+      ...(asset.baseDimensions.origin ? { origin: asset.baseDimensions.origin } : {}),
+    };
+  }
   asset.group.userData.studioName = edits.name;
   asset.capabilities.name = edits.name;
   asset.controller.capabilities.name = edits.name;
@@ -237,12 +303,21 @@ function checkResources(bytes: ArrayBuffer): void {
   }
 }
 
+function intersectWithNodes(group: Group, caps: AssetCapabilities): AssetCapabilities {
+  return {
+    ...structuredClone(caps),
+    riggedParts: caps.riggedParts.filter(part => Boolean(group.getObjectByName(part.name))),
+    detachableParts: caps.detachableParts.filter(part => Boolean(group.getObjectByName(part.name))),
+  };
+}
+
 async function openBinary(
   bytes: ArrayBuffer,
   source: ImportSource,
   label: string,
   file: Blob | null,
   providedCapabilities?: (group: Group) => AssetCapabilities,
+  metadataUnavailable = false,
 ): Promise<ImportedAsset> {
   checkResources(bytes);
   const gltf = await new GLTFLoader().parseAsync(bytes, '');
@@ -254,11 +329,7 @@ async function openBinary(
   group.animations = gltf.animations;
   const name = label.trim().slice(0, 80) || 'Imported asset';
   const embedded = readCapabilities(group);
-  const capabilities = providedCapabilities ? providedCapabilities(group) : (embedded ? {
-    ...embedded,
-    riggedParts: embedded.riggedParts.filter(part => Boolean(group.getObjectByName(part.name))),
-    detachableParts: embedded.detachableParts.filter(part => Boolean(group.getObjectByName(part.name))),
-  } : {
+  const capabilities = providedCapabilities ? providedCapabilities(group) : (embedded ? intersectWithNodes(group, embedded) : {
     ...inspectAsset(group),
     name,
     source: source.kind === 'local' ? { kind: 'local' as const, id: source.filename } : { kind: 'polyfork' as const, id: source.assetId },
@@ -278,9 +349,22 @@ async function openBinary(
     ...(restored.decalText ? { decalText: restored.decalText } : {}),
   };
   const asset: ImportedAsset = {
-    group, source, originalFile: file, palette, capabilities: controller.capabilities, controller, edits: initialEdits,
+    group,
+    source,
+    originalFile: file,
+    palette,
+    capabilities: controller.capabilities,
+    controller,
+    edits: initialEdits,
+    ...(controller.capabilities.dimensions ? { baseDimensions: structuredClone(controller.capabilities.dimensions) } : {}),
+    ...(controller.capabilities.colorZones ? { baseColorZones: structuredClone(controller.capabilities.colorZones) } : {}),
+    baseNightZones: structuredClone(controller.capabilities.nightZones),
+    ...(metadataUnavailable ? { metadataUnavailable: true } : {}),
   };
   applyImportEdits(asset, initialEdits);
+  if (initialEdits.decalText && Object.keys(initialEdits.decalText).length) {
+    asset.controller.setDecalsVisible(true, initialEdits.decalText);
+  }
   return asset;
 }
 
@@ -293,6 +377,7 @@ export function openLocalGlb(file: File): Promise<ImportedAsset> {
 }
 
 const glbTimeoutMs = 25_000;
+const postGlbDetailWaitMs = 2_500;
 const retryableStatuses = new Set([429, 502, 503, 504]);
 
 function retryDelayMs(response: Response, attempt: number): number {
@@ -301,7 +386,13 @@ function retryDelayMs(response: Response, attempt: number): number {
   return 1_000 * (attempt + 1);
 }
 
-export async function openPolyforkGlb(assetId: string, name: string, signal?: AbortSignal, category?: string): Promise<ImportedAsset> {
+export async function openPolyforkGlb(
+  assetId: string,
+  name: string,
+  signal?: AbortSignal,
+  category?: string,
+  fallbackCapabilities?: AssetCapabilities,
+): Promise<ImportedAsset> {
   const url = polyforkGlbUrl(assetId);
   const detailPromise = fetchPolyforkDetail(assetId, signal);
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -338,14 +429,24 @@ export async function openPolyforkGlb(assetId: string, name: string, signal?: Ab
       throw error;
     }
     signal?.throwIfAborted();
-    const detail = await detailPromise;
+    // Bound post-GLB metadata wait so a slow or rate-limited API endpoint never stalls opening a downloaded model.
+    const detail = await Promise.race([
+      detailPromise,
+      abortableDelay(postGlbDetailWaitMs, signal).then(() => null),
+    ]);
     signal?.throwIfAborted();
+    const metadataUnavailable = !detail && !fallbackCapabilities;
     return openBinary(
       bytes,
       { kind: 'polyfork', assetId, title: name, ...(category ? { category } : {}) },
       name,
       null,
-      group => buildPolyforkCapabilities(group, assetId, name, detail),
+      group => {
+        if (detail) return buildPolyforkCapabilities(group, assetId, name, detail);
+        if (fallbackCapabilities) return intersectWithNodes(group, fallbackCapabilities);
+        return buildPolyforkCapabilities(group, assetId, name, null);
+      },
+      metadataUnavailable,
     );
   }
   throw new Error('PolyFork could not supply this model.');

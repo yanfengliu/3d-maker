@@ -143,26 +143,34 @@ export function createInspectorBridge(host: WorkspaceBridge) {
       speed => { host.stage.speed = speed; },
     );
     host.stage.onAdvance = index => { namePlaybackControl(); markClip?.(index); };
-    const ctrl = host.getController();
-    refreshRigUi = showRiggedParts(ctrl?.capabilities.riggedParts ?? [], clips.length > 0, {
-      getValue: part => ctrl?.getPart(part) ?? 0,
+    const initialCtrl = host.getController();
+    refreshRigUi = showRiggedParts(initialCtrl?.capabilities.riggedParts ?? [], clips.length > 0, {
+      getValue: part => host.getController()?.getPart(part) ?? 0,
       setValue: (part, value) => {
+        const ctrl = host.getController();
         if (!ctrl) return;
-        if (host.stage.playing) { host.stage.play(false); showPlayback(false); }
+        host.stage.syncExternalPose();
+        showPlayback(false);
         ctrl.setPart(part, value);
         host.syncRigEdits();
         host.stage.invalidate();
       },
       toggle: part => {
+        const ctrl = host.getController();
         if (!ctrl) return 0;
-        if (host.stage.playing) { host.stage.play(false); showPlayback(false); }
+        host.stage.syncExternalPose();
+        showPlayback(false);
         const val = ctrl.togglePart(part);
         host.syncRigEdits();
         host.stage.invalidate();
         return val;
       },
       resetAll: () => {
-        ctrl?.resetParts();
+        const ctrl = host.getController();
+        if (!ctrl) return;
+        host.stage.syncExternalPose();
+        showPlayback(false);
+        ctrl.resetParts();
         host.syncRigEdits();
         host.stage.invalidate();
       },

@@ -81,6 +81,9 @@ it('supports natural-language commands and JSON settings for rigged parts, detac
   const closed = await editImportWithPrompt(partial.edits, shopSlots, 'close door', undefined, shopCaps);
   expect(closed.edits.pose).toBeUndefined();
 
+  const multiHide = await editImportWithPrompt(base, shopSlots, 'hide planter and lantern', undefined, shopCaps);
+  expect(multiHide.edits.hiddenParts).toEqual(['lantern', 'planter']);
+
   expect(() => parseImportedSettings({ ...base, pose: { ghost: 10 } }, shopSlots, shopCaps)).toThrow(/Unknown rigged part/);
   expect(() => parseImportedSettings({ ...base, hiddenParts: ['ghost'] }, shopSlots, shopCaps)).toThrow(/Unknown detachable part/);
 });

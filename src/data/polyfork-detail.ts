@@ -1,4 +1,5 @@
 import type { Object3D } from 'three';
+import { isPolyforkRateLimited, recordPolyforkRateLimit } from './polyfork';
 import {
   humanizeLabel,
   parseDecalSlots,
@@ -210,20 +211,26 @@ export async function fetchPolyforkDetail(assetId: string, signal?: AbortSignal)
   if (!/^[a-z0-9][a-z0-9_-]{0,159}$/.test(assetId)) return null;
   const cached = cache.get(assetId);
   if (cached && cached.expires > Date.now()) return cached.value;
+  if (isPolyforkRateLimited()) return null;
 
   try {
-    const timeout = AbortSignal.timeout(10_000);
+    const timeout = AbortSignal.timeout(4_000);
     const reqSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
     const response = await fetch(`${origin}/api/assets/${assetId}`, { credentials: 'omit', signal: reqSignal });
+    if (response.status === 429) {
+      recordPolyforkRateLimit(response.headers.get('Retry-After'));
+      return null;
+    }
     if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) return null;
     const raw: unknown = await response.json();
     let paramsRaw: unknown = null;
     if (isRecord(raw) && typeof raw.params_url === 'string' && raw.params_url.startsWith(`${origin}/cdn/`)) {
       try {
-        const paramsTimeout = AbortSignal.timeout(8_000);
+        const paramsTimeout = AbortSignal.timeout(3_000);
         const paramsSignal = signal ? AbortSignal.any([signal, paramsTimeout]) : paramsTimeout;
         const paramsRes = await fetch(raw.params_url, { credentials: 'omit', signal: paramsSignal });
-        if (paramsRes.ok && (paramsRes.headers.get('content-type') ?? '').includes('json')) paramsRaw = await paramsRes.json();
+        if (paramsRes.status === 429) recordPolyforkRateLimit(paramsRes.headers.get('Retry-After'));
+        else if (paramsRes.ok && (paramsRes.headers.get('content-type') ?? '').includes('json')) paramsRaw = await paramsRes.json();
       } catch {
         // Optional colorways/descriptions; proceed cleanly with core detail record.
       }

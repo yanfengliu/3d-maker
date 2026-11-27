@@ -97,6 +97,30 @@ export interface AssetCapabilities {
 
 const hexPattern = /^#[\da-f]{6}$/i;
 const axes = new Set<Axis>(['x', 'y', 'z']);
+const maxParts = 64;
+const maxZones = 64;
+const maxNightZones = 32;
+const maxDecals = 32;
+const maxPresets = 32;
+const maxClips = 256;
+const maxNameLen = 80;
+const maxDescLen = 280;
+
+function trimText(value: unknown, maxLen: number): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLen) : undefined;
+}
+
+function validDecalBasis(normal: [number, number, number], up: [number, number, number]): boolean {
+  const nLen = Math.hypot(normal[0], normal[1], normal[2]);
+  const uLen = Math.hypot(up[0], up[1], up[2]);
+  if (nLen < 1e-5 || uLen < 1e-5) return false;
+  const cx = up[1] * normal[2] - up[2] * normal[1];
+  const cy = up[2] * normal[0] - up[0] * normal[2];
+  const cz = up[0] * normal[1] - up[1] * normal[0];
+  return Math.hypot(cx, cy, cz) / (nLen * uLen) > 1e-4;
+}
 
 export function humanizeLabel(raw: string): string {
   const spaced = raw
@@ -125,18 +149,17 @@ function tuple2(value: unknown): [number, number] | null {
 export function parseDecalSlots(value: unknown): DecalSlotSpec[] {
   if (!Array.isArray(value)) return [];
   const slots: DecalSlotSpec[] = [];
+  const seen = new Set<string>();
   for (const row of value) {
-    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    if (slots.length >= maxDecals) break;
+    if (!isRecord(row)) continue;
+    const name = trimText(row.name, maxNameLen);
+    if (!name || seen.has(name)) continue;
     const at = tuple3(row.at), normal = tuple3(row.normal), up = tuple3(row.up), size = tuple2(row.size);
-    if (!at || !normal || !up || !size || size[0] <= 0 || size[1] <= 0) continue;
-    slots.push({
-      name: row.name.trim(),
-      at,
-      normal,
-      up,
-      size,
-      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
-    });
+    if (!at || !normal || !up || !size || size[0] <= 0 || size[1] <= 0 || !validDecalBasis(normal, up)) continue;
+    seen.add(name);
+    const describe = trimText(row.describe, maxDescLen);
+    slots.push({ name, at, normal, up, size, ...(describe ? { describe } : {}) });
   }
   return slots;
 }
@@ -144,21 +167,21 @@ export function parseDecalSlots(value: unknown): DecalSlotSpec[] {
 function parseRiggedParts(value: unknown): RiggedPartSpec[] {
   if (!Array.isArray(value)) return [];
   const parts: RiggedPartSpec[] = [];
+  const seen = new Set<string>();
   for (const row of value) {
-    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    if (parts.length >= maxParts) break;
+    if (!isRecord(row)) continue;
+    const name = trimText(row.name, maxNameLen);
+    if (!name || seen.has(name)) continue;
     const axis = row.axis;
     if (typeof axis !== 'string' || !axes.has(axis as Axis)) continue;
     const range = tuple2(row.range);
     if (!range || range[0] === range[1]) continue;
+    seen.add(name);
     const type = row.type === 'slide' ? 'slide' : 'rotate';
-    parts.push({
-      name: row.name,
-      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
-      type,
-      axis: axis as Axis,
-      range,
-      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
-    });
+    const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
+    const describe = trimText(row.describe, maxDescLen);
+    parts.push({ name, label, type, axis: axis as Axis, range, ...(describe ? { describe } : {}) });
   }
   return parts;
 }
@@ -166,15 +189,21 @@ function parseRiggedParts(value: unknown): RiggedPartSpec[] {
 function parseDetachableParts(value: unknown): DetachablePartSpec[] {
   if (!Array.isArray(value)) return [];
   const parts: DetachablePartSpec[] = [];
+  const seen = new Set<string>();
   for (const row of value) {
-    if (typeof row === 'string' && row.trim()) {
-      parts.push({ name: row, label: humanizeLabel(row) });
-    } else if (isRecord(row) && typeof row.name === 'string' && row.name.trim()) {
-      parts.push({
-        name: row.name,
-        label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
-        ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
-      });
+    if (parts.length >= maxParts) break;
+    if (typeof row === 'string') {
+      const name = trimText(row, maxNameLen);
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      parts.push({ name, label: humanizeLabel(name) });
+    } else if (isRecord(row)) {
+      const name = trimText(row.name, maxNameLen);
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
+      const describe = trimText(row.describe, maxDescLen);
+      parts.push({ name, label, ...(describe ? { describe } : {}) });
     }
   }
   return parts;
@@ -183,19 +212,26 @@ function parseDetachableParts(value: unknown): DetachablePartSpec[] {
 function parseNightZones(value: unknown): NightZoneSpec[] {
   if (!Array.isArray(value)) return [];
   const zones: NightZoneSpec[] = [];
+  const seen = new Set<string>();
   for (const row of value) {
-    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
+    if (zones.length >= maxNightZones) break;
+    if (!isRecord(row)) continue;
+    const name = trimText(row.name, maxNameLen);
+    if (!name || seen.has(name)) continue;
     if (typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
     if (typeof row.albedo !== 'string' || !hexPattern.test(row.albedo)) continue;
+    seen.add(name);
     const intensity = typeof row.intensity === 'number' && Number.isFinite(row.intensity) && row.intensity > 0
       ? Math.min(4, row.intensity) : 1;
+    const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
+    const describe = trimText(row.describe, maxDescLen);
     zones.push({
-      name: row.name,
-      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
+      name,
+      label,
       color: row.color.toLowerCase(),
       intensity,
       albedo: row.albedo.toLowerCase(),
-      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
+      ...(describe ? { describe } : {}),
     });
   }
   return zones;
@@ -204,15 +240,16 @@ function parseNightZones(value: unknown): NightZoneSpec[] {
 function parseColorZones(value: unknown): ColorZoneSpec[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const zones: ColorZoneSpec[] = [];
+  const seen = new Set<string>();
   for (const row of value) {
-    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim()) continue;
-    if (typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
-    zones.push({
-      name: row.name,
-      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
-      color: row.color.toLowerCase(),
-      ...(typeof row.describe === 'string' && row.describe.trim() ? { describe: row.describe.trim() } : {}),
-    });
+    if (zones.length >= maxZones) break;
+    if (!isRecord(row)) continue;
+    const name = trimText(row.name, maxNameLen);
+    if (!name || seen.has(name) || typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
+    seen.add(name);
+    const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
+    const describe = trimText(row.describe, maxDescLen);
+    zones.push({ name, label, color: row.color.toLowerCase(), ...(describe ? { describe } : {}) });
   }
   return zones.length ? zones : undefined;
 }
@@ -220,20 +257,38 @@ function parseColorZones(value: unknown): ColorZoneSpec[] | undefined {
 function parsePresets(value: unknown): ColorwayPresetSpec[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const presets: ColorwayPresetSpec[] = [];
+  const seen = new Set<string>();
   for (const row of value) {
-    if (!isRecord(row) || typeof row.name !== 'string' || !row.name.trim() || !isRecord(row.colors)) continue;
+    if (presets.length >= maxPresets) break;
+    if (!isRecord(row) || !isRecord(row.colors)) continue;
+    const name = trimText(row.name, maxNameLen);
+    if (!name || seen.has(name)) continue;
     const colors: Record<string, string> = {};
     for (const [k, v] of Object.entries(row.colors)) {
-      if (typeof v === 'string' && hexPattern.test(v)) colors[k] = v.toLowerCase();
+      if (Object.keys(colors).length >= maxZones) break;
+      const key = trimText(k, maxNameLen);
+      if (key && typeof v === 'string' && hexPattern.test(v)) colors[key] = v.toLowerCase();
     }
     if (!Object.keys(colors).length) continue;
-    presets.push({
-      name: row.name,
-      label: typeof row.label === 'string' && row.label.trim() ? row.label.trim() : humanizeLabel(row.name),
-      colors,
-    });
+    seen.add(name);
+    const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
+    presets.push({ name, label, colors });
   }
   return presets.length ? presets : undefined;
+}
+
+function parseClips(value: unknown): { name: string; duration: number; synthesized?: boolean }[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const clips: { name: string; duration: number; synthesized?: boolean }[] = [];
+  for (const row of value) {
+    if (clips.length >= maxClips) break;
+    if (!isRecord(row)) continue;
+    const name = trimText(row.name, maxNameLen);
+    const duration = typeof row.duration === 'number' && Number.isFinite(row.duration) && row.duration >= 0 ? row.duration : -1;
+    if (!name || duration < 0) continue;
+    clips.push({ name, duration, ...(row.synthesized === true ? { synthesized: true } : {}) });
+  }
+  return clips.length ? clips : undefined;
 }
 
 /** Validate and normalize a Form Foundry capability manifest read from GLB extras or JSON. */
@@ -282,9 +337,11 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
   if (isRecord(value.ik) && (value.ik.type === 'legs' || value.ik.type === 'arm')) {
     result.ik = {
       type: value.ik.type,
-      ...(typeof value.ik.summary === 'string' ? { summary: value.ik.summary } : {}),
+      ...(typeof value.ik.summary === 'string' ? { summary: value.ik.summary.trim().slice(0, maxDescLen) } : {}),
     };
   }
+  const clips = parseClips(value.clips);
+  if (clips) result.clips = clips;
   if (isRecord(value.state)) {
     const state: AssetRuntimeState = {};
     if (isRecord(value.state.pose)) {
@@ -340,7 +397,10 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
   return found;
 }
 
-/** Write a clean JSON snapshot of capabilities onto the root node for glTF extras serialization. */
+/** Write a clean JSON snapshot of capabilities onto the root node, clearing any stale nested copies. */
 export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
+  root.traverse(node => {
+    if (node !== root && 'formFoundry' in node.userData) delete node.userData.formFoundry;
+  });
   root.userData.formFoundry = structuredClone(capabilities);
 }

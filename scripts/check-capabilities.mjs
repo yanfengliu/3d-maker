@@ -144,6 +144,7 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
   };
 
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, acceptDownloads: true });
+  let failMetadata = false;
   try {
     await context.route(origin + '/**', async route => {
       const url = new URL(route.request().url());
@@ -151,9 +152,11 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
       if (url.pathname === '/api/assets') {
         await route.fulfill({ headers, json: { page: 1, per_page: 12, total: 1, assets: [detail] } });
       } else if (url.pathname === `/api/assets/${assetId}`) {
-        await route.fulfill({ headers, json: detail });
+        if (failMetadata) await route.fulfill({ status: 429, headers });
+        else await route.fulfill({ headers, json: detail });
       } else if (url.pathname === `/cdn/${assetId}-params.json`) {
-        await route.fulfill({ headers, json: params });
+        if (failMetadata) await route.fulfill({ status: 429, headers });
+        else await route.fulfill({ headers, json: params });
       } else if (url.pathname === `/cdn/${assetId}.glb`) {
         await route.fulfill({ headers, contentType: 'model/gltf-binary', body: glb });
       } else {
@@ -198,8 +201,18 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.ok(nightSample.darkBg > 10000 && nightSample.warmGlow > 20, 'Night mode did not darken viewport and illuminate warm pane: ' + JSON.stringify(nightSample));
     await page.screenshot({ path: join(out, 'capabilities-night.png') });
 
-    // 4. Test AI tools natural-language command + capability reference disclosure.
+    // 3b. Exercise decal toggle and Test animation loop, confirming opening AI tools stops Test cleanly.
+    await page.click('#decalToggle');
+    assert.equal(await page.locator('#decalToggle').getAttribute('aria-pressed'), 'false');
+    await page.click('#decalToggle');
+    assert.equal(await page.locator('#decalToggle').getAttribute('aria-pressed'), 'true');
+    await page.click('[data-part-play="door"]');
+    assert.equal(await page.locator('[data-part-play="door"]').getAttribute('aria-pressed'), 'true');
+    await waitFrames(page, 4);
+
+    // 4. Test AI tools stops running Test preview + natural-language command + capability reference disclosure.
     await page.click('#assistant');
+    assert.equal(await page.locator('[data-part-play="door"]').getAttribute('aria-pressed'), 'false');
     const summaryText = await page.locator('dialog').innerText();
     assert.ok(summaryText.includes('Interactive parts and model capabilities'));
     await page.locator('#promptText').fill('close door, show planter');
@@ -209,11 +222,22 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable[0].visible)), true);
 
-    // 5. Re-open door, save remix, reload, and verify all interactive edits persist.
-    await page.click('[data-part-toggle="door"]');
+    // 4b. Test 3D viewport eyedropper selects a visible paint slot on click (and ignores hidden detachable parts).
     await page.uncheck('[data-detach-part="planter"]');
+    await page.click('#pickColor');
+    assert.equal(await page.locator('#pickColor').getAttribute('aria-pressed'), 'true');
+    const vp = await page.locator('#viewport').boundingBox();
+    await page.mouse.click(vp.x + vp.width * 0.5, vp.y + vp.height * 0.5);
+    await waitFrames(page, 2);
+    const pickedSlot = await page.locator('#paintSlot').inputValue();
+    assert.ok(pickedSlot.startsWith('zone-') && pickedSlot !== 'zone-pot', 'Unexpected picked slot: ' + pickedSlot);
+    await page.click('#pickColor');
+
+    // 5. Re-open door, save remix, then simulate PolyFork metadata outage (429) on reload and verify all edits persist via cached snapshot!
+    await page.click('[data-part-toggle="door"]');
     await page.click('#save');
     await page.waitForFunction(() => document.querySelector('#save')?.textContent?.includes('Save changes'));
+    failMetadata = true;
     await page.reload();
     await page.waitForFunction(() => window.__shotReady);
     await page.locator('[data-source-filter="saved"]').click();
@@ -223,6 +247,8 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.deepEqual(restoredEdits.hiddenParts, ['planter']);
     assert.equal(restoredEdits.night, true);
     assert.equal(restoredEdits.decalText.fascia, 'BAKERY');
+    assert.equal(restoredEdits.paint['zone-paint'], '#47582c');
+    failMetadata = false;
 
     // 6. Export GLB with default checked rigged-part clips, verify extras.formFoundry + clip, then re-import offline.
     await page.click('#export');
@@ -235,6 +261,7 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.equal(manifest.version, 1);
     assert.deepEqual(manifest.riggedParts.map(p => p.name), ['door']);
     assert.deepEqual(doc.animations.map(a => a.name), ['Open door']);
+    assert.equal(manifest.clips[0].synthesized, true);
 
     await page.click('#import');
     await page.locator('input[type=file]').setInputFiles({
@@ -243,6 +270,43 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Offline Shopfront');
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 80);
     assert.deepEqual(await page.evaluate(() => window.forgeStudio.listClips().map(c => c.name)), ['Open door']);
+    // Synthesized clip does NOT autoplay and overwrite the posed door.
+    assert.match(await page.locator('#play').innerText(), /Play clip/);
+    // Detachable part survived export hidden and can be toggled visible again!
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable[0].visible)), false);
+    await page.check('[data-detach-part="planter"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable[0].visible)), true);
+    // Colorway zone-paint survived repainted export intact and can switch back to Aegean blue.
+    await page.click('[data-colorway="aegean-blue"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listPaintSlots().find(s => s.id === 'zone-paint')?.color)), '#4678a8');
+    // Closing door after re-import and re-exporting must bake 0 deg (not stale 80 deg from clip bind)!
+    await page.click('.parts-drawer summary');
+    await page.click('[data-part-toggle="door"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
+    const secondGlb = await page.evaluate(async () => {
+      const bytes = await window.forgeStudio.exportGLB();
+      const len = new DataView(bytes).getUint32(12, true);
+      return JSON.parse(new TextDecoder().decode(new Uint8Array(bytes, 20, len)));
+    });
+    const secondManifest = secondGlb.nodes.map(n => n.extras?.formFoundry).find(Boolean);
+    assert.equal(secondManifest.state?.pose, undefined);
+
+    // 6b. Switch from 0-clip PolyFork model to original Cargo Pod: no leaked click handler, pose survives swatch edit, and AI tools omits rigged parts.
+    await page.locator('[data-source-filter="all"]').click();
+    await page.locator(`[data-key="polyfork:${assetId}"]`).click();
+    await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Shopfront Fixture');
+    await page.getByRole('button', { name: 'Open Cargo Pod', exact: true }).click();
+    await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Cargo Pod');
+    await page.click('.parts-drawer summary');
+    await page.click('[data-part-toggle="CaseLid"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), -72);
+    await page.getByRole('button', { name: 'Terracotta' }).click();
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), -72);
+    await page.click('[data-part-toggle="CaseLid"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
+    await page.click('#assistant');
+    assert.ok(!(await page.locator('dialog').innerText()).includes('Interactive parts and model capabilities'));
+    await page.click('#closeDialog');
 
     // 7. Verify SDK exports inspectAsset and createAssetController in a real browser module load.
     const sdkPage = await context.newPage();

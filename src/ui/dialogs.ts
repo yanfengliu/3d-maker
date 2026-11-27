@@ -6,6 +6,7 @@ import type { ImportEdits } from '../imports';
 import type { ExportOptions } from '../studio/export';
 import { el, escapeHtml, notify, report } from './dom';
 import { icon } from './icons';
+import { stopPartPreviewAnimation } from './model-parts';
 import './dialogs.css';
 
 interface DialogActions {
@@ -81,6 +82,7 @@ export function setupDialogs(actions: DialogActions) {
   });
 
   function open(title: string, html: string) {
+    stopPartPreviewAnimation();
     lifecycle.abort();
     lifecycle = new AbortController();
     el('dialogTitle').textContent = title;
@@ -153,7 +155,7 @@ export function setupDialogs(actions: DialogActions) {
       : `<div class="modelstate"><span id="modelState">Checking on-device AI…</span><button class="textbutton" id="enableModel" hidden>Enable on-device AI</button></div>
         <form id="promptForm" class="dialogstack"><label for="promptText" class="field">Describe your edit<textarea id="promptText" rows="3" maxlength="2000"></textarea></label>
         <div class="dialogactions"><button class="btn orange" id="applyPrompt">${icon('spark', 15)} Apply edit</button></div></form>`;
-    const reference = capabilityReferenceMarkup(slots, caps);
+    const reference = capabilityReferenceMarkup(slots, imported ? caps : null);
     const signal = open('AI tools', `<div class="dialogstack">${tabs}${editor}${reference}${statusLine}</div>`);
     button('promptTab').onclick = () => { assistant(); };
     button('recipeTab').onclick = () => { assistant(true); };

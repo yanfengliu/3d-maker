@@ -25,6 +25,12 @@ export function stopPartPreviewAnimation(): void {
   if (activeAnimFrame) cancelAnimationFrame(activeAnimFrame);
   activeAnimFrame = 0;
   activeAnimPart = '';
+  if (typeof document !== 'undefined') {
+    for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-part-play][aria-pressed="true"]')) {
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = 'Test';
+    }
+  }
 }
 
 function formatPartValue(part: RiggedPartSpec, value: number): string {
@@ -159,9 +165,13 @@ export function showRiggedParts(
   const rows = rigRowsMarkup(parts, actions.getValue);
   if (!hasClips) {
     el('motionCount').textContent = String(parts.length) + (parts.length === 1 ? ' interactive part' : ' interactive parts');
-    panel.innerHTML = `<div class="rig-parts" id="rigPartsList">${rows}</div>
+    panel.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'rig-parts-wrap';
+    wrap.innerHTML = `<div class="rig-parts" id="rigPartsList">${rows}</div>
       <div class="rig-footer"><button type="button" class="rig-btn" id="resetRigParts">Reset parts</button></div>`;
-    return wireRigControls(panel, parts, actions);
+    panel.append(wrap);
+    return wireRigControls(wrap, parts, actions);
   }
   const drawer = document.createElement('details');
   drawer.className = 'parts-drawer';

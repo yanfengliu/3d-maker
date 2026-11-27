@@ -4,6 +4,7 @@ import { catalog, type Recipe } from '../data/recipe';
 import { readInventory } from '../data/inventory';
 import { listImports, type ImportedAsset, type ImportEdits } from '../imports';
 import { showPlayback } from '../ui/inspector';
+import { stopPartPreviewAnimation } from '../ui/model-parts';
 import type { ExportOptions } from './export';
 import type { Viewport } from './viewport';
 
@@ -44,7 +45,9 @@ export function createAgentApi(host: StudioHost) {
   }
   function posePart(action: (ctrl: AssetController) => number): number {
     const ctrl = requireController();
-    if (host.stage.playing) { host.stage.play(false); showPlayback(false); }
+    stopPartPreviewAnimation();
+    host.stage.syncExternalPose();
+    showPlayback(false);
     const applied = action(ctrl);
     host.syncRigEdits();
     host.refreshRig();

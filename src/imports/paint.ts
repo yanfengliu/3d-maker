@@ -27,12 +27,16 @@ export interface ImportPalette {
   slots: Map<string, PaintSlot>;
   materials: MaterialColor[];
   vertices: VertexPalette[];
+  /** Maps legacy pre-upgrade `vertex-<index>-<hex>` IDs onto their semantic `zone-<name>` slot. */
+  legacyMap: Map<string, string>;
 }
 
 // A continuous gradient remains editable through its material. Discrete authored
 // palettes (including PolyFork's character garments) get individual color controls.
 const maxColorsPerPrimitive = 32;
 const maxVertexSlots = 256;
+// Weighted sRGB squared-distance cap so unrelated surfaces stay in discrete vertex slots instead of joining a distant zone.
+const maxZoneDistSq = 0.28;
 
 function readablePart(mesh: Mesh, index: number): string {
   const generated = /^mesh(?:_\d+)*$/i;
@@ -73,6 +77,10 @@ function clusterByZones(source: VertexColors, zones: readonly ColorZoneSpec[]) {
     return { zone, linear, srgb, baseLuma: luma(linear.r, linear.g, linear.b) };
   });
   const grouped = new Map<string, { zone: ColorZoneSpec; baseLuma: number; indices: number[] }>();
+  const unmatched = new Map<string, number[]>();
+  const hexVotes = new Map<string, Map<string, number>>();
+  let trackVotes = true;
+  let trackUnmatched = true;
   const sample = new Color();
   const sampleSrgb = { r: 0, g: 0, b: 0 };
   for (let i = 0; i < source.count; i++) {
@@ -92,15 +100,44 @@ function clusterByZones(source: VertexColors, zones: readonly ColorZoneSpec[]) {
         if (dist < 1e-5) break;
       }
     }
-    if (!best) continue;
+    if (!best || bestDist > maxZoneDistSq) {
+      if (trackUnmatched) {
+        const hex = sample.getHexString();
+        let list = unmatched.get(hex);
+        if (!list) {
+          if (unmatched.size >= maxColorsPerPrimitive) {
+            trackUnmatched = false;
+            unmatched.clear();
+          } else {
+            list = [];
+            unmatched.set(hex, list);
+          }
+        }
+        list?.push(i);
+      }
+      continue;
+    }
     let bucket = grouped.get(best.zone.name);
     if (!bucket) {
       bucket = { zone: best.zone, baseLuma: best.baseLuma, indices: [] };
       grouped.set(best.zone.name, bucket);
     }
     bucket.indices.push(i);
+    if (trackVotes) {
+      const hex = sample.getHexString();
+      let votes = hexVotes.get(hex);
+      if (!votes) {
+        if (hexVotes.size >= maxColorsPerPrimitive) {
+          trackVotes = false;
+        } else {
+          votes = new Map();
+          hexVotes.set(hex, votes);
+        }
+      }
+      if (votes) votes.set('zone-' + best.zone.name, (votes.get('zone-' + best.zone.name) ?? 0) + 1);
+    }
   }
-  return grouped;
+  return { grouped, unmatched: trackUnmatched ? unmatched : null, hexVotes };
 }
 
 export function buildPalette(
@@ -110,6 +147,7 @@ export function buildPalette(
 ): ImportPalette {
   const materials: MaterialColor[] = [], vertices: VertexPalette[] = [];
   const materialSlots = new Map<string, PaintSlot>(), slots = new Map<string, PaintSlot>();
+  const legacyMap = new Map<string, string>();
   const seenMaterials = new Set<Material>(), seenGeometry = new Set<BufferGeometry>();
   const useZones = Boolean(colorZones?.length);
 
@@ -136,12 +174,28 @@ export function buildPalette(
     if (source.itemSize < 3) return;
 
     if (useZones && colorZones) {
-      const clustered = clusterByZones(source, colorZones);
+      const { grouped, unmatched, hexVotes } = clusterByZones(source, colorZones);
       const regions: VertexRegion[] = [];
-      for (const { zone, baseLuma, indices } of clustered.values()) {
+      for (const { zone, baseLuma, indices } of grouped.values()) {
         const id = 'zone-' + zone.name;
         if (!slots.has(id)) slots.set(id, { id, label: zone.label, color: zone.color, zoneName: zone.name });
         regions.push({ id, indices, baseLuma });
+      }
+      for (const [hex, votes] of hexVotes) {
+        let bestZone = '', bestCount = 0;
+        for (const [zoneId, count] of votes) {
+          if (count > bestCount) { bestCount = count; bestZone = zoneId; }
+        }
+        if (bestZone) legacyMap.set('vertex-' + String(index) + '-' + hex, bestZone);
+      }
+      if (unmatched && unmatched.size && unmatched.size + slots.size <= maxVertexSlots) {
+        const label = readablePart(mesh, index);
+        let sub = 0;
+        for (const [hex, indices] of unmatched) {
+          const id = 'vertex-' + String(index) + '-' + hex;
+          slots.set(id, { id, color: '#' + hex, label: unmatched.size === 1 ? label : label + ' · ' + String(++sub) });
+          regions.push({ id, indices });
+        }
       }
       if (regions.length) vertices.push({ geometry, source, regions });
       return;
@@ -158,7 +212,7 @@ export function buildPalette(
     vertices.push({ geometry, source, regions });
   });
   for (const [id, slot] of materialSlots) slots.set(id, slot);
-  return { slots, materials, vertices };
+  return { slots, materials, vertices, legacyMap };
 }
 
 export function validatePaint(value: unknown): Record<string, string> | undefined {
@@ -166,7 +220,7 @@ export function validatePaint(value: unknown): Record<string, string> | undefine
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Supply a paint color map.');
   const result: Record<string, string> = {};
   for (const [id, hex] of Object.entries(value)) {
-    if (!/^(?:material-(?:default|\d+)|vertex-\d+-[\da-f]{6}|zone-[a-z0-9][a-z0-9_-]{0,63})$/i.test(id) ||
+    if (!/^(?:material-(?:default|\d+)|vertex-\d+-[\da-f]{6}|zone-[a-zA-Z0-9][a-zA-Z0-9_-]{0,63})$/.test(id) ||
         typeof hex !== 'string' || !/^#[\da-f]{6}$/i.test(hex)) throw new Error('Invalid paint slot or color.');
     result[id] = hex.toLowerCase();
   }

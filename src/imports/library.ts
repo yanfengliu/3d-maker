@@ -1,3 +1,4 @@
+import type { AssetCapabilities } from '../capabilities/schema';
 import { applyImportEdits, openPolyforkGlb, openStoredFile, reconcileSavedEdits, validateEdits } from './asset';
 import type { ImportEdits, ImportedAsset, ImportSource } from './asset';
 import { publishImportChange } from './changes';
@@ -8,6 +9,8 @@ export interface ImportEntry {
   updatedAt: string;
   source: ImportSource;
   edits: ImportEdits;
+  /** Cached baseline capabilities so saved PolyFork remixes keep edits even if PolyFork metadata is temporarily unreachable. */
+  capabilities?: AssetCapabilities;
 }
 
 function connect(): Promise<IDBDatabase> {
@@ -43,9 +46,27 @@ async function transact<T>(stores: string[], mode: IDBTransactionMode, work: (tx
   }
 }
 
+function capabilitySnapshot(asset: ImportedAsset): AssetCapabilities | undefined {
+  if (asset.source.kind !== 'polyfork') return undefined;
+  const copy = structuredClone(asset.capabilities);
+  delete copy.state;
+  if (asset.baseColorZones?.length) copy.colorZones = structuredClone(asset.baseColorZones);
+  if (asset.baseNightZones.length) copy.nightZones = structuredClone(asset.baseNightZones);
+  if (asset.baseDimensions) copy.dimensions = structuredClone(asset.baseDimensions);
+  return copy;
+}
+
 export async function saveImport(asset: ImportedAsset, id?: string): Promise<ImportEntry> {
   const edits = validateEdits(asset.edits);
-  const entry: ImportEntry = { id: id ?? crypto.randomUUID(), name: edits.name, edits, source: { ...asset.source }, updatedAt: new Date().toISOString() };
+  const capabilities = capabilitySnapshot(asset);
+  const entry: ImportEntry = {
+    id: id ?? crypto.randomUUID(),
+    name: edits.name,
+    edits,
+    source: { ...asset.source },
+    updatedAt: new Date().toISOString(),
+    ...(capabilities ? { capabilities } : {}),
+  };
   if (asset.source.kind === 'local' && !asset.originalFile) throw new Error('The original file is missing.');
   const saved = await transact(['entries', 'files'], 'readwrite', tx => {
     const entries = tx.objectStore('entries');
@@ -93,7 +114,7 @@ export async function openSavedImport(id: string, signal?: AbortSignal): Promise
   const { source } = entry;
   let asset: ImportedAsset;
   if (source.kind === 'polyfork') {
-    asset = await openPolyforkGlb(source.assetId, source.title, signal, source.category);
+    asset = await openPolyforkGlb(source.assetId, source.title, signal, source.category, entry.capabilities);
   } else {
     if (!file) throw new Error('The saved GLB file is missing.');
     asset = await openStoredFile(file, source.filename);

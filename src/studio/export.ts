@@ -1,14 +1,14 @@
 import { type BufferGeometry, type Material, Mesh, type Group, type Object3D } from 'three';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { inspectAsset, synthesizeRigClips } from '../capabilities/runtime';
+import { inspectAsset, isSynthesizedClip, synthesizeRigClips, type AssetController } from '../capabilities/runtime';
 import { writeCapabilities } from '../capabilities/schema';
 
 export interface ExportOptions {
   includePartClips?: boolean;
 }
 
-/** Capture the rig at rest, including material/vertex colors, capability manifest, and optional part clips. */
-export function cloneForExport(source: Group, options?: ExportOptions) {
+/** Capture the rig at rest, preserving detachable subtrees, active part poses, capability manifest, and optional part clips. */
+export function cloneForExport(source: Group, options?: ExportOptions, controller?: AssetController | null) {
   const root = clone(source);
   const materials = new Map<Material, Material>();
   const paintedGeometry = new Map<BufferGeometry, BufferGeometry>();
@@ -51,18 +51,40 @@ export function cloneForExport(source: Group, options?: ExportOptions) {
   copyNode(source, root);
   for (const overlay of overlays) overlay.removeFromParent();
   root.animations = source.animations.map((clip) => clip.clone());
-  const capabilities = inspectAsset(source);
+
+  const capabilities = controller ? controller.syncManifest() : inspectAsset(source);
+  // Re-apply authoritative rigged part poses onto the clone so animation mixer resets never bake stale transforms.
+  controller?.applyPoseToClone(root);
+
+  // Keep declared detachable subtrees in the exported GLB even while hidden; state.hiddenParts restores visibility on load.
+  for (const part of capabilities.detachableParts) {
+    let node: Object3D | null = root.getObjectByName(part.name) ?? null;
+    while (node) {
+      node.visible = true;
+      node = node === root ? null : node.parent;
+    }
+  }
+
+  const synthNames = new Set(capabilities.clips?.filter(c => c.synthesized).map(c => c.name));
   if (options?.includePartClips && capabilities.riggedParts.length) {
     const existing = new Set(root.animations.map(clip => clip.name));
     for (const clip of synthesizeRigClips(root, capabilities)) {
       if (!existing.has(clip.name)) {
         root.animations.push(clip);
         existing.add(clip.name);
+        synthNames.add(clip.name);
       }
     }
   }
   if (root.animations.length) {
-    capabilities.clips = root.animations.map(clip => ({ name: clip.name, duration: Math.round(clip.duration * 1000) / 1000 }));
+    capabilities.clips = root.animations.map(clip => {
+      const synthesized = isSynthesizedClip(clip) || synthNames.has(clip.name);
+      return {
+        name: clip.name,
+        duration: Math.round(clip.duration * 1000) / 1000,
+        ...(synthesized ? { synthesized: true } : {}),
+      };
+    });
   } else delete capabilities.clips;
   writeCapabilities(root, capabilities);
   return {

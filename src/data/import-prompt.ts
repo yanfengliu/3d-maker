@@ -255,7 +255,21 @@ export async function editImportWithPrompt(
     signal,
   );
   if (!patch) {
-    for (const clause of commandClauses(prompt)) importClause(next, slots, clause, capabilities);
+    let lastDetachVerb: 'hide' | 'show' | null = null;
+    for (const rawClause of commandClauses(prompt)) {
+      const trimmed = rawClause.trim();
+      const verbMatch = /^(hide|remove|detach|show|attach)\s+/i.exec(trimmed);
+      let clause = trimmed;
+      if (verbMatch?.[1]) {
+        lastDetachVerb = /^(?:show|attach)$/i.test(verbMatch[1]) ? 'show' : 'hide';
+      } else if (lastDetachVerb && capabilities?.detachableParts.some(p =>
+        p.name.toLowerCase() === trimmed.toLowerCase() || p.label.toLowerCase() === trimmed.toLowerCase())) {
+        clause = `${lastDetachVerb} ${trimmed}`;
+      } else {
+        lastDetachVerb = null;
+      }
+      importClause(next, slots, clause, capabilities);
+    }
     return { edits: parseImportedSettings(next, slots, capabilities), engine: 'Local command' };
   }
   if ('paint' in patch && (!patch.paint || typeof patch.paint !== 'object' || Array.isArray(patch.paint) || !Object.keys(patch.paint).length)) {
