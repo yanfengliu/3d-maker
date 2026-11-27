@@ -4,7 +4,7 @@
 
 A desktop-browser three.js object and character studio with an editable procedural starter collection, a browser-local inventory and PolyFork GLB imports. Read [the design spec](docs/design/spec.md) for module boundaries, capture controls, and the agent interface. The owner requested direct commits on main for this rebuild.
 
-<!-- FLEET-CANON:BEGIN sha=5f4634c4e82c generated from ../fleet/FLEET.md by `npm run sync-canon` — do not edit inside this block; this repo's own rules go in docs/policies/local-rules.md -->
+<!-- FLEET-CANON:BEGIN sha=603cc3b90a94 generated from ../fleet/FLEET.md by `npm run sync-canon` — do not edit inside this block; this repo's own rules go in docs/policies/local-rules.md -->
 ## Fleet constitution
 
 Shared rules for every repo under `github/`, kept in `../fleet/FLEET.md`; `../fleet/` is fleet's checkout beside this repo's primary checkout. Where a rule gives its reason, use the reason to judge cases the rule does not name; each `[Rn]`'s history is in `../fleet/docs/canon-rationale.md`. This repo's `docs/policies/local-rules.md` may add rules but cannot change these permissions or limits. [R13]
@@ -45,7 +45,7 @@ The designated coordinator reads `../fleet/docs/skills/coordinator.md` before pl
 ### Style and environment
 
 - Plain words; one line per paragraph, no hard wrapping. A report says what changed, how it was checked (including any check skipped or failed) and what is not done. [R25]
-- Node 24 is the baseline. Products pin the model IDs they call in their own repo, and nowhere else. Reviewer model pins live only in `../fleet/docs/skills/multi-cli-review.md`. Runtime model calls are allowed and paid for; make per-item calls one-shot, not agent sessions. [R28, R29]
+- Node 24 is the baseline. Products pin the model IDs they call in their own repo, and nowhere else. Reviewers never hardcode CLI versions or model IDs; use the latest flagship model at highest thinking effort with fallback per `../fleet/docs/skills/multi-cli-review.md` (owner directive, 2026-11-27). Runtime model calls are allowed and paid for; make per-item calls one-shot, not agent sessions. [R28, R29]
 <!-- FLEET-CANON:END -->
 
 ## Gates
