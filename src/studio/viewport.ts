@@ -55,6 +55,7 @@ export class Viewport {
   private ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.ShadowMaterial({ opacity: 0.16 }));
   private key = new T.DirectionalLight('#ffefd8', 2.7);
   private host: HTMLElement;
+  private renderSize = new T.Vector2();
   private radius = 1;
   private frameHeight = 4;
   private frameWidth = 4;
@@ -127,13 +128,18 @@ export class Viewport {
   private resize() {
     const w = Math.max(1, this.host.clientWidth),
       h = Math.max(1, this.host.clientHeight);
-    this.renderer.setSize(w, h, false);
+    this.renderer.getSize(this.renderSize);
+    const changed = w !== this.renderSize.x || h !== this.renderSize.y;
+    if (changed) this.renderer.setSize(w, h, false);
     const half = Math.max(this.frameHeight, (this.frameWidth * h) / w) * 0.5;
     this.camera.left = (-half * w) / h;
     this.camera.right = (half * w) / h;
     this.camera.top = half;
     this.camera.bottom = -half;
     this.camera.updateProjectionMatrix();
+    // ResizeObserver runs after the frame callbacks. Resizing clears WebGL's buffer;
+    // draw the new projection before this frame is presented when an inspector tab changes.
+    if (changed && this.model) this.renderer.render(this.scene, this.camera);
     this.invalidate();
   }
   setModel(model: T.Group, refit = true) {

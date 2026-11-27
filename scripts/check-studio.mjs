@@ -66,10 +66,6 @@ try {
   await page.goto(origin + site + '?shot=1');
   await page.waitForFunction(() => window.__shotReady);
   await verifyInitialInventory(page);
-  await page.click('#animationTab');
-  assert.match(await page.locator('#play').innerText(), /Play clip/);
-  assert.equal(await page.locator('#timeline').inputValue(), '0');
-  await page.click('#propertiesTab');
   // Compare actual rendered pixels and check that meaningful model features are on screen.
   const pixels = () =>
     page.evaluate(() => {
@@ -105,6 +101,12 @@ try {
   await page.selectOption('#view', 'Top');
   await page.waitForTimeout(120);
   assert.notEqual((await pixels()).signature, before.signature);
+  await page.click('#animationTab');
+  assert.match(await page.locator('#play').innerText(), /Play clip/);
+  assert.equal(await page.locator('#timeline').inputValue(), '0');
+  await page.click('#propertiesTab');
+  const resized = await pixels();
+  assert.ok(resized.dark > 200 && resized.paint > 100, 'Changing inspector tabs cleared the viewport');
   await verifyBrowsing(page, fixture, out);
   await page.locator('#assetName').fill('Game Pilot');
   await page.locator('#assetName').press('Tab');
