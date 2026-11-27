@@ -2,7 +2,7 @@ import { Color, Group, Mesh } from 'three';
 import type { Material } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export type ImportSource = { kind: 'local'; filename: string } | { kind: 'polyfork'; assetId: string; title: string };
+export type ImportSource = { kind: 'local'; filename: string } | { kind: 'polyfork'; assetId: string; title: string; category?: string };
 export interface ImportEdits {
   name: string;
   tint: string;
@@ -117,8 +117,8 @@ export function openLocalGlb(file: File): Promise<ImportedAsset> {
   return openStoredFile(file, file.name);
 }
 
-export async function openPolyforkGlb(assetId: string, name: string, signal?: AbortSignal): Promise<ImportedAsset> {
+export async function openPolyforkGlb(assetId: string, name: string, signal?: AbortSignal, category?: string): Promise<ImportedAsset> {
   const response = await fetch(polyforkGlbUrl(assetId), { credentials: 'omit', signal: signal ?? null });
   if (!response.ok) throw new Error(`PolyFork could not supply this model (HTTP ${String(response.status)}).`);
-  return openBinary(await response.arrayBuffer(), { kind: 'polyfork', assetId, title: name }, name, null);
+  return openBinary(await response.arrayBuffer(), { kind: 'polyfork', assetId, title: name, ...(category ? { category } : {}) }, name, null);
 }

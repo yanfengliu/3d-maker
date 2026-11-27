@@ -93,7 +93,7 @@ export async function openSavedImport(id: string, signal?: AbortSignal): Promise
   const { source } = entry;
   let asset: ImportedAsset;
   if (source.kind === 'polyfork') {
-    asset = await openPolyforkGlb(source.assetId, source.title, signal);
+    asset = await openPolyforkGlb(source.assetId, source.title, signal, source.category);
   } else {
     if (!file) throw new Error('The saved GLB file is missing.');
     asset = await openStoredFile(file, source.filename);

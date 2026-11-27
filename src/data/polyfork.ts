@@ -2,7 +2,7 @@ export interface PolyforkAsset {
   id: string;
   title: string;
   category: string;
-  triangles: number;
+  triangles: number | null;
   rigged: boolean;
   remixable: boolean;
   thumbnailUrl: string;
@@ -29,7 +29,7 @@ function parseAsset(value: unknown): PolyforkAsset | null {
   if (!value || typeof value !== 'object') return null;
   const row = value as Record<string, unknown>;
   if (row.free !== true || typeof row.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,159}$/.test(row.id)) return null;
-  if (typeof row.title !== 'string' || !row.title.trim() || typeof row.class !== 'string' || !count(row.triangles)) return null;
+  if (typeof row.title !== 'string' || !row.title.trim() || typeof row.class !== 'string' || (row.triangles !== null && !count(row.triangles))) return null;
   const { id } = row;
   const glbUrl = `${origin}/cdn/${id}.glb`;
   if (!row.download || typeof row.download !== 'object' || !('glb' in row.download) || row.download.glb !== glbUrl) return null;
@@ -55,7 +55,7 @@ function rateLimitMessage(): string {
 }
 
 /** Search on demand. The API and model downloads stay on PolyFork's own origin. */
-export async function searchPolyfork(query: string, signal?: AbortSignal, page = 1): Promise<PolyforkPage> {
+export async function searchPolyfork(query: string, signal?: AbortSignal, page = 1, category?: string): Promise<PolyforkPage> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Choose a positive catalog page number.');
   if (Date.now() < retryAfter) throw new Error(rateLimitMessage());
   const url = new URL('/api/assets', origin);
@@ -63,6 +63,7 @@ export async function searchPolyfork(query: string, signal?: AbortSignal, page =
   url.searchParams.set('per_page', String(perPage));
   url.searchParams.set('page', String(page));
   if (query.trim()) url.searchParams.set('q', query.trim());
+  if (category) url.searchParams.set('class', category);
   const response = await fetch(url, { signal: signal ?? null, credentials: 'omit' });
   if (response.status === 429) {
     retryAfter = Date.now() + backoff(response.headers.get('Retry-After'));
