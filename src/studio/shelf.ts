@@ -11,9 +11,9 @@ import { thumbnail } from './thumbnails';
 
 const sources: { id: BrowseSource; label: string; icon: Icon }[] = [
   { id: 'all', label: 'All assets', icon: 'library' },
-  { id: 'original', label: 'Studio originals', icon: 'studio' },
+  { id: 'original', label: 'Originals', icon: 'studio' },
   { id: 'polyfork', label: 'PolyFork', icon: 'globe' },
-  { id: 'saved', label: 'Saved assets', icon: 'folder' },
+  { id: 'saved', label: 'Saved', icon: 'folder' },
 ];
 const categoryIcons: Record<BrowseCategory, Icon> = {
   prop: 'studio', character: 'person', vehicle: 'vehicle', building: 'building', animal: 'animal',
@@ -79,7 +79,14 @@ export function setupShelf(actions: Actions) {
       same?.focus({preventScroll:true});
     }
   }
+  function showImportCategory() {
+    const button = el('inventoryCategories').querySelector<HTMLButtonElement>('[data-category="import"]');
+    if (!button) return;
+    const matches = locals.imports.length > 0 && localBrowseItems({...filters, source:'saved', category:'import', query:''}, locals).length > 0;
+    button.hidden = filters.category !== 'import' && !((filters.source === 'all' || filters.source === 'saved') && matches);
+  }
   function markFilters() {
+    showImportCategory();
     for (const b of el('inventorySources').querySelectorAll<HTMLButtonElement>('button')) {
       b.setAttribute('aria-pressed', String(b.dataset.sourceFilter === filters.source));
     }
@@ -92,6 +99,7 @@ export function setupShelf(actions: Actions) {
   }
   function counts(total:number, partial:boolean) {
     pages = Math.max(1, Math.ceil(total / perPage));
+    el('inventoryPager').hidden = pages <= 1;
     pageInput.value = String(filters.page);
     pageInput.max = String(pages);
     el('pageLimit').textContent = 'of ' + pages.toLocaleString();
@@ -159,6 +167,7 @@ export function setupShelf(actions: Actions) {
     const changed = JSON.stringify([recipes,imports]) !== JSON.stringify([locals.recipes,locals.imports]);
     if (!changed) return;
     locals = { recipes, imports };
+    showImportCategory();
     if (pendingKey.startsWith('saved:') && ![...recipes,...imports].some(entry => 'saved:' + entry.id === pendingKey)) {
       opening?.abort();
     }

@@ -55,8 +55,8 @@ function toolbar() {
   const row = catalog.find((row) => row.id === recipe?.template);
   el('sceneName').textContent = name();
   el('assetCode').textContent = row
-    ? `${row.code}  /  ${row.category.toUpperCase()}  /  ${recipe?.quality === 'hd' ? 'HD' : 'STANDARD'}`
-    : category().toUpperCase();
+    ? `${row.category} · ${recipe?.quality === 'hd' ? 'HD' : 'Standard'}`
+    : category();
   const source = el<HTMLAnchorElement>('assetSource');
   source.hidden = imported?.source.kind !== 'polyfork';
   if (imported?.source.kind === 'polyfork') {
@@ -94,13 +94,23 @@ document.addEventListener('keydown', event => {
   event.preventDefault();
   if (!event.repeat) showPlayback(togglePlayback());
 });
+function namePlaybackControl() {
+  const clip = stage.model?.animations[stage.clipIndex];
+  if (clip) el('play').title = 'Play or pause ' + clip.name + ' (Space)';
+}
 function controls() {
+  el('propertiesTab').setAttribute('aria-pressed', String(tab === 'props'));
+  el('animationTab').setAttribute('aria-pressed', String(tab === 'anim'));
   el('propertiesTab').classList.toggle('active', tab === 'props');
   el('animationTab').classList.toggle('active', tab === 'anim');
-  stage.onAdvance = undefined;
+  if (tab === 'anim') availableClips();
+  el('play').hidden = !stage.model?.animations.length;
+  showPlayback(stage.playing);
+  namePlaybackControl();
+  let markClip: ((i: number) => void) | undefined;
   if (tab === 'anim') {
-    stage.onAdvance = showAnimation(
-      availableClips(),
+    markClip = showAnimation(
+      stage.model?.animations ?? [],
       stage.clipIndex,
       stage.playing,
       stage.speed,
@@ -114,8 +124,8 @@ function controls() {
         stage.setClip(i);
         stage.seek(0);
         stage.play(true);
+        namePlaybackControl();
       },
-      togglePlayback,
       (n) => {
         stage.seek(n);
       },
@@ -125,12 +135,13 @@ function controls() {
     );
   } else if (recipe) showProperties(recipe, category(), edit);
   else if (imported) showProperties({ ...imported.edits, primary: imported.edits.tint }, category(), edit);
+  stage.onAdvance = index => { namePlaybackControl(); markClip?.(index); };
 }
 function swap(model: T.Group, refit: boolean) {
   const previous = stage.model;
   const clip = refit ? undefined : previous?.animations[stage.clipIndex];
   const playing = stage.playing, fraction = stage.clipFraction;
-  if (clip && !model.animations.some(candidate => candidate.name === clip.name)) addCharacterAnimations(model);
+  if (clip && (stage.playAll || !model.animations.some(candidate => candidate.name === clip.name))) addCharacterAnimations(model);
   if (refit) {
     stage.playAll = false;
     if (autoplay && !model.animations.length) addCharacterAnimations(model);
@@ -299,6 +310,7 @@ el('save').onclick = () => {
       btn.disabled = false;
     });
 };
+el('play').onclick = () => { showPlayback(togglePlayback()); };
 el('propertiesTab').onclick = () => {
   tab = 'props';
   controls();

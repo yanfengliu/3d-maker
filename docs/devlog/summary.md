@@ -1,6 +1,6 @@
 # Devlog
 
-- 2026-11-26 — Added the 85 downloadable CC0 humanoid motions to compatible rigs in the studio, three.js SDK and GLB exporter. Added default playback, the Space shortcut, clip search and continuous playback of the full list. Corrected the Characters filter for humanoids filed as animals upstream.
+- 2026-11-26 — Added the 85 downloadable CC0 humanoid motions to compatible rigs in the studio, three.js SDK and GLB exporter. Added default playback, the Space shortcut, clip search and continuous playback of the full list. Moved transport into the viewport and simplified the inventory and editor headers. Corrected the Characters filter for humanoids filed as animals upstream.
 
 - 2026-11-26 — Merged Inventory and Object Studio into one desktop page. Added category browsing, cross-collection search, thumbnail results and direct page navigation across the originals, free PolyFork catalog and saved assets.
 

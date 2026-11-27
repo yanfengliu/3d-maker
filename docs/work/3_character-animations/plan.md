@@ -21,6 +21,8 @@ Use the publisher's exportable CC0 motion index, retain native clips, and bind a
 
 - Compatible characters have the downloadable repertoire in preview and GLB export. Existing embedded and custom clips remain usable.
 - Desktop tests exercise playback, export and reimport; unrelated models keep their native motions.
+- The first clip and newly chosen clips play by default, Play all advances through the complete repertoire, and Space toggles playback without interfering with field input.
+- The desktop layout keeps model playback visible while browsing and editing.
 - The report distinguishes the website's preview repertoire, downloadable motions, public creator features and paid gates.
 - Character inventory reconciles the website roster with the public asset catalogue.
 

@@ -221,6 +221,11 @@ try {
   await playback.check('#playAllClips');
   await playback.locator('#timeline').press('End');
   await playback.waitForFunction(() => document.querySelector('#motionName').textContent === 'Idle');
+  // Rebuilding a character during a native clip must keep the entire playlist.
+  await playback.click('#propertiesTab');
+  await playback.getByRole('button', {name:'Sage'}).click();
+  // The animation panel itself hydrates the library. Observe the playlist before reopening it.
+  await playback.waitForFunction(() => document.querySelector('#play')?.title === 'Play or pause Agree (Space)', undefined, {timeout:15000});
   await playback.close();
   const sdk = await browser.newPage();
   await sdk.goto(origin + '/sdk-check');
