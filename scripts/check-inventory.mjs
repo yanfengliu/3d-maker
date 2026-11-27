@@ -139,6 +139,10 @@ export async function showSaved(page) {
 }
 
 async function deleteDuringOpen(page) {
+  // Reload onto Field Pilot so the session GLB cache is cold and opening the saved PolyFork entry hits network fetch.
+  const returnUrl = page.url();
+  await page.goto(returnUrl + (returnUrl.includes('?') ? '&' : '?') + 'asset=field-pilot');
+  await page.waitForFunction(() => window.__shotReady && window.forgeStudio.getRecipe()?.template === 'field-pilot');
   await showSaved(page);
   const title = 'Survey Rover 02', url = origin + '/cdn/survey-rover-02.glb';
   // Hold an already received GLB before the importer gets it, as can happen with slow parsing.

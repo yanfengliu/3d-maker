@@ -1,9 +1,8 @@
 import '../ui/style.css';
 import '../ui/workspace.css';
 import type * as T from 'three';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { cloneForExport, type ExportOptions } from './export';
-import { addCharacterAnimations } from '../animation/library';
+import type { ExportOptions } from './export';
+import { attachCharacterAnimations, ensureCharacterAnimations, loadCharacterAnimations } from '../animation/lazy';
 import { createAssetController, type AssetController } from '../capabilities/runtime';
 import { readCapabilities } from '../capabilities/schema';
 import { catalog, parseRecipe, type Recipe } from '../data/recipe';
@@ -94,14 +93,21 @@ function toolbar() {
   ui.syncViewportTools();
 }
 
-function availableClips() {
-  const model = stage.model;
-  if (!model) return [];
-  const hadClips = model.animations.length > 0;
-  if (document.body.classList.contains('shot-only')) addCharacterAnimations(model);
+function onMotionsReady(model: T.Group, hadClips: boolean) {
+  if (stage.model !== model) return;
   if (!hadClips && model.animations.length) {
     stage.setClip(0);
     stage.play(autoplay);
+  }
+  ui.renderControls();
+}
+
+function availableClips() {
+  const model = stage.model;
+  if (!model) return [];
+  if (document.body.classList.contains('shot-only')) {
+    const hadClips = model.animations.length > 0;
+    attachCharacterAnimations(model, () => { onMotionsReady(model, hadClips); });
   }
   return model.animations;
 }
@@ -132,7 +138,10 @@ function swap(model: T.Group, refit: boolean) {
   if (refit) {
     ui.setPickMode(false);
     stage.playAll = false;
-    if (!document.body.classList.contains('shot-only')) addCharacterAnimations(model);
+    if (!document.body.classList.contains('shot-only')) {
+      const hadClips = model.animations.length > 0;
+      attachCharacterAnimations(model, () => { onMotionsReady(model, hadClips); });
+    }
   } else if (previous) {
     model.animations.push(...previous.animations.slice(model.animations.length));
   }
@@ -266,6 +275,10 @@ function remix(newName?: string) {
 }
 
 async function exportGLB(options?: ExportOptions): Promise<ArrayBuffer> {
+  const [{ GLTFExporter }, { cloneForExport }] = await Promise.all([
+    import('three/addons/exporters/GLTFExporter.js'),
+    import('./export'),
+  ]);
   const source = imported?.group;
   const snapshot = source ? stage.restClone(() => cloneForExport(source, options, imported?.controller)) : null;
   const builtOriginal = recipe ? buildModel(recipe) : null;
@@ -276,14 +289,14 @@ async function exportGLB(options?: ExportOptions): Promise<ArrayBuffer> {
     if (origPose) {
       for (const [part, val] of Object.entries(origPose)) exportCtrl.setPart(part, val);
     }
-    addCharacterAnimations(builtOriginal);
+    await ensureCharacterAnimations(builtOriginal);
   }
   const originalSnap = builtOriginal ? cloneForExport(builtOriginal, options, exportCtrl) : null;
   exportCtrl?.dispose();
   const model = originalSnap?.root ?? snapshot?.root;
   if (!model) throw new Error('Choose an asset to export.');
   try {
-    if (!builtOriginal) addCharacterAnimations(model);
+    if (!builtOriginal) await ensureCharacterAnimations(model);
     return (await new GLTFExporter().parseAsync(model, {
       binary: true,
       animations: model.animations,
@@ -298,12 +311,8 @@ async function exportGLB(options?: ExportOptions): Promise<ArrayBuffer> {
 
 async function downloadGlb(options?: ExportOptions) {
   const filename = name().replace(/[^a-z\d -]/gi, '').trim() || 'asset';
-  const data = await exportGLB(options);
-  const url = URL.createObjectURL(new Blob([data], { type: 'model/gltf-binary' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename + '.glb';
-  link.click();
+  const url = URL.createObjectURL(new Blob([await exportGLB(options)], { type: 'model/gltf-binary' }));
+  Object.assign(document.createElement('a'), { href: url, download: filename + '.glb' }).click();
   window.setTimeout(() => { URL.revokeObjectURL(url); }, 10000);
 }
 
@@ -318,8 +327,8 @@ const shelf = setupShelf({
   open: async (item, signal) => {
     if (item.source === 'original') choose(item.recipe);
     else if (item.source === 'polyfork') {
-      const { id, title, category } = item.asset;
-      await openImport(() => openPolyforkGlb(id, title, signal, category), undefined, signal);
+      const { id, title, category, remixable } = item.asset;
+      await openImport(() => openPolyforkGlb(id, title, signal, category, undefined, remixable), undefined, signal);
     } else if ('recipe' in item.entry) choose(item.entry.recipe, item.entry.id);
     else await openImport(() => openSavedImport(item.entry.id, signal), item.entry.id, signal);
   },
@@ -443,30 +452,21 @@ stage.onTick = frac => {
   const slider = document.querySelector<HTMLInputElement>('#timeline');
   if (slider) { slider.value = String(frac); slider.style.setProperty('--pct', String(frac * 100) + '%'); }
 };
-stage.onReady = () => { window.__shotReady = true; };
+stage.onReady = () => {
+  window.__shotReady = true;
+  // Warm the separate humanoid motion chunk after the initial frame settles so opening a character feels instant.
+  if (!document.body.classList.contains('shot-only')) void loadCharacterAnimations();
+};
 
 const api = createAgentApi({
-  stage,
-  getRecipe: () => (recipe ? { ...recipe } : null),
-  getImported: () => imported,
-  getController: activeController,
-  applyRecipe,
-  remix,
-  save,
-  exportGLB,
-  openPolyfork: openRemote,
-  listPaintSlots: paintSlots,
-  getImportEdits,
-  setImportEdits,
-  listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
+  stage, getRecipe: () => (recipe ? { ...recipe } : null), getImported: () => imported, getController: activeController,
+  applyRecipe: input => { applyRecipe(input); }, remix, save, exportGLB, openPolyfork: openRemote, listPaintSlots: paintSlots,
+  getImportEdits, setImportEdits, listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
   playClip: index => {
     if (!availableClips()[index]) throw new Error('Unknown animation clip.');
     stage.setClip(index); stage.play(true); ui.renderControls();
   },
-  syncRigEdits,
-  refreshRig: ui.refreshRig,
-  syncViewportTools: ui.syncViewportTools,
-  applyPreset: ui.applyPreset,
+  syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset,
 });
 
 declare global {

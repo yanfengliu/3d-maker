@@ -1,6 +1,7 @@
 import { AnimationMixer, Bone, BufferGeometry, Color, LoopOnce, MeshStandardMaterial, SkinnedMesh } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, polyforkGlbUrl, reconcileSavedEdits, validateEdits } from './asset';
+import { clearPolyforkGlbCache } from './glb-cache';
 
 // A skinned triangle with a one-second bone rotation. The binary fixture exercises the loader itself.
 function modelFile(extra: Record<string, unknown> = {}, withColors = false): File {
@@ -48,7 +49,10 @@ function modelFile(extra: Record<string, unknown> = {}, withColors = false): Fil
   return new File([glb], 'Test Pilot.GLB');
 }
 
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => {
+  clearPolyforkGlbCache();
+  vi.restoreAllMocks();
+});
 
 describe('imported GLB assets', () => {
   it('retains a skin, clip and material while edits change the outer transform and tint', async () => {

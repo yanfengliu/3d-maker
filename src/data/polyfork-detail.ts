@@ -206,55 +206,61 @@ function parseDetailResponse(assetId: string, raw: unknown, paramsRaw: unknown):
   };
 }
 
-/** Best-effort read of PolyFork's public detail + params JSON. Never throws so offline/synthetic GLB opens always work. */
-export async function fetchPolyforkDetail(assetId: string, signal?: AbortSignal): Promise<PolyforkDetail | null> {
+async function fetchJsonWithTimeout(url: string, timeoutMs: number, signal?: AbortSignal): Promise<{ data: unknown; failed: boolean }> {
+  try {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const reqSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    const response = await fetch(url, { credentials: 'omit', signal: reqSignal });
+    if (response.status === 429) {
+      recordPolyforkRateLimit(response.headers.get('Retry-After'));
+      return { data: null, failed: true };
+    }
+    if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) {
+      return { data: null, failed: true };
+    }
+    return { data: await response.json(), failed: false };
+  } catch {
+    return { data: null, failed: true };
+  }
+}
+
+/** Best-effort parallel read of PolyFork's public detail + params JSON. Never throws so offline/synthetic GLB opens always work. */
+export async function fetchPolyforkDetail(
+  assetId: string,
+  signal?: AbortSignal,
+  expectParams = true,
+): Promise<PolyforkDetail | null> {
   if (!/^[a-z0-9][a-z0-9_-]{0,159}$/.test(assetId)) return null;
   const cached = cache.get(assetId);
   if (cached && cached.expires > Date.now()) return cached.value;
   if (isPolyforkRateLimited()) return null;
 
-  try {
-    const timeout = AbortSignal.timeout(4_000);
-    const reqSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    const response = await fetch(`${origin}/api/assets/${assetId}`, { credentials: 'omit', signal: reqSignal });
-    if (response.status === 429) {
-      recordPolyforkRateLimit(response.headers.get('Retry-After'));
-      return null;
-    }
-    if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) return null;
-    const raw: unknown = await response.json();
-    let paramsRaw: unknown = null;
-    let paramsFailed = false;
-    if (isRecord(raw) && typeof raw.params_url === 'string' && raw.params_url.startsWith(`${origin}/cdn/`)) {
-      try {
-        const paramsTimeout = AbortSignal.timeout(3_000);
-        const paramsSignal = signal ? AbortSignal.any([signal, paramsTimeout]) : paramsTimeout;
-        const paramsRes = await fetch(raw.params_url, { credentials: 'omit', signal: paramsSignal });
-        if (paramsRes.status === 429) {
-          recordPolyforkRateLimit(paramsRes.headers.get('Retry-After'));
-          paramsFailed = true;
-        } else if (paramsRes.ok && (paramsRes.headers.get('content-type') ?? '').includes('json')) {
-          paramsRaw = await paramsRes.json();
-        } else {
-          paramsFailed = true;
-        }
-      } catch {
-        paramsFailed = true;
-      }
-    }
-    const parsed = parseDetailResponse(assetId, raw, paramsRaw);
-    // Do not cache partial records whose params fetch failed so retries and saved fallbacks can recover color zones.
-    if (parsed && !paramsFailed) {
-      if (cache.size >= cacheLimit) {
-        const first = cache.keys().next();
-        if (!first.done) cache.delete(first.value);
-      }
-      cache.set(assetId, { value: parsed, expires: Date.now() + cacheTtl });
-    }
-    return parsed;
-  } catch {
-    return null;
+  const expectedParamsUrl = `${origin}/cdn/${assetId}-params.json`;
+  const detailPromise = fetchJsonWithTimeout(`${origin}/api/assets/${assetId}`, 4_000, signal);
+  const speculativeParams = expectParams ? fetchJsonWithTimeout(expectedParamsUrl, 3_500, signal) : null;
+
+  const { data: raw, failed: detailFailed } = await detailPromise;
+  if (detailFailed || !isRecord(raw)) return null;
+
+  let paramsRaw: unknown = null;
+  let paramsFailed = false;
+  if (typeof raw.params_url === 'string' && raw.params_url.startsWith(`${origin}/cdn/`)) {
+    const paramsResult = raw.params_url === expectedParamsUrl && speculativeParams
+      ? await speculativeParams
+      : await fetchJsonWithTimeout(raw.params_url, 3_000, signal);
+    paramsRaw = paramsResult.data;
+    paramsFailed = paramsResult.failed;
   }
+  const parsed = parseDetailResponse(assetId, raw, paramsRaw);
+  // Do not cache partial records whose params fetch failed so retries and saved fallbacks can recover color zones.
+  if (parsed && !paramsFailed) {
+    if (cache.size >= cacheLimit) {
+      const first = cache.keys().next();
+      if (!first.done) cache.delete(first.value);
+    }
+    cache.set(assetId, { value: parsed, expires: Date.now() + cacheTtl });
+  }
+  return parsed;
 }
 
 /** Combine verified PolyFork metadata with the actual nodes and embedded decals present in the loaded Three.js group. */

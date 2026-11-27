@@ -1,5 +1,7 @@
 # Devlog
 
+- 2026-11-27 — Optimized studio loading speed by code-splitting the 85-clip character motion library, `GLTFLoader`, `GLTFExporter`, and `three` vendor bundle (cutting initial gzipped JS from 825 KB to 218 KB), firing PolyFork GLB/detail/params requests in parallel with a bounded session GLB LRU cache, parallelizing `Characters`/`Animals` category pagination, adding `polyfork.dev` preconnect, and loading above-the-fold starter cards eagerly.
+
 - 2026-11-26 — Added client-side PolyFork asset parity and AI-discoverable capability manifests: interactive rigged hinges/slides with live preview and opt-in GLB clip baking, detachable part toggles, twilight night glow, decal previews, semantic color zones, curated colorway presets, 3D color eyedropper, `extras.formFoundry` on every exported GLB, `inspectAsset`/`createAssetController` in `studio-sdk.js`, and matching `window.forgeStudio` + AI tools controls.
 
 - 2026-11-26 — Fixed PolyFork catalog and model loading stalling after transient rate limits or slow downloads by replacing the 60-second CORS-blind 429 lockout with short progressive backoff and automatic recovery, deduplicating concurrent catalog requests, clearing backoff on manual Retry, and adding timeout and transient retry handling to GLB downloads.

@@ -1,5 +1,5 @@
 import { Color, Group } from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import type { GLTFLoader as GltfLoaderClass } from 'three/addons/loaders/GLTFLoader.js';
 import { createAssetController, inspectAsset, type AssetController } from '../capabilities/runtime';
 import {
   readCapabilities,
@@ -10,7 +10,14 @@ import {
 } from '../capabilities/schema';
 import { abortableDelay } from '../data/polyfork';
 import { buildPolyforkCapabilities, fetchPolyforkDetail } from '../data/polyfork-detail';
+import { cacheGlb, downloadPolyforkGlb, getCachedGlb } from './glb-cache';
 import { applyPalette, buildPalette, validatePaint, type ImportPalette } from './paint';
+
+let gltfLoaderPromise: Promise<{ GLTFLoader: typeof GltfLoaderClass }> | null = null;
+function loadGltfLoader() {
+  gltfLoaderPromise ??= import('three/addons/loaders/GLTFLoader.js');
+  return gltfLoaderPromise;
+}
 
 export type ImportSource = { kind: 'local'; filename: string } | { kind: 'polyfork'; assetId: string; title: string; category?: string };
 export interface ImportEdits {
@@ -343,6 +350,7 @@ async function openBinary(
   metadataUnavailable = false,
 ): Promise<ImportedAsset> {
   checkResources(bytes);
+  const { GLTFLoader } = await loadGltfLoader();
   const gltf = await new GLTFLoader().parseAsync(bytes, '');
   if (!gltf.scene.getObjectByProperty('isMesh', true)) throw new Error('This GLB has no mesh in its default scene.');
   const group = new Group();
@@ -399,15 +407,7 @@ export function openLocalGlb(file: File): Promise<ImportedAsset> {
   return openStoredFile(file, file.name);
 }
 
-const glbTimeoutMs = 25_000;
 const postGlbDetailWaitMs = 2_500;
-const retryableStatuses = new Set([429, 502, 503, 504]);
-
-function retryDelayMs(response: Response, attempt: number): number {
-  const header = response.headers.get('Retry-After');
-  if (header && /^\d+$/.test(header)) return Math.min(8_000, Math.max(500, Number(header) * 1000));
-  return 1_000 * (attempt + 1);
-}
 
 export async function openPolyforkGlb(
   assetId: string,
@@ -415,76 +415,48 @@ export async function openPolyforkGlb(
   signal?: AbortSignal,
   category?: string,
   fallbackCapabilities?: AssetCapabilities,
+  expectParams = true,
 ): Promise<ImportedAsset> {
   const url = polyforkGlbUrl(assetId);
-  const detailPromise = fetchPolyforkDetail(assetId, signal);
-  for (let attempt = 0; attempt < 3; attempt++) {
-    signal?.throwIfAborted();
-    const timeout = AbortSignal.timeout(glbTimeoutMs);
-    const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    let response: Response;
-    try {
-      response = await fetch(url, { credentials: 'omit', signal: requestSignal });
-    } catch (error) {
-      signal?.throwIfAborted();
-      if (timeout.aborted) {
-        if (attempt < 2) {
-          await abortableDelay(800 * (attempt + 1), signal);
-          continue;
-        }
-        throw new Error('PolyFork model download timed out. Try opening it again.', { cause: error });
-      }
-      throw error;
-    }
-    if (retryableStatuses.has(response.status) && attempt < 2) {
-      void response.body?.cancel();
-      await abortableDelay(retryDelayMs(response, attempt), signal);
-      continue;
-    }
-    if (response.status === 429) throw new Error('PolyFork is limiting model downloads. Try again in a moment.');
-    if (!response.ok) throw new Error(`PolyFork could not supply this model (HTTP ${String(response.status)}).`);
-    let bytes: ArrayBuffer;
-    try {
-      bytes = await response.arrayBuffer();
-    } catch (error) {
-      signal?.throwIfAborted();
-      if (timeout.aborted) throw new Error('PolyFork model download timed out. Try opening it again.', { cause: error });
-      throw error;
-    }
-    signal?.throwIfAborted();
-    // Bound post-GLB metadata wait so a slow or rate-limited API endpoint never stalls opening a downloaded model.
-    const detail = await Promise.race([
-      detailPromise,
-      abortableDelay(postGlbDetailWaitMs, signal).then(() => null),
-    ]);
-    signal?.throwIfAborted();
-    const metadataUnavailable = !detail && !fallbackCapabilities;
-    return openBinary(
-      bytes,
-      { kind: 'polyfork', assetId, title: name, ...(category ? { category } : {}) },
-      name,
-      null,
-      group => {
-        if (detail) {
-          const built = buildPolyforkCapabilities(group, assetId, name, detail);
-          if (fallbackCapabilities) {
-            if (!built.colorZones?.length && fallbackCapabilities.colorZones?.length) {
-              built.colorZones = structuredClone(fallbackCapabilities.colorZones);
-            }
-            if (!built.presets?.length && fallbackCapabilities.presets?.length) {
-              built.presets = structuredClone(fallbackCapabilities.presets);
-            }
-            if (!built.nightZones.length && fallbackCapabilities.nightZones.length) {
-              built.nightZones = structuredClone(fallbackCapabilities.nightZones);
-            }
-          }
-          return built;
-        }
-        if (fallbackCapabilities) return intersectWithNodes(group, fallbackCapabilities);
-        return buildPolyforkCapabilities(group, assetId, name, null);
-      },
-      metadataUnavailable,
-    );
+  void loadGltfLoader();
+  const detailPromise = fetchPolyforkDetail(assetId, signal, expectParams);
+  let bytes = getCachedGlb(assetId);
+  if (!bytes) {
+    bytes = await downloadPolyforkGlb(url, signal);
+    cacheGlb(assetId, bytes);
   }
-  throw new Error('PolyFork could not supply this model.');
+  signal?.throwIfAborted();
+  // Bound post-GLB metadata wait so a slow or rate-limited API endpoint never stalls opening a downloaded model.
+  const detail = await Promise.race([
+    detailPromise,
+    abortableDelay(postGlbDetailWaitMs, signal).then(() => null),
+  ]);
+  signal?.throwIfAborted();
+  const metadataUnavailable = !detail && !fallbackCapabilities;
+  return openBinary(
+    bytes,
+    { kind: 'polyfork', assetId, title: name, ...(category ? { category } : {}) },
+    name,
+    null,
+    group => {
+      if (detail) {
+        const built = buildPolyforkCapabilities(group, assetId, name, detail);
+        if (fallbackCapabilities) {
+          if (!built.colorZones?.length && fallbackCapabilities.colorZones?.length) {
+            built.colorZones = structuredClone(fallbackCapabilities.colorZones);
+          }
+          if (!built.presets?.length && fallbackCapabilities.presets?.length) {
+            built.presets = structuredClone(fallbackCapabilities.presets);
+          }
+          if (!built.nightZones.length && fallbackCapabilities.nightZones.length) {
+            built.nightZones = structuredClone(fallbackCapabilities.nightZones);
+          }
+        }
+        return built;
+      }
+      if (fallbackCapabilities) return intersectWithNodes(group, fallbackCapabilities);
+      return buildPolyforkCapabilities(group, assetId, name, null);
+    },
+    metadataUnavailable,
+  );
 }

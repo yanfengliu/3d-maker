@@ -46,7 +46,7 @@ export function setupShelf(actions: Actions) {
       card.setAttribute('aria-busy', String(card.dataset.key === pendingKey));
     }
   }
-  function card(item: BrowseItem) {
+  function card(item: BrowseItem, index: number) {
     let image = item.thumbnailUrl;
     if (item.source === 'saved' && 'recipe' in item.entry) {
       const cached = previews.get(item.key);
@@ -59,9 +59,10 @@ export function setupShelf(actions: Actions) {
     const title = escapeHtml(item.title);
     const key = escapeHtml(item.key);
     const swatch = item.source === 'original' ? item.recipe.template : item.category;
+    const imgAttr = index < 6 ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"';
     const visual = `<div class="inv-picture" data-kind="${swatch}">
       <span class="no-picture">${icon(categoryIcons[item.category],36)}</span>
-      ${image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" decoding="async"/>` : ''}
+      ${image ? `<img src="${escapeHtml(image)}" alt="" ${imgAttr}/>` : ''}
       <span class="selection-tick">${icon('check',11)}</span></div>`;
     const remove = item.source === 'saved' ? `<button type="button" class="deleteasset square" data-delete="${key}" aria-label="Delete ${title}" title="Delete saved asset">${icon('trash',14)}</button>` : '';
     return `<article class="inv-tile"><button class="inv-card" type="button" data-key="${key}" data-source="${item.source}" aria-label="Open ${title}">
@@ -70,7 +71,7 @@ export function setupShelf(actions: Actions) {
   function results(items: BrowseItem[], emptyText: string) {
     const focusedKey = document.activeElement instanceof HTMLElement ? document.activeElement.closest<HTMLButtonElement>('.inv-card')?.dataset.key : undefined;
     visible = new Map(items.map(item => [item.key, item]));
-    grid.innerHTML = items.length ? items.map(card).join('') : `<p class="no-results">${emptyText}</p>`;
+    grid.innerHTML = items.length ? items.map((item, i) => card(item, i)).join('') : `<p class="no-results">${emptyText}</p>`;
     for (const img of grid.querySelectorAll('img')) {
       img.onerror = () => { img.hidden = true; };
     }
@@ -245,5 +246,15 @@ export function setupShelf(actions: Actions) {
   el('inventoryPager').onsubmit = event=>{ event.preventDefault(); selectPage(pageInput.valueAsNumber); };
   pageInput.onchange = ()=>{ selectPage(pageInput.valueAsNumber); };
   el('inventoryRetry').onclick = ()=>{ clearPolyforkBackoff(); reload(false); };
-  return { markSelection, refreshSaved, start:()=>{ reload(true); void refreshSaved().catch(report); } };
+  return {
+    markSelection,
+    refreshSaved,
+    start: () => {
+      try { locals = { ...locals, recipes: readInventory() }; } catch (error) { report(error); }
+      const savedCount = el('inventorySources').querySelector('button[data-source-filter="saved"] small');
+      if (savedCount) savedCount.textContent = String(locals.recipes.length);
+      reload(true);
+      void refreshSaved().catch(report);
+    },
+  };
 }

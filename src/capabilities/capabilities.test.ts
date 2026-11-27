@@ -4,6 +4,7 @@ import { catalog } from '../data/recipe';
 import { clearPolyforkBackoff } from '../data/polyfork';
 import { buildPolyforkCapabilities, clearPolyforkDetailCache, fetchPolyforkDetail } from '../data/polyfork-detail';
 import { applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, reconcileSavedEdits } from '../imports/asset';
+import { clearPolyforkGlbCache } from '../imports/glb-cache';
 import { colorwayPaintPatch, pickPaintSlot } from '../imports/paint';
 import { buildModel } from '../models';
 import { cloneForExport } from '../studio/export';
@@ -130,6 +131,7 @@ const shopParamsJson = {
 afterEach(() => {
   clearPolyforkDetailCache();
   clearPolyforkBackoff();
+  clearPolyforkGlbCache();
   vi.restoreAllMocks();
 });
 
@@ -387,14 +389,29 @@ describe('self-describing asset capabilities and runtime controller', () => {
     noSnapshot.controller.dispose();
   });
 
-  it('falls back cleanly when PolyFork detail metadata is unavailable or non-JSON', async () => {
+  it('falls back cleanly when PolyFork detail metadata is unavailable or non-JSON and caches repeated GLB opens', async () => {
     const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not json', { status: 200, headers: { 'content-type': 'text/html' } }));
     const detail = await fetchPolyforkDetail('missing-asset');
-    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledWith('https://polyfork.dev/api/assets/missing-asset', expect.objectContaining({ credentials: 'omit' }));
     expect(detail).toBeNull();
     const empty = new T.Group();
     const caps: AssetCapabilities = buildPolyforkCapabilities(empty, 'missing-asset', 'Fallback', detail);
     expect(caps.riggedParts).toEqual([]);
     expect(caps.detachableParts).toEqual([]);
+
+    // Repeated openPolyforkGlb reuses the session-local GLB cache without re-downloading the binary.
+    vi.restoreAllMocks();
+    const bytes = shopfrontGlb();
+    let glbFetches = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(raw => {
+      const url = typeof raw === 'string' ? raw : raw instanceof URL ? raw.href : raw.url;
+      if (url.endsWith('.glb')) { glbFetches++; return Promise.resolve(new Response(bytes)); }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    const first = await openPolyforkGlb('cached-shop', 'Cached Shop', undefined, 'building', undefined, false);
+    const second = await openPolyforkGlb('cached-shop', 'Cached Shop', undefined, 'building', undefined, false);
+    expect(glbFetches).toBe(1);
+    first.controller.dispose();
+    second.controller.dispose();
   });
 });

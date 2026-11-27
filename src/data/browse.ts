@@ -207,21 +207,32 @@ async function classAssets(filters: BrowseQuery, category: string, signal: Abort
     if (key.startsWith(prefix) && entry.expires > Date.now()) pages.set(entry.value.page, entry.value);
   }
   let error: string | null = null, retryAfterMs: number | undefined, last = 1, countKnown = false;
-  for (let page = 1; page <= last; page++) {
-    try {
-      const result = await remotePage(filters, page, signal, category, size);
-      pages.set(page, result);
-      if (page === 1) {
-        last = Math.max(1, Math.ceil(result.total / result.perPage));
-        countKnown = true;
+  try {
+    const first = await remotePage(filters, 1, signal, category, size);
+    pages.set(1, first);
+    last = Math.max(1, Math.ceil(first.total / first.perPage));
+    countKnown = true;
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : 'The catalog request failed.';
+    if (cause instanceof PolyforkRateLimitError) retryAfterMs = cause.retryAfterMs;
+    last = 1;
+  }
+  // Fetch remaining pages in small parallel batches instead of a serial page-by-page waterfall.
+  const batchSize = 3;
+  for (let startPage = 2; startPage <= last && !signal.aborted && !retryAfterMs; startPage += batchSize) {
+    const batch = Array.from({ length: Math.min(batchSize, last - startPage + 1) }, (_, idx) => startPage + idx);
+    const settled = await Promise.allSettled(batch.map(page => remotePage(filters, page, signal, category, size)));
+    for (const [idx, outcome] of settled.entries()) {
+      const page = batch[idx] ?? startPage;
+      if (outcome.status === 'fulfilled') {
+        pages.set(page, outcome.value);
+      } else {
+        const cause: unknown = outcome.reason;
+        error = cause instanceof Error ? cause.message : 'The catalog request failed.';
+        if (cause instanceof PolyforkRateLimitError) {
+          retryAfterMs = Math.max(retryAfterMs ?? 0, cause.retryAfterMs);
+        }
       }
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : 'The catalog request failed.';
-      if (cause instanceof PolyforkRateLimitError) {
-        retryAfterMs = Math.max(retryAfterMs ?? 0, cause.retryAfterMs);
-        break;
-      }
-      if (signal.aborted) break;
     }
   }
   const assets = [...pages.values()].filter(value => !countKnown || value.page <= last)

@@ -14,5 +14,14 @@ export default defineConfig(({ mode }) =>
     : {
         base: './',
         plugins: [starterCatalog()],
+        build: {
+          rolldownOptions: {
+            output: {
+              codeSplitting: {
+                groups: [{ name: 'three-vendor', test: /node_modules[\\/]three[\\/](?:build|src|examples[\\/]jsm[\\/](?:controls|environments))/ }],
+              },
+            },
+          },
+        },
       },
 );
