@@ -4,6 +4,7 @@ import { mkdir, readFile, stat } from 'node:fs/promises';
 import { resolve, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studioBrowser } from './browser.mjs';
+import { inventoryFixture, showSaved, verifyBrowsing, verifyInitialInventory } from './check-inventory.mjs';
 
 const project = fileURLToPath(new URL('../', import.meta.url));
 const out = join(project, 'output/studio');
@@ -54,6 +55,7 @@ let browser;
 try {
   browser = await studioBrowser();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+  const fixture = await inventoryFixture(context, project);
   const page = await context.newPage();
   const failures = [];
   page.on('pageerror', (error) => failures.push(error.message));
@@ -62,12 +64,8 @@ try {
       failures.push(response.status() + ' ' + response.url());
   });
   await page.goto(origin + site + '?shot=1');
-  await page.waitForFunction(
-    () =>
-      window.__shotReady &&
-      [...document.querySelectorAll('.cardpic img')].every((img) => img.complete && img.naturalWidth > 0),
-  );
-  assert.equal(await page.locator('.card').count(), 6);
+  await page.waitForFunction(() => window.__shotReady);
+  await verifyInitialInventory(page);
   // Compare actual rendered pixels and check that meaningful model features are on screen.
   const pixels = () =>
     page.evaluate(() => {
@@ -103,20 +101,18 @@ try {
   await page.selectOption('#view', 'Top');
   await page.waitForTimeout(120);
   assert.notEqual((await pixels()).signature, before.signature);
-  await page.locator('#filters [data-filter=Character]').click();
-  assert.equal(await page.locator('#starterCards button').count(), 2);
-  await page.getByRole('button', { name: 'Open Field Pilot' }).click();
+  await verifyBrowsing(page, fixture, out);
   await page.locator('#assetName').fill('Game Pilot');
   await page.locator('#assetName').press('Tab');
   await page.getByRole('button', { name: 'Terracotta' }).click();
   await page.selectOption('#quality', 'standard');
   await page.click('#save');
-  await page.click('#navInventory');
-  await page.getByRole('button', { name: /Game Pilot Character/ }).waitFor();
+  await showSaved(page);
+  await page.getByRole('button', { name: 'Open Game Pilot', exact: true }).waitFor();
   await page.reload();
   await page.waitForFunction(() => window.__shotReady);
-  await page.click('#navInventory');
-  await page.getByRole('button', { name: /Game Pilot Character/ }).click();
+  await showSaved(page);
+  await page.getByRole('button', { name: 'Open Game Pilot', exact: true }).click();
   const recipe = await page.evaluate(() => window.forgeStudio.getRecipe());
   assert.equal(recipe.name, 'Game Pilot');
   assert.equal(recipe.quality, 'standard');
@@ -170,12 +166,13 @@ try {
   const saved=await page.evaluate(async id=>(await window.forgeStudio.listInventory()).find(a=>a.id===id),ids[0]);
   assert.equal(saved.name,'Imported pilot final');assert.equal(saved.edits.tint,'#aabbcc');
   await page.waitForFunction(async () => (await window.forgeStudio.listInventory()).length === 2);
-  await page.click('#navInventory');
-  await page.locator('.openasset').filter({ hasText: 'Imported pilot' }).click();
+  await showSaved(page);
+  await page.getByRole('button', { name: 'Open Imported pilot final', exact: true }).click();
   await page.waitForFunction(() => window.forgeStudio.getImportEdits()?.name === 'Imported pilot final');
-  await page.click('#navInventory');
+  await showSaved(page);
   const stale=await page.context().newPage();await stale.goto(origin+site);await stale.waitForFunction(()=>window.__shotReady);
-  await stale.click('#navInventory');await stale.locator('.openasset').filter({hasText:'Imported pilot'}).click();
+  await showSaved(stale);
+  await stale.getByRole('button', { name: 'Open Imported pilot final', exact: true }).click();
   await stale.waitForFunction(()=>window.forgeStudio.getImportEdits()?.name==='Imported pilot final');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Delete Imported pilot' }).click();
@@ -199,7 +196,7 @@ try {
   assert.ok(result.every((r) => r.group && r.clips > 0));
   assert.deepEqual(failures, []);
   console.log(
-    'Verified six rendered starters, orbit and preset controls, editing, inventory across reload, animation playback, GLB export/import, and the three.js SDK.',
+    'Verified unified browsing, categories, search, pagination, catalog recovery and same-page selection alongside the editor, inventory round-trips, animation, GLB and SDK checks.',
   );
   console.log('Viewport pixel sample', before);
 } finally {

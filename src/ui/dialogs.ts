@@ -1,7 +1,6 @@
 import { editWithPrompt, getPromptAvailability, preparePromptModel } from '../data/assistant';
-import { searchPolyfork, type PolyforkAsset } from '../data/polyfork';
 import { parseRecipe, type Recipe } from '../data/recipe';
-import { el, escapeHtml, notify, report } from './dom';
+import { el, notify, report } from './dom';
 import { icon } from './icons';
 import './dialogs.css';
 
@@ -9,24 +8,12 @@ interface DialogActions {
   recipe: () => Recipe | null;
   apply: (recipe: Recipe) => void;
   openLocal: (file: File, signal?: AbortSignal) => Promise<void>;
-  openRemote: (id: string, name: string, signal?: AbortSignal) => Promise<void>;
   exportGlb: () => Promise<void>;
 }
 
 const message = (error: unknown) => error instanceof Error ? error.message : 'The operation could not be completed.';
 const button = (id: string) => el<HTMLButtonElement>(id);
 const statusLine = '<div id="dialogStatus" class="dialogstatus" role="status" aria-live="polite"></div>';
-
-function libraryRow(asset: PolyforkAsset) {
-  const title = escapeHtml(asset.title);
-  const picture = asset.thumbnailUrl
-    ? `<img alt="" loading="lazy" src="${escapeHtml(asset.thumbnailUrl)}" />`
-    : '';
-  return `<article class="resultrow"><div class="resultthumb">${icon(asset.category === 'character' ? 'person' : 'studio', 22)}${picture}</div>
-    <div class="resultname"><strong>${title}</strong><small>${escapeHtml(asset.category)} · ${asset.triangles.toLocaleString()} tris${asset.rigged ? ' · rigged' : ''}</small></div>
-    <a class="textbutton" href="${asset.pageUrl}" target="_blank" rel="noopener" aria-label="View ${title} on PolyFork" title="View on PolyFork">${icon('diagonal', 15)}</a>
-    <button class="btn" data-asset="${asset.id}" aria-label="Import ${title}">Import</button></article>`;
-}
 
 function downloadRecipe(recipe: Recipe) {
   const blob = new Blob([JSON.stringify(recipe, null, 2) + '\n'], { type: 'application/json' });
@@ -84,20 +71,10 @@ export function setupDialogs(actions: DialogActions) {
     }
   }
 
-  function importTabs(catalogActive: boolean) {
-    return `<div class="dialogtabs" aria-label="Import source"><button id="importTab" aria-pressed="${String(!catalogActive)}">${icon('folder', 15)} Local file</button><button id="catalogTab" aria-pressed="${String(catalogActive)}">${icon('globe', 15)} PolyFork catalog</button></div>`;
-  }
-
-  function bindImportTabs() {
-    button('importTab').onclick = imports;
-    button('catalogTab').onclick = catalog;
-  }
-
   function imports() {
-    const signal = open('Import asset', `<div class="dialogstack">${importTabs(false)}
+    const signal = open('Import asset', `<div class="dialogstack">
       <div class="dropzone" id="dropzone">${icon('upload', 28)}<strong>Drop an asset here</strong><p class="dialogcopy">Three.js-compatible GLB or a Form Foundry recipe (.json).</p>
       <button class="btn dark" id="chooseFile">Choose file</button><input id="assetFile" type="file" accept=".glb,.json" hidden /></div>${statusLine}</div>`);
-    bindImportTabs();
     const fileInput = el<HTMLInputElement>('assetFile');
     const zone = el('dropzone');
     let opening = false;
@@ -121,78 +98,6 @@ export function setupDialogs(actions: DialogActions) {
       zone.classList.remove('dragover');
       void load(event.dataTransfer?.files[0]);
     };
-  }
-
-  function catalog() {
-    const signal = open('PolyFork catalog', `<div class="dialogstack">${importTabs(true)}
-      <form id="catalogForm" class="dialogquery"><label class="searchbox">${icon('search', 17)}<input type="search" id="catalogQuery" placeholder="Search free models" aria-label="Search PolyFork catalog" autocomplete="off" /></label><button class="btn dark">Search</button></form>
-      <div class="catalogresults" id="catalogResults" aria-label="PolyFork models"></div>
-      <div class="pager"><button class="btn" id="catalogPrev" disabled>Previous</button><span id="catalogCount"></span><button class="btn" id="catalogNext" disabled>Next</button></div>${statusLine}</div>`);
-    bindImportTabs();
-    const query = el<HTMLInputElement>('catalogQuery');
-    const results = el('catalogResults');
-    const previous = button('catalogPrev');
-    const next = button('catalogNext');
-    let request: AbortController | undefined;
-    let timer = 0;
-    let currentPage = 1;
-    let opening = false;
-    signal.addEventListener('abort', () => { request?.abort(); clearTimeout(timer); }, { once: true });
-    async function search(page: number) {
-      if (signal.aborted || opening) return;
-      clearTimeout(timer);
-      request?.abort();
-      const current = new AbortController();
-      request = current;
-      results.replaceChildren();
-      el('catalogCount').textContent = '';
-      previous.disabled = true;
-      next.disabled = true;
-      status('Searching PolyFork…');
-      try {
-        const listing = await searchPolyfork(query.value, current.signal, page);
-        if (current.signal.aborted) return;
-        currentPage = listing.page;
-        results.innerHTML = listing.assets.map(libraryRow).join('');
-        results.scrollTop = 0;
-        for (const thumbnail of results.querySelectorAll<HTMLImageElement>('img')) {
-          const reveal = () => { if (thumbnail.naturalWidth > 0) thumbnail.classList.add('ready'); };
-          thumbnail.onload = reveal;
-          if (thumbnail.complete) reveal();
-        }
-        results.querySelectorAll<HTMLButtonElement>('[data-asset]').forEach(control => {
-          const asset = listing.assets.find(row => row.id === control.dataset.asset);
-          if (!asset) return;
-          control.onclick = async () => {
-            if (opening) return;
-            opening = true;
-            query.disabled = true;
-            await complete(signal, () => actions.openRemote(asset.id, asset.title, signal), `Opening ${asset.title}…`, 'PolyFork asset opened.');
-            opening = false;
-            query.disabled = false;
-          };
-        });
-        const pages = Math.max(1, Math.ceil(listing.total / listing.perPage));
-        el('catalogCount').textContent = `${currentPage.toString()} / ${pages.toString()}`;
-        previous.disabled = currentPage <= 1;
-        next.disabled = currentPage >= pages;
-        status(listing.assets.length ? `${listing.total.toLocaleString()} models from PolyFork` : 'No matching models. Try a different search.');
-      } catch (error) {
-        if (!current.signal.aborted) status(message(error));
-      }
-    }
-    query.oninput = () => {
-      request?.abort();
-      clearTimeout(timer);
-      results.replaceChildren();
-      previous.disabled = next.disabled = true;
-      timer = window.setTimeout(() => { void search(1); }, 360);
-    };
-    el<HTMLFormElement>('catalogForm').onsubmit = event => { event.preventDefault(); void search(1); };
-    previous.onclick = () => { void search(currentPage - 1); };
-    next.onclick = () => { void search(currentPage + 1); };
-    void search(1);
-    query.focus();
   }
 
   function assistant(showRecipe = false) {
@@ -277,5 +182,5 @@ export function setupDialogs(actions: DialogActions) {
     };
   }
 
-  return { imports, catalog, assistant: () => { assistant(); }, exports };
+  return { imports, assistant: () => { assistant(); }, exports };
 }

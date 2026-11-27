@@ -1,4 +1,5 @@
 import '../ui/style.css';
+import '../ui/workspace.css';
 import type * as T from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { cloneForExport } from './export';
@@ -34,7 +35,6 @@ function newSelection(id?:string) {
   return {id, write:Promise.resolve()};
 }
 let selection = newSelection();
-let currentPage = 'studio';
 let tab: 'props' | 'anim' = 'props';
 let grid = true,
   wire = false,
@@ -55,6 +55,11 @@ function toolbar() {
   el('assetCode').textContent = row
     ? `${row.code}  /  ${row.category.toUpperCase()}  /  ${recipe?.quality === 'hd' ? 'HD' : 'STANDARD'}`
     : category().toUpperCase();
+  const source = el<HTMLAnchorElement>('assetSource');
+  source.hidden = imported?.source.kind !== 'polyfork';
+  if (imported?.source.kind === 'polyfork') {
+    source.href = 'https://polyfork.dev/asset/' + encodeURIComponent(imported.source.assetId);
+  } else source.removeAttribute('href');
   el('save').innerHTML =
     icon(selection.id ? 'save' : 'plus', 16) + (selection.id ? ' Save changes' : ' Save to inventory');
 }
@@ -106,18 +111,6 @@ function edit(patch: Partial<Recipe & ImportEdits>) {
     controls();
   }
 }
-function showPage(page: 'studio' | 'inventory') {
-  currentPage = page;
-  el('studioPage').hidden = page !== 'studio';
-  el('inventoryPage').hidden = page !== 'inventory';
-  el('navStudio').classList.toggle('active', page === 'studio');
-  el('navInventory').classList.toggle('active', page === 'inventory');
-  el<HTMLButtonElement>('export').disabled = page !== 'studio';
-  if (page === 'inventory') {
-    stage.play(false);
-    void shelf.refresh().catch(report);
-  } else controls();
-}
 function choose(next: Recipe, id?: string) {
   const valid = parseRecipe(next);
   const model = buildModel(valid);
@@ -128,8 +121,8 @@ function choose(next: Recipe, id?: string) {
   tab = 'props';
   swap(model, true);
   toolbar();
-  showPage('studio');
-  shelf.renderLibrary();
+  controls();
+  shelf.markSelection();
 }
 async function openImport(load: () => Promise<ImportedAsset>, id?: string, signal?: AbortSignal) {
   const seq = ++openSequence;
@@ -144,8 +137,8 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
   tab = 'props';
   swap(asset.group, true);
   toolbar();
-  showPage('studio');
-  shelf.renderLibrary();
+  controls();
+  shelf.markSelection();
 }
 function save(): Promise<string> {
   const target = selection;
@@ -159,8 +152,10 @@ function save(): Promise<string> {
     target.id = saved.id;
     if (target === selection) {
       toolbar();
+      shelf.markSelection();
       notify('Saved to inventory');
     }
+    void shelf.refreshSaved().catch(report);
     return saved.id;
   });
   target.write = result.then(() => undefined, () => undefined);
@@ -198,13 +193,27 @@ async function downloadGlb() {
   }, 10000);
 }
 const shelf = setupShelf({
-  choose,
-  active: () => recipe,
-  openImport: (id) => openImport(() => openSavedImport(id), id),
+  activeKey: () => {
+    if (selection.id) return 'saved:' + selection.id;
+    if (recipe) return 'original:' + recipe.template;
+    if (imported?.source.kind === 'polyfork') return 'polyfork:' + imported.source.assetId;
+    return null;
+  },
+  open: async (item, signal) => {
+    if (item.source === 'original') choose(item.recipe);
+    else if (item.source === 'polyfork') {
+      const {id, title, category} = item.asset;
+      await openImport(() => openPolyforkGlb(id, title, signal, category), undefined, signal);
+    } else if ('recipe' in item.entry) choose(item.entry.recipe, item.entry.id);
+    else {
+      const {id} = item.entry;
+      await openImport(() => openSavedImport(id, signal), id, signal);
+    }
+  },
   deleted: (id) => {
     if (selection.id === id) {
       selection = newSelection();
-      toolbar();
+      toolbar(); shelf.markSelection();
     }
   },
 });
@@ -222,12 +231,10 @@ const openRemote = (id: string, title: string, signal?: AbortSignal) =>
 const dialogs = setupDialogs({
   recipe: () => (recipe ? { ...recipe } : null),
   apply: applyRecipe,
-  openRemote,
   openLocal: (file, signal) => openImport(() => openLocalGlb(file), undefined, signal),
   exportGlb: downloadGlb,
 });
 el('import').onclick = dialogs.imports;
-el('moreCatalog').onclick = dialogs.catalog;
 el('assistant').onclick = dialogs.assistant;
 el('export').onclick = dialogs.exports;
 el('save').onclick = () => {
@@ -238,12 +245,6 @@ el('save').onclick = () => {
     .finally(() => {
       btn.disabled = false;
     });
-};
-el('navStudio').onclick = el('toStudio').onclick = () => {
-  showPage('studio');
-};
-el('navInventory').onclick = () => {
-  showPage('inventory');
 };
 el('propertiesTab').onclick = () => {
   tab = 'props';
@@ -344,10 +345,9 @@ if (params.get('shot') === '1' && shotView && ['Front', 'Top', 'Side'].includes(
   stage.view(shotView as View);
   el<HTMLSelectElement>('view').value = shotView;
 }
-window.addEventListener('storage', () => {
-  if (currentPage === 'inventory') void shelf.refresh().catch(report);
-});
-
-subscribeImportChanges(() => {
-  if (currentPage === 'inventory') void shelf.refresh().catch(report);
-});
+if (!document.body.classList.contains('shot-only')) {
+  shelf.start();
+  const refreshInventory = () => { void shelf.refreshSaved().catch(report); };
+  window.addEventListener('storage', refreshInventory);
+  subscribeImportChanges(refreshInventory);
+}

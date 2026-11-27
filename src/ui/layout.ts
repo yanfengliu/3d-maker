@@ -5,30 +5,55 @@ export function iconButton(id: string, name: Icon, title: string) {
 }
 
 export const layout = `
-<header class="topbar"><div class="brand"><img src="./mark.svg" alt=""/><span>Form Foundry</span></div>
-  <nav class="topnav" aria-label="Workspace"><button id="navStudio" class="nav active">${icon('studio', 17)} Studio</button><button id="navInventory" class="nav">${icon('library', 16)} Inventory</button></nav>
-  <div class="topactions"><span class="local"><i></i> Local workspace</span><button class="btn dark" id="export">${icon('download', 16)} Export asset</button></div>
-</header>
-<main>
-<section id="studioPage">
-  <div class="pagehead"><div><div class="eyebrow"><b></b> WORKSPACE <span>/</span> STUDIO</div><h1>Object Studio<span class="title-dot">.</span></h1></div><div class="headbuttons"><button class="btn" id="import">${icon('upload', 16)} Import</button><button class="btn ai" id="assistant">${icon('spark', 16)} AI tools</button></div></div>
-  <div class="desk">
-    <section class="scenePanel" id="scenePanel" aria-label="3D viewport">
-      <div id="viewport"></div>
-      <div class="viewtop"><div class="viewbadge"><i></i> LIVE VIEWPORT</div><div class="viewmenu"><select id="view" aria-label="Camera view"><option>Perspective</option><option>Front</option><option>Top</option><option>Side</option></select>${icon('chevron', 15)}</div></div>
-      <div class="sceneinfo"><span id="assetCode"></span><strong id="sceneName"></strong></div>
-      <div class="toolshelf">${iconButton('fit', 'focus', 'Frame model')}${iconButton('grid', 'grid', 'Toggle floor grid')}${iconButton('wire', 'layers', 'Toggle wireframe')}<em></em>${iconButton('expand', 'expand', 'Expand viewport')}</div>
-      <div class="viewhint">${icon('mouse', 13)} Drag to orbit <span>·</span> Scroll to zoom</div>
-    </section>
-    <aside class="inspector"><div class="panelhead"><h2>${icon('sliders', 19)} Inspector</h2>${iconButton('reset', 'reset', 'Reset asset properties')}</div>
-    <div class="tabs"><button id="propertiesTab" class="active">Properties</button><button id="animationTab">Animation</button></div>
-    <div id="inspectorBody"></div>
-    <div class="savebar"><button id="save" class="btn orange">${icon('plus', 17)} Save to inventory</button></div></aside>
+<header class="topbar">
+  <div class="brand"><img src="./mark.svg" alt=""/><span>Form Foundry</span></div>
+  <span class="workspace-label">Studio</span>
+  <div class="topactions">
+    <span class="local"><i></i> Local workspace</span>
+    <button class="btn" id="import">${icon('upload',16)} Import file</button>
+    <button class="btn ai" id="assistant">${icon('spark',16)} AI tools</button>
+    <button class="btn dark" id="export">${icon('download',16)} Export asset</button>
   </div>
-  <section class="shelf"><div class="shelfhead"><div class="sectiontitle"><span class="sectionmark"></span><h2>Asset library</h2><span class="count" id="libraryCount">06</span></div><div class="filters" id="filters"><button data-filter="All" class="active">All assets</button><button data-filter="Object">Objects</button><button data-filter="Character">Characters</button></div></div><div id="starterCards" class="cards"></div><button class="textbutton cataloglink" id="moreCatalog">${icon('globe', 15)} Explore PolyFork catalog ${icon('diagonal', 14)}</button></section>
-</section>
-<section id="inventoryPage" hidden><div class="pagehead"><div><div class="eyebrow"><b></b> WORKSPACE <span>/</span> COLLECTION</div><h1>Inventory<span class="title-dot">.</span></h1></div><button id="toStudio" class="btn">${icon('studio', 16)} Open studio</button></div>
-<div class="inventory-tools"><div class="sectiontitle"><span class="sectionmark"></span><h2>Saved assets</h2><span id="savedCount" class="count">00</span></div><label class="searchbox">${icon('search', 16)}<input id="savedQuery" placeholder="Search inventory" aria-label="Search inventory"/></label></div><div id="savedCards" class="inventorycards"></div></section>
+</header>
+<main class="workspace-shell">
+  <section id="inventoryPanel" aria-labelledby="inventoryHeading">
+    <header class="workspace-heading"><h1 id="inventoryHeading">Inventory<span class="title-dot">.</span></h1></header>
+    <div class="inventory-layout">
+      <aside class="inventory-nav" aria-label="Filter inventory">
+        <nav aria-label="Collections"><h2 class="micro">COLLECTIONS</h2><div id="inventorySources"></div></nav>
+        <nav aria-label="Categories"><h2 class="micro">CATEGORIES</h2><div id="inventoryCategories"></div></nav>
+      </aside>
+      <section class="browser-pane" aria-labelledby="listingTitle">
+        <label class="searchbox inventory-search">${icon('search',17)}<input type="search" id="inventorySearch" placeholder="Search inventory…" aria-label="Search inventory" autocomplete="off"/></label>
+        <div class="listing-head"><h2 id="listingTitle">All assets</h2><span class="result-count" id="inventoryTotal" aria-live="polite"></span></div>
+        <div id="inventoryNotice" class="inventory-notice" role="status" hidden><span id="inventoryNoticeText"></span><button class="textbutton" id="inventoryRetry">Retry</button></div>
+        <div class="results-scroll" id="resultsScroll"><div id="assetGrid" aria-label="Inventory assets"></div></div>
+        <form id="inventoryPager" class="inventory-pager" aria-label="Inventory pages">
+          <button id="inventoryPrev" class="square" type="button" aria-label="Previous page" title="Previous page">${icon('back',16)}</button>
+          <label>Page <input type="number" id="inventoryPageNumber" min="1" value="1" aria-label="Page number"/></label><span id="pageLimit">of 1</span>
+          <button id="inventoryNext" class="square" type="button" aria-label="Next page" title="Next page">${icon('forward',16)}</button>
+        </form>
+      </section>
+    </div>
+  </section>
+  <section id="editorPanel" aria-label="Object Studio">
+    <header class="workspace-heading editor-heading">
+      <div><div class="eyebrow"><b></b> OBJECT STUDIO</div><h2 id="sceneName">Relay Drone</h2></div>
+      <div class="asset-spec"><span id="assetCode"></span><a id="assetSource" target="_blank" rel="noopener noreferrer" hidden>View on PolyFork ↗</a></div>
+    </header>
+    <div class="editor-body">
+      <section class="scenePanel" id="scenePanel" aria-label="3D viewport">
+        <div id="viewport"></div>
+        <div class="viewtop"><div class="viewbadge"><i></i> LIVE VIEWPORT</div><div class="viewmenu"><select id="view" aria-label="Camera view"><option>Perspective</option><option>Front</option><option>Top</option><option>Side</option></select>${icon('chevron',15)}</div></div>
+        <div class="toolshelf">${iconButton('fit','focus','Frame model')}${iconButton('grid','grid','Toggle floor grid')}${iconButton('wire','layers','Toggle wireframe')}<em></em>${iconButton('expand','expand','Expand viewport')}</div>
+      </section>
+      <section class="inspector" aria-label="Inspector">
+        <div class="panelhead"><h2>${icon('sliders',18)} Inspector</h2><div class="tabs"><button id="propertiesTab" class="active">Properties</button><button id="animationTab">Animation</button></div>${iconButton('reset','reset','Reset asset properties')}</div>
+        <div id="inspectorBody"></div>
+        <div class="savebar"><button id="save" class="btn orange">${icon('plus',17)} Save to inventory</button></div>
+      </section>
+    </div>
+  </section>
 </main>
-<dialog id="dialog"><div class="dialoghead"><h2 id="dialogTitle"></h2>${iconButton('closeDialog', 'close', 'Close dialog')}</div><div id="dialogBody"></div></dialog>
+<dialog id="dialog"><div class="dialoghead"><h2 id="dialogTitle"></h2>${iconButton('closeDialog','close','Close dialog')}</div><div id="dialogBody"></div></dialog>
 <div id="toast" role="status" hidden></div>`;
