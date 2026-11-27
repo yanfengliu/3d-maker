@@ -8,6 +8,7 @@ import { readInventory, removeAsset } from '../data/inventory';
 import { listImports, deleteImport } from '../imports';
 import { el, escapeHtml, report, notify } from '../ui/dom';
 import { icon, type Icon } from '../ui/icons';
+import { buildActiveFilterChips, formatListingTitle, formatSourceBadge } from './filter-state';
 import { thumbnail } from './thumbnails';
 
 const sources: { id: BrowseSource; label: string; icon: Icon }[] = [
@@ -87,17 +88,46 @@ export function setupShelf(actions: Actions) {
     const matches = locals.imports.length > 0 && localBrowseItems({...filters, source:'saved', category:'import', query:''}, locals).length > 0;
     button.hidden = filters.category !== 'import' && !((filters.source === 'all' || filters.source === 'saved') && matches);
   }
+  function updateSourceCounts() {
+    const narrowed = filters.category !== 'all' || filters.query.trim() !== '';
+    const originalTotal = catalog.length;
+    const originalMatch = narrowed ? localBrowseItems({ ...filters, source: 'original', page: 1 }, locals).length : originalTotal;
+    const savedTotal = locals.recipes.length + locals.imports.length;
+    const savedMatch = narrowed ? localBrowseItems({ ...filters, source: 'saved', page: 1 }, locals).length : savedTotal;
+    const origEl = el('inventorySources').querySelector('button[data-source-filter="original"] small');
+    if (origEl) origEl.textContent = formatSourceBadge(originalMatch, originalTotal, narrowed);
+    const savedEl = el('inventorySources').querySelector('button[data-source-filter="saved"] small');
+    if (savedEl) savedEl.textContent = formatSourceBadge(savedMatch, savedTotal, narrowed);
+  }
+  function renderActiveFilters() {
+    const container = el('activeFilters');
+    const sourceLabel = sources.find(source => source.id === filters.source)?.label ?? 'All assets';
+    const catLabel = filters.category === 'all' ? 'All categories' : categoryLabel(filters.category);
+    const chips = buildActiveFilterChips(filters, sourceLabel, catLabel);
+    container.hidden = chips.length === 0;
+    if (!chips.length) {
+      container.innerHTML = '';
+      return;
+    }
+    const chipHtml = chips.map(chip =>
+      `<button type="button" class="filter-chip" data-clear-filter="${chip.kind}" title="Turn off ${escapeHtml(chip.label)}">${escapeHtml(chip.label)} ${icon('close', 11)}</button>`,
+    ).join('');
+    const clearAll = chips.length > 1 ? '<button type="button" class="clear-filters" data-clear-filter="all">Clear filters</button>' : '';
+    container.innerHTML = chipHtml + clearAll;
+  }
   function markFilters() {
     showImportCategory();
+    updateSourceCounts();
     for (const b of el('inventorySources').querySelectorAll<HTMLButtonElement>('button')) {
       b.setAttribute('aria-pressed', String(b.dataset.sourceFilter === filters.source));
     }
     for (const b of el('inventoryCategories').querySelectorAll<HTMLButtonElement>('button')) {
       b.setAttribute('aria-pressed', String(b.dataset.category === filters.category));
     }
-    el('listingTitle').textContent = filters.category === 'all'
-      ? (sources.find(source=>source.id===filters.source)?.label ?? 'All assets')
-      : categoryLabel(filters.category);
+    const sourceLabel = sources.find(source => source.id === filters.source)?.label ?? 'All assets';
+    const catLabel = filters.category === 'all' ? 'All categories' : categoryLabel(filters.category);
+    el('listingTitle').textContent = formatListingTitle(filters, sourceLabel, catLabel);
+    renderActiveFilters();
   }
   function counts(total:number, partial:boolean) {
     pages = Math.max(1, Math.ceil(total / perPage));
@@ -178,9 +208,9 @@ export function setupShelf(actions: Actions) {
     reload(true);
   }
   function sourcesMarkup() {
-    return sources.map(source=>{
+    return sources.map(source => {
       const count = source.id === 'original' ? catalog.length : source.id === 'saved' ? locals.recipes.length + locals.imports.length : null;
-      return `<button type="button" data-source-filter="${source.id}">${icon(source.icon,15)}<span>${source.label}</span>${count===null?'':`<small>${String(count)}</small>`}</button>`;
+      return `<button type="button" data-source-filter="${source.id}"><span class="filter-switch" aria-hidden="true"></span>${icon(source.icon,14)}<span class="filter-label">${source.label}</span>${count === null ? '' : `<small>${String(count)}</small>`}</button>`;
     }).join('');
   }
   async function refreshSaved() {
@@ -196,8 +226,7 @@ export function setupShelf(actions: Actions) {
     if (pendingKey.startsWith('saved:') && ![...recipes,...imports].some(entry => 'saved:' + entry.id === pendingKey)) {
       opening?.abort();
     }
-    const savedCount = el('inventorySources').querySelector('button[data-source-filter="saved"] small');
-    if (savedCount) savedCount.textContent = String(recipes.length + imports.length);
+    updateSourceCounts();
     if (filters.source === 'all' || filters.source === 'saved') reload(false);
   }
   async function selectItem(item: BrowseItem) {
@@ -227,8 +256,17 @@ export function setupShelf(actions: Actions) {
     } else void selectItem(item);
   };
   el('inventorySources').innerHTML = sourcesMarkup();
-  el('inventoryCategories').innerHTML = `<button type="button" data-category="all">${icon('layers',15)} All categories</button>` +
-    categories.map(c=>`<button type="button" data-category="${c.id}">${icon(categoryIcons[c.id],15)} ${c.label}</button>`).join('');
+  el('inventoryCategories').innerHTML = `<button type="button" data-category="all"><span class="filter-switch" aria-hidden="true"></span>${icon('layers',14)}<span class="filter-label">All categories</span></button>` +
+    categories.map(c => `<button type="button" data-category="${c.id}"><span class="filter-switch" aria-hidden="true"></span>${icon(categoryIcons[c.id],14)}<span class="filter-label">${c.label}</span></button>`).join('');
+  el('activeFilters').onclick = event => {
+    const kind = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-clear-filter]')?.dataset.clearFilter : undefined;
+    if (!kind) return;
+    if (kind === 'source' || kind === 'all') filters.source = 'all';
+    if (kind === 'category' || kind === 'all') filters.category = 'all';
+    if (kind === 'query' || kind === 'all') { filters.query = ''; query.value = ''; }
+    filters.page = 1;
+    reload(true);
+  };
   el('inventorySources').onclick = event=>{
     const id = event.target instanceof Element ? event.target.closest('button')?.dataset.sourceFilter : undefined;
     const source = sources.find(s=>s.id===id); if (!source) return;
@@ -251,8 +289,7 @@ export function setupShelf(actions: Actions) {
     refreshSaved,
     start: () => {
       try { locals = { ...locals, recipes: readInventory() }; } catch (error) { report(error); }
-      const savedCount = el('inventorySources').querySelector('button[data-source-filter="saved"] small');
-      if (savedCount) savedCount.textContent = String(locals.recipes.length);
+      updateSourceCounts();
       reload(true);
       void refreshSaved().catch(report);
     },

@@ -18,11 +18,12 @@ export const layout = `
     <header class="workspace-heading"><h1 id="inventoryHeading">Inventory</h1><label class="searchbox inventory-search">${icon('search',17)}<input type="search" id="inventorySearch" placeholder="Search inventory…" aria-label="Search inventory" autocomplete="off"/></label></header>
     <div class="inventory-layout">
       <aside class="inventory-nav" aria-label="Filter inventory">
-        <nav aria-label="Collections"><h2 class="micro">COLLECTIONS</h2><div id="inventorySources"></div></nav>
-        <nav aria-label="Categories"><h2 class="micro">CATEGORIES</h2><div id="inventoryCategories"></div></nav>
+        <nav aria-label="Source filter"><h2 class="micro">SOURCE FILTER</h2><div id="inventorySources"></div></nav>
+        <nav aria-label="Category filter"><h2 class="micro">CATEGORY FILTER</h2><div id="inventoryCategories"></div></nav>
       </aside>
       <section class="browser-pane" aria-labelledby="listingTitle">
         <div class="listing-head"><h2 id="listingTitle">All assets</h2><span class="result-count" id="inventoryTotal" aria-live="polite"></span></div>
+        <div id="activeFilters" class="active-filters" role="region" aria-label="Active filters" hidden></div>
         <div id="inventoryNotice" class="inventory-notice" role="status" hidden><span id="inventoryNoticeText"></span><button class="textbutton" id="inventoryRetry">Retry</button></div>
         <div class="results-scroll" id="resultsScroll"><div id="assetGrid" aria-label="Inventory assets"></div></div>
         <form id="inventoryPager" class="inventory-pager" aria-label="Inventory pages">

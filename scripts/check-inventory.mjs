@@ -315,5 +315,32 @@ export async function verifyBrowsing(page, fixture, out) {
   await source(page, 'original').click();
   await category(page, 'character').click();
   await waitGrid(page, Math.min(12, origChars));
+  // Combined source + category filters must show matching/total badge, combined heading, active chips, and one-click clear.
+  assert.equal(await source(page, 'original').getAttribute('aria-pressed'), 'true');
+  assert.equal(await category(page, 'character').getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('[data-source-filter="original"] small').textContent(), `${origChars}/${originalCount}`);
+  assert.equal(await page.locator('#listingTitle').textContent(), 'Originals · Characters');
+  await page.locator('#activeFilters').waitFor({ state: 'visible' });
+  assert.match(await page.locator('#activeFilters [data-clear-filter="source"]').textContent(), /Source: Originals/);
+  assert.match(await page.locator('#activeFilters [data-clear-filter="category"]').textContent(), /Category: Characters/);
+  await page.locator('#activeFilters [data-clear-filter="all"]').waitFor({ state: 'visible' });
+  await page.waitForFunction(expected => {
+    const imgs = [...document.querySelectorAll('#assetGrid [data-source="original"] img')];
+    return imgs.length === expected && imgs.every(img => img.complete && img.naturalWidth > 0);
+  }, Math.min(12, origChars));
+  await page.clock.fastForward(200);
+  await page.screenshot({ path: join(out, 'filter-toggles-combined.png') });
+  // Removing the category filter chip restores all Originals and resets the sidebar count back to the full total.
+  await page.locator('#activeFilters [data-clear-filter="category"]').click();
+  await page.waitForFunction(
+    expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
+    String(originalCount),
+  );
+  assert.equal(await page.locator('#listingTitle').textContent(), 'Originals');
+  assert.equal(await page.locator('[data-source-filter="original"] small').textContent(), String(originalCount));
+  await page.clock.fastForward(200);
+  await page.screenshot({ path: join(out, 'filter-toggles-originals.png') });
+  await category(page, 'character').click();
+  await waitGrid(page, Math.min(12, origChars));
   await open(page, 'Field Pilot').click();
 }

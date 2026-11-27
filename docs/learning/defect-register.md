@@ -1,5 +1,11 @@
 # Studio defect register
 
+## 2026-11-27 — Combined source and category filters looked like separate tabs with a stale 106 badge
+
+Clicking `Originals 106` while a category filter (such as `Characters`) was active kept the category filter applied with only a faint highlight, showed `Characters` as the heading while the sidebar still displayed `106`, and offered no active-filter chip bar, making the narrowed list look like missing originals. Both sidebar groups now render explicit toggle switches with matched active styling (`SOURCE FILTER` and `CATEGORY FILTER`), source badges display `matching/total` whenever category or search filters narrow them (e.g. `18/106`), `#listingTitle` combines active source and category (`Originals · Characters`), and `#activeFilters` renders removable toggle chips plus a `Clear filters` action above the grid.
+
+`src/studio/filter-state.test.ts` covers `matching / total` badge formatting, combined listing headings, and removable filter chip generation. `scripts/check-inventory.mjs` exercises combined `Originals` + `Characters` filtering in headless Chrome, asserts the `matching / total` badge, combined title, and active filter chips, and verifies clicking the category chip restores all originals.
+
 ## 2026-11-26 — PolyFork 429 responses locked out catalog loading for 60 seconds and GLB fetches had no retry or timeout
 
 PolyFork catalog responses do not expose `Retry-After` in `Access-Control-Expose-Headers`, so browsers read `null` and triggered a 60-second client-side blackout after a single HTTP 429, leaving categories like Buildings showing only local originals (such as Signal Tower) and blocking manual Retry clicks. Model GLB downloads also lacked timeouts and transient 429/5xx retries, and an unexpected catalog rejection could leave the shelf stuck on `Loading…`. The catalog client now uses short progressive backoff when `Retry-After` is hidden, deduplicates concurrent page requests, clears backoff on explicit Retry, auto-retries after rate-limit cooldowns, recovers the shelf UI on unexpected failures, and retries/times out transient GLB fetch failures.
