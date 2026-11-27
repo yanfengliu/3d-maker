@@ -5,7 +5,8 @@ import type { ExportOptions } from './export';
 import { attachCharacterAnimations, ensureCharacterAnimations, loadCharacterAnimations } from '../animation/lazy';
 import { createAssetController, type AssetController } from '../capabilities/runtime';
 import { readCapabilities } from '../capabilities/schema';
-import { catalog, parseRecipe, type Recipe } from '../data/recipe';
+import { catalog, parseRecipe, resolveVariationRecipe, type Recipe } from '../data/recipe';
+import { findVariation } from '../models/variations';
 import { saveAsset } from '../data/inventory';
 import {
   applyImportEdits,
@@ -51,12 +52,8 @@ const initial = first.recipe;
 
 const activeController = () => imported?.controller ?? originalController;
 const name = () => recipe?.name ?? imported?.edits.name ?? 'Asset';
-const category = () =>
-  recipe
-    ? (catalog.find(row => row.id === recipe?.template)?.category ?? 'Object')
-    : imported?.source.kind === 'polyfork'
-      ? 'PolyFork model'
-      : 'Imported GLB';
+const category = () => recipe ? (catalog.find(row => row.id === recipe?.template)?.category ?? 'Object')
+  : imported?.source.kind === 'polyfork' ? 'PolyFork model' : 'Imported GLB';
 
 function syncRigEdits() {
   if (!imported) return;
@@ -68,28 +65,19 @@ function syncRigEdits() {
 }
 
 const ui = createInspectorBridge({
-  stage,
-  getRecipe: () => recipe,
-  getImported: () => imported,
-  getController: activeController,
-  edit,
-  setImportEdits,
-  syncRigEdits,
+  stage, getRecipe: () => recipe, getImported: () => imported, getController: activeController,
+  edit, selectVariation, setImportEdits, syncRigEdits,
 });
 
 function toolbar() {
   const row = catalog.find(entry => entry.id === recipe?.template);
   el('sceneName').textContent = name();
-  el('assetCode').textContent = row
-    ? `${row.category} · ${recipe?.quality === 'hd' ? 'HD' : 'Standard'}`
-    : category();
+  el('assetCode').textContent = row ? `${row.category} · ${recipe?.quality === 'hd' ? 'HD' : 'Standard'}` : category();
   const source = el<HTMLAnchorElement>('assetSource');
   source.hidden = imported?.source.kind !== 'polyfork';
-  if (imported?.source.kind === 'polyfork') {
-    source.href = 'https://polyfork.dev/asset/' + encodeURIComponent(imported.source.assetId);
-  } else source.removeAttribute('href');
-  el('save').innerHTML =
-    icon(selection.id ? 'save' : 'plus', 16) + (selection.id ? ' Save changes' : ' Save to inventory');
+  if (imported?.source.kind === 'polyfork') source.href = 'https://polyfork.dev/asset/' + encodeURIComponent(imported.source.assetId);
+  else source.removeAttribute('href');
+  el('save').innerHTML = icon(selection.id ? 'save' : 'plus', 16) + (selection.id ? ' Save changes' : ' Save to inventory');
   ui.syncViewportTools();
 }
 
@@ -160,10 +148,9 @@ function swap(model: T.Group, refit: boolean) {
   if (refit) el<HTMLSelectElement>('view').value = 'Perspective';
 }
 
-function reapplyOriginalState(ctrl: AssetController, state?: ReturnType<AssetController['getState']>) {
+function applyOriginalState(ctrl: AssetController, state?: ReturnType<AssetController['getState']>) {
   if (!state) return;
   if (state.pose && Object.keys(state.pose).length) {
-    // Unbind the clip BEFORE posing so Three.js PropertyMixer restoration does not overwrite the restored pose.
     if (!stage.playing) stage.syncExternalPose();
     for (const [part, value] of Object.entries(state.pose)) {
       if (ctrl.capabilities.riggedParts.some(p => p.name === part)) ctrl.setPart(part, value);
@@ -177,6 +164,23 @@ function reapplyOriginalState(ctrl: AssetController, state?: ReturnType<AssetCon
   stage.invalidate();
 }
 
+function selectVariation(variation: string, template?: string) {
+  const id = template ?? recipe?.template;
+  if (!id) throw new Error('Open a studio original to switch variations.');
+  applyRecipe(resolveVariationRecipe(id, variation), false);
+  const init = findVariation(id, variation)?.state;
+  if (init && originalController) {
+    applyOriginalState(originalController, {
+      ...(init.pose ? { pose: { ...init.pose } } : {}),
+      ...(init.hiddenParts ? { hiddenParts: [...init.hiddenParts] } : {}),
+      ...(init.night !== undefined ? { night: init.night } : {}),
+      ...(init.decalText ? { decalText: { ...init.decalText } } : {}),
+    });
+    ui.syncViewportTools();
+    ui.refreshRig();
+  }
+}
+
 function edit(patch: Partial<Recipe & ImportEdits>) {
   try {
     if (recipe) {
@@ -186,7 +190,7 @@ function edit(patch: Partial<Recipe & ImportEdits>) {
       originalController?.dispose();
       originalController = createAssetController(built);
       swap(built, false);
-      reapplyOriginalState(originalController, prevState);
+      applyOriginalState(originalController, prevState);
       ui.refreshRig();
     } else if (imported) {
       applyImportEdits(imported, { ...imported.edits, ...patch });
@@ -195,10 +199,7 @@ function edit(patch: Partial<Recipe & ImportEdits>) {
       ui.refreshRig();
     }
     toolbar();
-  } catch (error) {
-    report(error);
-    ui.renderControls();
-  }
+  } catch (error) { report(error); ui.renderControls(); }
 }
 
 function choose(next: Recipe, id?: string) {
@@ -359,7 +360,7 @@ function applyRecipe(input: unknown, carryPose = true) {
   originalController = createAssetController(model);
   recipe = next;
   swap(model, false);
-  reapplyOriginalState(originalController, prevState);
+  applyOriginalState(originalController, prevState);
   toolbar();
   ui.renderControls();
 }
@@ -468,24 +469,22 @@ stage.onReady = () => {
 
 const api = createAgentApi({
   stage, getRecipe: () => (recipe ? { ...recipe } : null), getImported: () => imported, getController: activeController,
-  applyRecipe: input => { applyRecipe(input); }, remix, save, exportGLB, openPolyfork: openRemote, listPaintSlots: paintSlots,
-  getImportEdits, setImportEdits, listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
+  applyRecipe: input => { applyRecipe(input); }, selectVariation, remix, save, exportGLB, openPolyfork: openRemote,
+  listPaintSlots: paintSlots, getImportEdits, setImportEdits,
+  listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
   playClip: index => {
     if (!availableClips()[index]) throw new Error('Unknown animation clip.');
     stage.setClip(index); stage.play(true); ui.renderControls();
   },
   syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset,
 });
-
-declare global {
-  interface Window {
-    forgeStudio: ForgeStudioApi;
-    __shotReady: boolean;
-  }
-}
+declare global { interface Window { forgeStudio: ForgeStudioApi; __shotReady: boolean; } }
 window.forgeStudio = api;
 window.__shotReady = false;
-choose(catalog.find(row => row.id === params.get('asset'))?.recipe ?? initial);
+const startId = params.get('asset');
+const startVariation = params.get('variation') ?? undefined;
+const startRow = catalog.find(row => row.id === startId);
+choose(startRow ? resolveVariationRecipe(startRow.id, startVariation) : initial);
 const shotView = params.get('view');
 if (params.get('shot') === '1' && shotView && ['Front', 'Top', 'Side'].includes(shotView)) {
   stage.view(shotView as View);

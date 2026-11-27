@@ -1,6 +1,6 @@
 import type { AssetController } from '../capabilities/runtime';
 import type { ColorwayPresetSpec } from '../capabilities/schema';
-import type { Recipe } from '../data/recipe';
+import { catalog, type Recipe } from '../data/recipe';
 import { colorwayPaintPatch, listPaintSlots, pickPaintSlot, type ImportedAsset, type ImportEdits } from '../imports';
 import { el, notify } from '../ui/dom';
 import { showAnimation, showPlayback, showProperties } from '../ui/inspector';
@@ -14,6 +14,7 @@ export interface WorkspaceBridge {
   getImported: () => ImportedAsset | null;
   getController: () => AssetController | null;
   edit: (patch: Partial<Recipe & ImportEdits>) => void;
+  selectVariation: (variation: string) => void;
   setImportEdits: (edits: ImportEdits) => void;
   syncRigEdits: () => void;
 }
@@ -80,7 +81,16 @@ export function createInspectorBridge(host: WorkspaceBridge) {
     const recipe = host.getRecipe();
     const imported = host.getImported();
     if (recipe) {
-      showProperties(recipe, host.edit);
+      const entry = catalog.find(row => row.id === recipe.template);
+      showProperties(
+        {
+          ...recipe,
+          variation: recipe.variation ?? 'default',
+          ...(entry ? { variations: entry.variations } : {}),
+        },
+        host.edit,
+        host.selectVariation,
+      );
       const ctrl = host.getController();
       if (ctrl) {
         showModelPartsProperties(ctrl.capabilities, {

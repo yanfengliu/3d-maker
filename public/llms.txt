@@ -25,9 +25,11 @@ In a three.js scene, `dist/studio-sdk.js` exports `inspectAsset(group, animation
 
 Open the studio and use window.forgeStudio.
 
-- listTemplates() lists the available starters.
+- listTemplates() lists the available starters (each with its registered variations).
+- listVariations(template?) enumerates every stored variation across the dataset or for one template, including "default" and all situation-specific versions.
 - getRecipe() reads the active starter recipe. Returns null while viewing an imported GLB.
-- applyRecipe(recipe) validates and displays a complete starter recipe.
+- applyRecipe(recipe) validates and displays a complete starter recipe (including optional variation).
+- selectVariation(variation, template?) switches the active original (or opens template) directly to a stored variation.
 - save() saves the active asset to this browser's inventory.
 - remix(name?) starts a separately named draft from the current model and edits. It keeps the active clip and camera. Call save() to add the copy to inventory, and call save() again to update that copy.
 - listInventory() reads the browser's saved inventory.

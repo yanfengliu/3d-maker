@@ -75,6 +75,9 @@
 #propertiesBody{overflow-y:auto;scrollbar-width:thin;padding:0 13px 10px}
 #propertiesBody .propgroup{padding:9px 1px;border:0}
 #propertiesBody .identity{display:flex;align-items:center;gap:10px;padding-top:2px}
+#propertiesBody .variation-group{padding-top:2px}
+#propertiesBody .variation-group select{min-width:0;max-width:65%;height:28px;border:1px solid var(--line);background:#fafbf6;border-radius:5px;padding:0 6px;font-size:12px}
+.variation-note{margin:4px 0 0;font-size:11px;line-height:1.35;color:#697261}
 #modelPaint:empty,#modelParts:empty{display:none}
 .paint-editor{display:flex;align-items:center;gap:6px;margin-top:5px}
 .paint-editor select{min-width:0;flex:1;height:29px;border:1px solid var(--line);background:#fafbf6;border-radius:4px;padding:0 5px;font-size:12px}

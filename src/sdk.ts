@@ -1,8 +1,8 @@
 import { addCharacterAnimations } from './animation/library';
 import { parseRecipe } from './data/recipe';
 import { buildModel } from './models';
-export { catalog, parseRecipe } from './data/recipe';
-export type { Recipe, TemplateId } from './data/recipe';
+export { catalog, listVariations, parseRecipe, resolveVariationRecipe } from './data/recipe';
+export type { CatalogEntry, ModelVariationEntry, Recipe, TemplateId, VariationSummary } from './data/recipe';
 export { createAssetController, inspectAsset, synthesizeRigClips } from './capabilities/runtime';
 export type { AssetController } from './capabilities/runtime';
 export type {

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { catalog, parseRecipe, type Recipe } from './recipe';
+import { catalog, listVariations, parseRecipe, resolveVariationRecipe, type Recipe } from './recipe';
 import { readInventory, removeAsset, saveAsset } from './inventory';
 import { clearPolyforkBackoff, PolyforkRateLimitError, searchPolyfork } from './polyfork';
 
@@ -41,10 +41,15 @@ describe('recipes', () => {
   });
 
   it('rejects unknown fields, invalid types and malformed versions before use', () => {
-    for (const change of [{ version: 2 }, { template: 'custom' }, { name: '  ' }, { detail: 1 }, { extra: 'value' }, { primary: 'transparent' }, { quality: 'ultra' }]) {
+    for (const change of [{ version: 2 }, { template: 'custom' }, { variation: 'does-not-exist' }, { variation: 42 }, { name: '  ' }, { detail: 1 }, { extra: 'value' }, { primary: 'transparent' }, { quality: 'ultra' }]) {
       expect(() => parseRecipe({ ...starter(), ...change })).toThrow();
     }
     expect(parseRecipe({ ...starter(), name: ' Sample ', accent: '#AB12EF' })).toMatchObject({ name: 'Sample', accent: '#ab12ef' });
+    expect(parseRecipe({ ...starter(), variation: 'default' }).variation).toBeUndefined();
+    const lifter = resolveVariationRecipe('relay-drone', 'cargo-lifter');
+    expect(lifter.variation).toBe('cargo-lifter');
+    expect(parseRecipe(lifter)).toEqual(lifter);
+    expect(listVariations('bakery-shopfront').map(v => v.id)).toEqual(expect.arrayContaining(['default', 'winter-frost', 'evening-bistro']));
   });
 });
 

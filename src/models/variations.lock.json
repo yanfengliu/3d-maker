@@ -1,0 +1,2039 @@
+{
+  "version": 1,
+  "entries": {
+    "acoustic-lute@default": {
+      "template": "acoustic-lute",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Ribbed Renaissance lute on a wooden display stand with a rotating tuning peg and swaying body.",
+      "recipeHash": "sha256:3b23517df193deb15b69536befdbb8b066e761e371f4935cc455d7e8fd84a6af",
+      "standardHash": "sha256:ae10321fa3467d81e4f7ea1be6d609f37cba40fd50dac06db932ff0950239ef3",
+      "hdHash": "sha256:4501175d344e06a5978f44d90b097b87c14cc7969bc4a3e1be59c85dfc9cbb37",
+      "clips": [
+        "Strum sway",
+        "Tune peg"
+      ],
+      "riggedParts": [
+        "TuningPeg",
+        "LuteBody"
+      ],
+      "detachableParts": []
+    },
+    "alpine-pine-grove@default": {
+      "template": "alpine-pine-grove",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A cluster of tiered alpine spruces on a mossy knoll with a removable camp boulder.",
+      "recipeHash": "sha256:206a89c6078ce0f7a11a6570bdd8016d6330784557349e9de8585562ae44da37",
+      "standardHash": "sha256:47052129d2f65515192dc0221a88f1644c89863448b1b43332c8b033998dc184",
+      "hdHash": "sha256:8cbc5d4eb27d4092e6d0ac7c4944e6fcfec822094a6e08568ec8782a5393bf8c",
+      "clips": [
+        "Alpine breeze"
+      ],
+      "riggedParts": [
+        "MainCrown"
+      ],
+      "detachableParts": [
+        "CampBoulder"
+      ]
+    },
+    "apothecary-cabinet@default": {
+      "template": "apothecary-cabinet",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Walnut herbalist chest with two sliding drawers and a removable collection of glass potion jars.",
+      "recipeHash": "sha256:144026faffcb477fc986899095e3b8b3b5bc959fe49f5397ce0a15bb3321fe26",
+      "standardHash": "sha256:774f56e91baa17da6d8e8c3c50b88028d4d13cd0c541b406cd5f24f7df6104b4",
+      "hdHash": "sha256:e61c92ca16204d7d263f9ec221f2fbb92916631acfa81d748cbcdcb042821c48",
+      "clips": [
+        "Open drawers"
+      ],
+      "riggedParts": [
+        "TopDrawer",
+        "MidDrawer"
+      ],
+      "detachableParts": [
+        "PotionJars"
+      ]
+    },
+    "arcane-mage@default": {
+      "template": "arcane-mage",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Robed arcane spellcaster with draped shoulder mantle, hip-slung spellbook, and detachable wizard hat.",
+      "recipeHash": "sha256:43d5a555404059911b3ed43900df19901ef0a7b4bd87e93ed1beb2c2207115fc",
+      "standardHash": "sha256:b75baa8b968c42ffe298aa004add4de94fd3aa80053e97eb3fd5249a202180d6",
+      "hdHash": "sha256:1fcdcfa3d3b7b4351652d19460d17a46d0ffa94d524a77cf09d01ddd2c1ee6d3",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "WizardHat"
+      ]
+    },
+    "arctic-explorer@default": {
+      "template": "arctic-explorer",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Polar expedition scout in a fur-ruffed down parka with snow goggles and detachable alpine pack.",
+      "recipeHash": "sha256:98a0be584c525ce4ce670a44a98af95bc0651c51c828a93791e422bf40e63022",
+      "standardHash": "sha256:c0c1a479a51bb6342aaaf19acdbd7bc2a71787a516057df824aac930caad7d77",
+      "hdHash": "sha256:b8a43fdfd37aa840a5930d303b701832f5893b136c86094b6c5a7cc9dfeef9d4",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "ExpeditionPack"
+      ]
+    },
+    "arctic-snowcat@default": {
+      "template": "arctic-snowcat",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Tracked polar expedition snowcat with a tilting snowplow, rotating beacon, and detachable roof rack.",
+      "recipeHash": "sha256:44d78d92870d66bcf67eb3b2a82d4000dbf0817693d9a3b2d30374fe5eb4ceb1",
+      "standardHash": "sha256:19c77a38b01d0479a28a457515473a5d0fb0952b5b5009e7bc61102b177efe08",
+      "hdHash": "sha256:b4e6faf08e155d4b7094573d7ae8b53d63d2c5fac1488dbb9989ff3e33b31323",
+      "clips": [
+        "Polar patrol",
+        "Plow tilt"
+      ],
+      "riggedParts": [
+        "SnowPlow",
+        "RoofBeacon"
+      ],
+      "detachableParts": [
+        "RoofRack"
+      ]
+    },
+    "armored-railcar@default": {
+      "template": "armored-railcar",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Heavy armored railway car with a 360-degree roof turret and sliding blast side hatch.",
+      "recipeHash": "sha256:141766636a4d97db90e0042ff835853ec15d5921c6439d2a2d1431256c1a95d8",
+      "standardHash": "sha256:94a52e81d06603f9aec72fd5d8f781c7274a2008b58f05e726bdf1247b92a42a",
+      "hdHash": "sha256:b6e398219bea7318466b521e2dc6e9bfd31b83128f05460361c8111cb08c17d9",
+      "clips": [
+        "Track patrol",
+        "Turret sweep"
+      ],
+      "riggedParts": [
+        "RoofTurret",
+        "SideHatch"
+      ],
+      "detachableParts": []
+    },
+    "artisan-chef@default": {
+      "template": "artisan-chef",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Culinary artisan wearing a double-breasted coat, bistro neckerchief, waist apron, and detachable pleated toque.",
+      "recipeHash": "sha256:dbc7faa316b9cc6f26f5753e5bb38878bce4c23bd3cefbc4b50b019df2ac5d53",
+      "standardHash": "sha256:013274daa2511fc011c46ed09b34c441dbdc57cd663b284698de9b71ad106e95",
+      "hdHash": "sha256:65b30b471f259fecf670230b69df870c4d46e4a1f0d73930198f7af85d8a25c5",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "ChefHat"
+      ]
+    },
+    "bakery-shopfront@default": {
+      "template": "bakery-shopfront",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Two-story corner bakery with striped awning, display bay, window planter, and hinged shop door.",
+      "recipeHash": "sha256:2876e9c04f86efa1a0cf392d9b7376eb8e7aa91667e13ee84342b5d56f5e363c",
+      "standardHash": "sha256:b0643314ccbbc416bf1644efdeab237415f57411e558e32848ff54d075f5c431",
+      "hdHash": "sha256:8f0a4f089a209b357f76ff3701f74534df39034b701ea3ff8d69017dac975142",
+      "clips": [
+        "Open shop door"
+      ],
+      "riggedParts": [
+        "FrontDoor"
+      ],
+      "detachableParts": [
+        "Awning",
+        "Planter"
+      ]
+    },
+    "bakery-shopfront@evening-bistro": {
+      "template": "bakery-shopfront",
+      "variation": "evening-bistro",
+      "label": "Evening Bistro",
+      "situation": "Dusk and night street dining scene with slate facade, brass awning, and hanging corner lantern.",
+      "recipeHash": "sha256:f8125e223256e34f905df0a8d2f28d11a72f91991b827cdba70b0ff4c745b8aa",
+      "standardHash": "sha256:9d93ff20291fa7e8166fb7771a8ea5e553bf23072eda88c4548599537faa0006",
+      "hdHash": "sha256:28e7495dc0068626972bea3cce836b163e5a579b93c2960cd505162010be69d2",
+      "clips": [
+        "Open shop door",
+        "Lantern sway"
+      ],
+      "riggedParts": [
+        "FrontDoor",
+        "PatioLantern"
+      ],
+      "detachableParts": [
+        "Awning",
+        "Planter",
+        "LanternMount"
+      ]
+    },
+    "bakery-shopfront@winter-frost": {
+      "template": "bakery-shopfront",
+      "variation": "winter-frost",
+      "label": "Winter Frost",
+      "situation": "Cold-weather snowy street scene with snow drifts on roof, chimney, and awning.",
+      "recipeHash": "sha256:9affa4db6b0b47461884e315424996191ad68a3de0c0b29d430a75e0e3c3dd04",
+      "standardHash": "sha256:b82411f7c20624b0c88cd8a2693bb35adf3aab331f33a4ea36695d2b45433e29",
+      "hdHash": "sha256:131aa86106736298a88d064556821d64c6f3f3a4289704c092650ba13b5318ba",
+      "clips": [
+        "Open shop door"
+      ],
+      "riggedParts": [
+        "FrontDoor"
+      ],
+      "detachableParts": [
+        "Awning",
+        "Planter",
+        "RoofSnow"
+      ]
+    },
+    "bamboo-water-shrine@default": {
+      "template": "bamboo-water-shrine",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A serene stone water basin with a rocking bamboo fountain and zen moss boulder.",
+      "recipeHash": "sha256:e3fd51a12478a788ea9195db58ba663876d4b8bca8e01e39f9bdfe73e7ac2c5b",
+      "standardHash": "sha256:8874cb13ac0f3b6b69fb093f690e88be6898b2acad9ec220c271cbb581f3464b",
+      "hdHash": "sha256:0e4c842cdfaca0d84b0af68af8b8efd0c15c284334a23691a54785bc298542c6",
+      "clips": [
+        "Water tip"
+      ],
+      "riggedParts": [
+        "BambooRocker"
+      ],
+      "detachableParts": [
+        "MossStone"
+      ]
+    },
+    "barn-owl@default": {
+      "template": "barn-owl",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A perched barn owl with a heart-shaped facial disc and articulated wings.",
+      "recipeHash": "sha256:684eec6d1da68c6fe5d658b88166aa4f2f04d7f683ca35620ce80dbf6c3f0296",
+      "standardHash": "sha256:d6c02dfc9c47f33c8113801353ae16b7b2936be6af3fa2ee3454d7a26c5445d7",
+      "hdHash": "sha256:a6933d34d480100bf8747c3e054768280bc9a14a9b23927f6191ad7428999ca1",
+      "clips": [
+        "Wing beat",
+        "Night watch"
+      ],
+      "riggedParts": [
+        "WingL",
+        "WingR",
+        "OwlHead"
+      ],
+      "detachableParts": []
+    },
+    "blacksmith-forge@default": {
+      "template": "blacksmith-forge",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Stone hearth forge with hooded chimney, pumping bellows, and removable stump-mounted anvil.",
+      "recipeHash": "sha256:7569323aa07c37f2c6c76383ea16a5b5e0d066921a14ab739a401aa20b134875",
+      "standardHash": "sha256:031c67a969d930597c4fcdd4e61577032288ae200db59b0b4bf97fb24ca045cf",
+      "hdHash": "sha256:86cc49deb1395035003af3ebb598fdaed765f136f26b1e0a014338827f0507de",
+      "clips": [
+        "Pump bellows"
+      ],
+      "riggedParts": [
+        "BellowsTop"
+      ],
+      "detachableParts": [
+        "AnvilBlock"
+      ]
+    },
+    "brass-pocket-compass@default": {
+      "template": "brass-pocket-compass",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Hunter-case nautical pocket compass on a navigator plinth with a hinged dome lid and spinning needle.",
+      "recipeHash": "sha256:821fb9158a02469457db0316c972fcbe175c453f5e9276e70696515f64cd92bd",
+      "standardHash": "sha256:602030abbae8a27c36edf6b5fee7da35f26c37756261b121ea523c93e32dc2fb",
+      "hdHash": "sha256:18142c44a833cc3273f441ee50ba4685f41c92f4bdeba4f0ce9e4013d79f2f4e",
+      "clips": [
+        "Open compass",
+        "Seek north"
+      ],
+      "riggedParts": [
+        "CompassLid",
+        "Needle"
+      ],
+      "detachableParts": []
+    },
+    "brass-spyglass@default": {
+      "template": "brass-spyglass",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Leather-wrapped brass telescope on a tabletop cradle with a telescoping lens tube and hinged cap.",
+      "recipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
+      "standardHash": "sha256:c1debc9b93e215a6afa08bf50988d8e187e5c1ef6090b0b648bc4702527e7c99",
+      "hdHash": "sha256:0b1c1a915a7f28c6b53a065c23bd218bb0ccce55de9b1ca206702698375b7b07",
+      "clips": [
+        "Extend spyglass",
+        "Flip lens cap"
+      ],
+      "riggedParts": [
+        "LensTube",
+        "LensCap"
+      ],
+      "detachableParts": []
+    },
+    "canal-boathouse@default": {
+      "template": "canal-boathouse",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Stilt-mounted canal boathouse with timber pier, lifting slipway gate, and swinging dockside mooring crane.",
+      "recipeHash": "sha256:a77fdd66344578bce10d14f960b13f059cb60eb1fe805b23da77699b803ba6a8",
+      "standardHash": "sha256:88b9711223d0fb92ec1707ee2029760d493aafb968f0001e7ba4fcfcd2f3042a",
+      "hdHash": "sha256:26b7566d10f836f0c7f136fb367af54d3f2a9a4c78a27e0365dc0a54251f23f0",
+      "clips": [
+        "Launch boat",
+        "Swing mooring crane"
+      ],
+      "riggedParts": [
+        "BoatGate",
+        "MooringCrane"
+      ],
+      "detachableParts": []
+    },
+    "cargo-gantry-crane@default": {
+      "template": "cargo-gantry-crane",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Industrial rail-mounted A-frame gantry crane with a traversing trolley and lowering hoist hook.",
+      "recipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
+      "standardHash": "sha256:3a0d2962ffa5d99bebb56525ad78dee17de3d2c1c8669192d27113d10b7a8e38",
+      "hdHash": "sha256:a0fabb6a93b408f254c1a8dc2a822cf3682028002eb7b43e951ff686839a16ac",
+      "clips": [
+        "Transfer cargo"
+      ],
+      "riggedParts": [
+        "CraneTrolley",
+        "HoistHook"
+      ],
+      "detachableParts": []
+    },
+    "cargo-pod@default": {
+      "template": "cargo-pod",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A reinforced equipment pod for field transport.",
+      "recipeHash": "sha256:9b0fd88dc5027fd01a8c33cc7774369297fdb8d958405ee866672af5aff240e3",
+      "standardHash": "sha256:1be4f15b95200c402db986615836b7d9d61176ac620b69596b175929bb738520",
+      "hdHash": "sha256:db062dbd4baaae8db41b9078fd14680ec163a1898cc4e6d5a01c3fa965238c19",
+      "clips": [
+        "Open case"
+      ],
+      "riggedParts": [
+        "CaseLid"
+      ],
+      "detachableParts": []
+    },
+    "castle-gatehouse@default": {
+      "template": "castle-gatehouse",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Twin-tower fortified stone gatehouse with a rising iron portcullis and detachable fire braziers.",
+      "recipeHash": "sha256:c2e9c82c96545539d1b6ed68955aa53a551bdd5e93e65cd77f2a10435d5e52fa",
+      "standardHash": "sha256:7876119f95d510306433fa0b0ca568dc479b35fd091861f4bf2f897a583fb53f",
+      "hdHash": "sha256:d0c2c48abf9289b2fc0e1940b142d8d63a45e89bc32aba3ff4867214133ca96f",
+      "clips": [
+        "Raise portcullis"
+      ],
+      "riggedParts": [
+        "Portcullis"
+      ],
+      "detachableParts": [
+        "BrazierPair"
+      ]
+    },
+    "city-tramcar@default": {
+      "template": "city-tramcar",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Double-ended urban streetcar with parting sliding doors and a tilting roof pantograph.",
+      "recipeHash": "sha256:ed19620bbdbdab1a939005f063be144091f6f8af6b90b6e79a8105365a7e0a67",
+      "standardHash": "sha256:a1766769834168254321576085b468376cec186ad72818764d9416782c7662dd",
+      "hdHash": "sha256:51e8e7b3982d4fc586d14b0c49774367d55d7bed56608115ccba119ff8f9a0ad",
+      "clips": [
+        "Boarding stop",
+        "Pantograph raise"
+      ],
+      "riggedParts": [
+        "TramDoorF",
+        "TramDoorR",
+        "Pantograph"
+      ],
+      "detachableParts": []
+    },
+    "clockwork-crab@default": {
+      "template": "clockwork-crab",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A brass-geared automaton crab with snapping pincers and a wind-up back key.",
+      "recipeHash": "sha256:ab71d1fc7bb8a85ada9dfcd54fdc216d20d31f12c74c9149300a02c8a4cc5e76",
+      "standardHash": "sha256:4eb80d13104162167ffa2fe604ef317dd83900c8eb57b5a2fbca1936224c5ad8",
+      "hdHash": "sha256:65e87b529d02b6dede6bfdd4b1376b7bd41c3cf529e49a13905fdc6c830d88fb",
+      "clips": [
+        "Pincer snap",
+        "Wind-up tick"
+      ],
+      "riggedParts": [
+        "ClawL",
+        "ClawR"
+      ],
+      "detachableParts": [
+        "BackKey"
+      ]
+    },
+    "coastal-sailboat@default": {
+      "template": "coastal-sailboat",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Sloop-rigged coastal sailboat with a swinging mainsail boom and articulated tiller rudder.",
+      "recipeHash": "sha256:10ff6e85a4f6eb10522c6c1eb957997d2e6fd1a0a8eff62663148ef9a68f6b87",
+      "standardHash": "sha256:16bc50ec2a6b21633ec81c60fd8918a761f95111da188a55d7051344c840ae9e",
+      "hdHash": "sha256:2ff5a83d556bba82b9aa7308a10968a0a1429b64dfa1ec3ea511c23f8b9721a3",
+      "clips": [
+        "Tack breeze"
+      ],
+      "riggedParts": [
+        "MainBoom",
+        "TillerRudder"
+      ],
+      "detachableParts": []
+    },
+    "coral-jellyfish@default": {
+      "template": "coral-jellyfish",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A glowing reef jellyfish with a pulsing dome bell and swirling tentacle crown.",
+      "recipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
+      "standardHash": "sha256:0cbe93d83342bab9e4df6bb1b72c0713d1f9a2de3d8f6f5b14937c711c4f3519",
+      "hdHash": "sha256:2ffd4e48e6bd7b35d08ecc525bd6eaa8447a6d75c7a042a02af832dedd2c3fcd",
+      "clips": [
+        "Pulse drift"
+      ],
+      "riggedParts": [
+        "JellyBell",
+        "TendrilRing"
+      ],
+      "detachableParts": []
+    },
+    "country-train-depot@default": {
+      "template": "country-train-depot",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Timber-eaved country railway depot with boarding platform, sliding freight door, and tilting trackside semaphore signal.",
+      "recipeHash": "sha256:67513a253955e927d8770e5f60c1abd429ca6ccd41a722ba230129bb798fc439",
+      "standardHash": "sha256:0f48f6d87991032a0aec2f68c0305b3ce27d16ef61c4a77d3876429bed818c57",
+      "hdHash": "sha256:29e836af4ef40eac8d0f666e94f52acbe459f896fe481e974a2c740c76b191e5",
+      "clips": [
+        "Depot arrival",
+        "Slide freight door"
+      ],
+      "riggedParts": [
+        "FreightDoor",
+        "SignalArm"
+      ],
+      "detachableParts": []
+    },
+    "crystal-geode-spire@default": {
+      "template": "crystal-geode-spire",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A fractured mineral geode spire crowned by a levitating crystal shard.",
+      "recipeHash": "sha256:47f20d7ee4d03a3454541824358de59ac545f99e0af36cb1d2045fb1514a2041",
+      "standardHash": "sha256:ec080b7a9a4136dd893d46337e594ebe093a27d8144fa5f50c6936aa5d7f3ff0",
+      "hdHash": "sha256:e066a69b8ff2322c28ac64b53ffff7aa761f244069c63cb0341282b06c42d228",
+      "clips": [
+        "Resonance spin"
+      ],
+      "riggedParts": [
+        "FloatingShard"
+      ],
+      "detachableParts": [
+        "SmallCluster"
+      ]
+    },
+    "cyber-courier@default": {
+      "template": "cyber-courier",
+      "variation": "default",
+      "label": "Default",
+      "situation": "High-speed urban cyber courier with wraparound neon visor, standing collar rig, and detachable sling pack.",
+      "recipeHash": "sha256:a2d390365e13b9764175cd8165c758f5c60877e0b9c35a4c3002972ad183da60",
+      "standardHash": "sha256:61acc4a89719b5e02086d15e5d1ecfc05629226a1333d9f78e046f548dec4e8a",
+      "hdHash": "sha256:e5ddced25a149c61d6f56cd2bf7f2227b13f6880dad893f661ab39a2dfb0567c",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "CyberVisor"
+      ],
+      "detachableParts": [
+        "CourierPack"
+      ]
+    },
+    "cyber-ramen-kiosk@default": {
+      "template": "cyber-ramen-kiosk",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Neon-lit street-food kiosk with a rolling counter shutter, swaying sign, and detachable stools.",
+      "recipeHash": "sha256:c5a0c0f411c2f8362a1b0d7819ec2ad722681515abb6d7330c05621166aba713",
+      "standardHash": "sha256:9b361bc5ca2d9529c8f2ff17b7f8e6abeb76ee7f94a4699fccc7ed4f6ed7d78a",
+      "hdHash": "sha256:ec7a1017b5e845c056a2bdba62435fe7333c39c424de5d5249b8a48667de4262",
+      "clips": [
+        "Open shutter",
+        "Sign sway"
+      ],
+      "riggedParts": [
+        "RollShutter",
+        "NeonSign"
+      ],
+      "detachableParts": [
+        "StoolSet"
+      ]
+    },
+    "deep-sea-diver@default": {
+      "template": "deep-sea-diver",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Hard-hat deep-sea diver wearing a brass porthole helmet, weighted belt, and detachable twin dive tanks.",
+      "recipeHash": "sha256:6c7e2578e9b69aad8408e49c9995b5cf643c41a773dd76ada2f9c98978147972",
+      "standardHash": "sha256:df450263655226b8fd7d6b378c44e52ce8172b3c4b0b9755bfe9b4408c7a07c1",
+      "hdHash": "sha256:4dc0027729c44283052e82e57e945db2c607a143084ffbc63f2decbf6ce6a178",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "DiveTanks"
+      ]
+    },
+    "deep-submersible@default": {
+      "template": "deep-submersible",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Deep-sea research submersible with a shrouded stern propeller and dual articulated grab arms.",
+      "recipeHash": "sha256:9a242938b644c51f8937c4ff5ea88a1f62c24f78ed6276b0d46cb029cd8ce420",
+      "standardHash": "sha256:bd819af8fd79b97847c78d4fd435bf9b3f519ec58e6aca0cd4038e053f8cb97e",
+      "hdHash": "sha256:a1a0f0942e8763320fcb0f90349a72dd2ddbd8a979da11f85220114e0aaa7968",
+      "clips": [
+        "Deep dive",
+        "Sample grab"
+      ],
+      "riggedParts": [
+        "SternProp",
+        "GrabArmL",
+        "GrabArmR"
+      ],
+      "detachableParts": []
+    },
+    "desert-adobe-house@default": {
+      "template": "desert-adobe-house",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Stepped terracotta adobe house with projecting cedar vigas, roof ladder, hinged door, and louvered turquoise shutter.",
+      "recipeHash": "sha256:ca976bdcfd27f374a94623604ab995901d6f7f2c425f44e48163c04ec32b1c5d",
+      "standardHash": "sha256:81d0b6bb1cbf74b25ecfbf2d5dfa2b16c14a88925e843042b7c5c7954b26685e",
+      "hdHash": "sha256:7a2ec53ceb52b43ee7b9e277a58e4e71496433322093acb6e06d30b37cc5a9f0",
+      "clips": [
+        "Morning breeze",
+        "Open shutter"
+      ],
+      "riggedParts": [
+        "AdobeDoor",
+        "WindowShutter"
+      ],
+      "detachableParts": []
+    },
+    "desert-hover-skiff@default": {
+      "template": "desert-hover-skiff",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Expedition desert hover skiff with tilting ducted thrusters and a removable aft cargo crate.",
+      "recipeHash": "sha256:a0d26d1a2a9dd85bb9bc241ea7619249dc4658204f2a8d04fe4194fcbdd2b2d6",
+      "standardHash": "sha256:10bdd882197bb5a3a45e106ff183b9c80d4d1eaeaf873e0d989fa27841ee290e",
+      "hdHash": "sha256:9a52a94501b0bbb7c929c8ee10356fd8867c9e02a8456aedf06f69235976bef5",
+      "clips": [
+        "Vector thrust"
+      ],
+      "riggedParts": [
+        "ThrusterL",
+        "ThrusterR"
+      ],
+      "detachableParts": [
+        "CargoCrate"
+      ]
+    },
+    "desert-nomad@default": {
+      "template": "desert-nomad",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Dune wayfarer with layered head wrap, indigo shoulder drape, hip canteen, and detachable woven satchel.",
+      "recipeHash": "sha256:c1d565a5b8c52635011b0c2aec404c47c82292cf7ff6a42c9de440ee9880d1c5",
+      "standardHash": "sha256:3835636752bafbddf314ae0274312d0452991a688d3803bcea9c9631d967d616",
+      "hdHash": "sha256:8ac247d8e0543e4561957c772cb762c6d3a0800660a52a7a71f47c476b607fda",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "NomadSatchel"
+      ]
+    },
+    "desert-radar-bunker@default": {
+      "template": "desert-radar-bunker",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Armored desert listening bunker with a rotating roof phased-array radar and hinged blast hatch.",
+      "recipeHash": "sha256:92c09145589e99d11b3fd6cad986d018fd0e981417529be11645d183a4f7a9b9",
+      "standardHash": "sha256:8cf7782a8d68a1efddbaf44fedb4541082779c9ff7ac906989b4f0c62b75aa84",
+      "hdHash": "sha256:521b7961b76d4547d968f5e86f82a02697c74bd002cfc8af700f64150aee1d2a",
+      "clips": [
+        "Radar sweep",
+        "Open blast hatch"
+      ],
+      "riggedParts": [
+        "RadarArray",
+        "BlastHatch"
+      ],
+      "detachableParts": []
+    },
+    "dome-observatory@default": {
+      "template": "dome-observatory",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Hilltop masonry observatory with buttressed drum, rotating slotted dome, and tilting refractor telescope.",
+      "recipeHash": "sha256:470e9683445414158e8bb22a7b8d63b4370e79122a5cf6e8f5047e1287833f52",
+      "standardHash": "sha256:6fad8f4fea2dd7edcfc9a4d2b2573637d589a4db7caba5456c24856931bb9938",
+      "hdHash": "sha256:b701f5a954b6f4b72eb257318f2452a8a28ec934aa4c6747afdb5dc4db74238e",
+      "clips": [
+        "Stargaze sweep",
+        "Aim telescope"
+      ],
+      "riggedParts": [
+        "ObservatoryDome",
+        "Telescope"
+      ],
+      "detachableParts": []
+    },
+    "emperor-penguin@default": {
+      "template": "emperor-penguin",
+      "variation": "default",
+      "label": "Default",
+      "situation": "An upright Antarctic emperor penguin with golden ear patches and flapping flippers.",
+      "recipeHash": "sha256:b7fa5bf769b19180e43198dfff9361fdb9f0434b592001d817bac47f1152dd47",
+      "standardHash": "sha256:1d3d5d3b278d2898518a40b7c665c48d190775a1e52a8913da0729d8235d28c5",
+      "hdHash": "sha256:9553230fce641722ef344a4866061f4043286edabf48ff21a33b156edfefd50f",
+      "clips": [
+        "Happy flap"
+      ],
+      "riggedParts": [
+        "FlipperL",
+        "FlipperR",
+        "PenguinHead"
+      ],
+      "detachableParts": []
+    },
+    "espresso-bar-cart@default": {
+      "template": "espresso-bar-cart",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Canopied street espresso cart with rolling spoked wheels and a brass lever brew head.",
+      "recipeHash": "sha256:0d3384d488e998aefb33d529137ed9fd3d04671eb71578202294791795c94ee9",
+      "standardHash": "sha256:157756ee1a8d0a55e026430aee9bfe421c111403d5023baec9b35d5c1f91365b",
+      "hdHash": "sha256:a85edf63257b8ffbe494dcc1b2dc76429341c1b3af446365fbc182c46bb57548",
+      "clips": [
+        "Pull brew lever",
+        "Roll cart"
+      ],
+      "riggedParts": [
+        "BrewLever",
+        "CartWheelL",
+        "CartWheelR"
+      ],
+      "detachableParts": []
+    },
+    "expedition-backpack@default": {
+      "template": "expedition-backpack",
+      "variation": "default",
+      "label": "Default",
+      "situation": "External-frame canvas alpine pack with a hinged rain flap and detachable rolled bedroll.",
+      "recipeHash": "sha256:16f7ef8364be497aebaf48e680507836ce120320bbb93c3c7719c73fe5af35b5",
+      "standardHash": "sha256:3ae85a6229325244bef74b6a387bb780a14b542ea5f09615fb6df7d9893ecaf1",
+      "hdHash": "sha256:31c1610f85cce9958f2c7f2a4ac13b9011478cc70a7e320f82501f3ec19655cb",
+      "clips": [
+        "Open top flap"
+      ],
+      "riggedParts": [
+        "TopFlap"
+      ],
+      "detachableParts": [
+        "Bedroll"
+      ]
+    },
+    "farm-tractor@default": {
+      "template": "farm-tractor",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Utility farm tractor with heavy rear drive tires and a tilting front-end loader bucket.",
+      "recipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
+      "standardHash": "sha256:6a26404860be00bd11bd6e3700c20228b19d893820620eb1510c60989792e8a7",
+      "hdHash": "sha256:4518fa40df742bb0099792258c831c52af590eeaef728bd2012292e175d6ac46",
+      "clips": [
+        "Field work",
+        "Dump bucket"
+      ],
+      "riggedParts": [
+        "RearWheelL",
+        "RearWheelR",
+        "FrontBucket"
+      ],
+      "detachableParts": []
+    },
+    "field-pilot@default": {
+      "template": "field-pilot",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A suited pilot equipped for field operations.",
+      "recipeHash": "sha256:2a7e9423974b5ed5c9a97065904b9ea686bb4c0fcef599bc08f9886f3c62398d",
+      "standardHash": "sha256:d81d22083f7f912c51757df7f0537d479474036030eee7068bcf52a1c2edf7af",
+      "hdHash": "sha256:ef61583ba43a8c71d7ce6ae7cd02a3cbcf8d953b1ad4782accf01c852ac6a4f0",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": []
+    },
+    "field-rover@default": {
+      "template": "field-rover",
+      "variation": "default",
+      "label": "Default",
+      "situation": "An all-terrain rover for ground surveys.",
+      "recipeHash": "sha256:dcfe882e5843b312a0d0663992574a9226a10e84eba3bee2ed917ca6c55b95b6",
+      "standardHash": "sha256:3c8846cb27b8bd3778c23781e86a6260f7db361257581fcc40d5e15c80098993",
+      "hdHash": "sha256:d358015033a2fba6372c0e588b8943cc3dae1fb26260b5db43c6ab49606072a5",
+      "clips": [
+        "Traverse",
+        "Survey"
+      ],
+      "riggedParts": [
+        "SurveyHead",
+        "WheelL0",
+        "WheelL1",
+        "WheelL2",
+        "WheelR0",
+        "WheelR1",
+        "WheelR2"
+      ],
+      "detachableParts": []
+    },
+    "fire-watchtower@default": {
+      "template": "fire-watchtower",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Cross-braced forestry fire lookout tower with catwalk, glazed cab, hinged floor trap hatch, and rotating spotter scope.",
+      "recipeHash": "sha256:bad1bb385efb9c769f1768a91aeee7c585d986cf148ad9d6412db425d3a86d81",
+      "standardHash": "sha256:5adfef1bee88ff0bfe8245c58d18eafca285ed785d8d985e9089da8e34dd7e9e",
+      "hdHash": "sha256:3621a040b396021fb16da0b2e7ca427785137c01473709ee070517e233624ec6",
+      "clips": [
+        "Horizon scan",
+        "Open trap hatch"
+      ],
+      "riggedParts": [
+        "SpotterScope",
+        "TrapHatch"
+      ],
+      "detachableParts": []
+    },
+    "floating-sky-dock@default": {
+      "template": "floating-sky-dock",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Repulsor-lifted airship docking pad with a deploying boarding ramp and rotating guidance beacon.",
+      "recipeHash": "sha256:91a68e204f4faa76810958df47f8141ad33b20c8f71573b32ab826386a2627c3",
+      "standardHash": "sha256:f768fe48717f12d386cb854fbe5e663e9fc5f36fb36d9ce008f735cc404eac03",
+      "hdHash": "sha256:1b0f8f98922905ac929bc4dbcb850ca2f507c003286e6ad1043d80980ed12e7e",
+      "clips": [
+        "Beacon sweep",
+        "Deploy ramp"
+      ],
+      "riggedParts": [
+        "DockRamp",
+        "BeaconPylon"
+      ],
+      "detachableParts": []
+    },
+    "forest-fox@default": {
+      "template": "forest-fox",
+      "variation": "default",
+      "label": "Default",
+      "situation": "An alert woodland fox with a bushy snow-tipped tail and swiveling head.",
+      "recipeHash": "sha256:f1be7d2c2ee8a9392e497f8e81b21af2dbb70386a56957c4012fe86c13e9ffb0",
+      "standardHash": "sha256:ad5fb777f2f4fcd2dce4064243874a5d759274cb4b960c4da282f2b8a9b407f6",
+      "hdHash": "sha256:aa6fd6a59f2f29de02f00cb0a7038f8d7bda644d087dab5698a0c06664b3fc2b",
+      "clips": [
+        "Alert wag",
+        "Head scan"
+      ],
+      "riggedParts": [
+        "FoxTail",
+        "FoxHead"
+      ],
+      "detachableParts": []
+    },
+    "forest-ranger@default": {
+      "template": "forest-ranger",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Woodland archer with pointed hood, leaf-clasped cloak, leather bracer, and detachable feathered quiver.",
+      "recipeHash": "sha256:7d75dd03c72a5c55e2e474246f8a798e2f06b37636a3f7e690509fc9b7770ad9",
+      "standardHash": "sha256:2820ee7b26e37717fd24a21dd1ecb7fc9e45692d1e1870e9b773dfb7093b4a1d",
+      "hdHash": "sha256:540af678615105582d81cccc86e4a636dcd864b43d6a3d2547fe9af74d702d2d",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "ArrowQuiver"
+      ]
+    },
+    "fortress-drawbridge@default": {
+      "template": "fortress-drawbridge",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Moat-fronted stone fortress entry with a lowering timber drawbridge and detachable heraldic banners.",
+      "recipeHash": "sha256:6dde13705114bf3e260a602bc505553499e484bea5dea6b26b815cfff951b095",
+      "standardHash": "sha256:56829ee5082bc0b46a18ddf6f1470326b4d89896b0710a9348f2f226f6b88682",
+      "hdHash": "sha256:a12c6ab0728e7383fb8f7355ea8951b3e043c0aff65a832534a732083810079a",
+      "clips": [
+        "Lower drawbridge"
+      ],
+      "riggedParts": [
+        "Drawbridge"
+      ],
+      "detachableParts": [
+        "BannerFlags"
+      ]
+    },
+    "fuel-silo-station@default": {
+      "template": "fuel-silo-station",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Pressurized industrial propellant silo depot with a spinning manifold valve wheel and top hatch.",
+      "recipeHash": "sha256:a3f1a22049ae97d1a9eced5bfb402cb1976a8f4726dab3565b3a7eaaca147fb4",
+      "standardHash": "sha256:72f0d694af6ac618f75d66a6f08487c133b77cb7f4aa7a1392694040a03ef270",
+      "hdHash": "sha256:53d7e8a801eeefa4979e3da404bd61ccf9f8f61257c6a794c3c99fb7b978d354",
+      "clips": [
+        "Turn valve",
+        "Inspect tank"
+      ],
+      "riggedParts": [
+        "ValveWheel",
+        "TankHatch"
+      ],
+      "detachableParts": []
+    },
+    "geothermal-turbine@default": {
+      "template": "geothermal-turbine",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Industrial steam power generator with an exposed vertical turbine rotor and tilting exhaust louver.",
+      "recipeHash": "sha256:edb4e892dbd1bf5a0f8da6b79442147e3cd73f5cc69d4cdbe455788bec86cee1",
+      "standardHash": "sha256:6e54c71c641a4d4cdc1bfcc095aa71a64cac68852dfb3512ed4fcf4dbc5e1efe",
+      "hdHash": "sha256:e5aa397f38284a102d2bd9ff95db9af2009811e2de0b3d852af3b0a35146342b",
+      "clips": [
+        "Spin turbine",
+        "Vent steam"
+      ],
+      "riggedParts": [
+        "SteamRotor",
+        "VentLouver"
+      ],
+      "detachableParts": []
+    },
+    "glass-greenhouse@default": {
+      "template": "glass-greenhouse",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Victorian botanical glasshouse on a limestone dwarf wall with iron ribs, hinged glass door, and tilting roof vent.",
+      "recipeHash": "sha256:47c54c6dc87b1b07314191e991eba9830dbda39a7fc480a271c269c3c4abab90",
+      "standardHash": "sha256:5625ac8d6b0f168c316ec1209581b83d886f5a9a028c902bda2e121fc63d22f3",
+      "hdHash": "sha256:ccc87694d89aec87dbd99ee24d9ff5ffde3233e5ce2007c7ad02f4f503008b88",
+      "clips": [
+        "Ventilate glasshouse",
+        "Open glass door"
+      ],
+      "riggedParts": [
+        "GlassDoor",
+        "RoofVent"
+      ],
+      "detachableParts": []
+    },
+    "grandfather-clock@default": {
+      "template": "grandfather-clock",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Tall mahogany longcase clock with a swinging brass pendulum and opening glass cabinet door.",
+      "recipeHash": "sha256:fa669828e4da7435e36ca922a95f0b5a4ca028daddedd466151ae64bec9861f6",
+      "standardHash": "sha256:0a7c5db1f40deb63f551932ac8c95bb4e9df50a508f947d1fc09c913360cba8b",
+      "hdHash": "sha256:150135e6be30d81b5ba6bd1205973ba65902381186377e4cc78cf744833027f5",
+      "clips": [
+        "Tick pendulum",
+        "Open door"
+      ],
+      "riggedParts": [
+        "ClockPendulum",
+        "GlassDoor"
+      ],
+      "detachableParts": []
+    },
+    "harbor-bell-tower@default": {
+      "template": "harbor-bell-tower",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Pier-side masonry bell tower with open arched belfry, swinging bronze fog bell, and rotating rooftop weather vane.",
+      "recipeHash": "sha256:988c91773eeb482dc1a77058f027ab611d32c3d27d65c4eb45b72f6b5ef3ee16",
+      "standardHash": "sha256:ab91874218d6072d08117bbea4af45355043d013dd8e5fe5bf363fb88e164a29",
+      "hdHash": "sha256:78c9a375842b14fd72cf0bd522857b3d3ace5281d9bda868e72c8ecbf0f526d9",
+      "clips": [
+        "Toll fog bell",
+        "Wind shift"
+      ],
+      "riggedParts": [
+        "HarborBell",
+        "WeatherVane"
+      ],
+      "detachableParts": []
+    },
+    "harbor-tugboat@default": {
+      "template": "harbor-tugboat",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Stout harbor tugboat with a rotating radar scanner, stern rudder, and detachable life ring.",
+      "recipeHash": "sha256:ca0cbe4a4ff31d5e672e435e5c9003c28ec5dc8c2e2e450463b1eb9ee199de11",
+      "standardHash": "sha256:94ce4621e5fcdb6ba45adde08bfdd24084300efab0cccd6a6c3f203b7b0a356c",
+      "hdHash": "sha256:b125a7ade5ac8f51e45ced854f289b969f449312dcbc41704bc96190bd3e456f",
+      "clips": [
+        "Harbor patrol",
+        "Radar sweep"
+      ],
+      "riggedParts": [
+        "RadarBar",
+        "SternRudder"
+      ],
+      "detachableParts": [
+        "LifeRing"
+      ]
+    },
+    "hot-air-balloon@default": {
+      "template": "hot-air-balloon",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Striped teardrop hot air balloon with a swaying wicker gondola and detachable ballast sandbags.",
+      "recipeHash": "sha256:e43b1e7ac8213b2ebe1fe1adbc88992ac227558230570be04a3e2e43aaa284b7",
+      "standardHash": "sha256:59e424de7cf5d7ee288c558dda9e1e93e83d8cd7ff1f922d92e11a1b967b08d4",
+      "hdHash": "sha256:4aee21f35df70ed81989a465abd4174011a0bf30864defa16fe97aa9d385c25a",
+      "clips": [
+        "Gentle drift"
+      ],
+      "riggedParts": [
+        "Gondola"
+      ],
+      "detachableParts": [
+        "Sandbags"
+      ]
+    },
+    "hydroponic-dome@default": {
+      "template": "hydroponic-dome",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Geodesic bio-conservatory with a hinged roof vent hatch and rotating interior grow-lamp halo.",
+      "recipeHash": "sha256:e9cc82468c8e0cf5d99a286133b4c2eb7f88dd24cbb4751a80b028126b5f18e5",
+      "standardHash": "sha256:3b47fa14747754d475234a02af834ba6184a4b76e29691e955eb3fb0c47c5723",
+      "hdHash": "sha256:87cc871efcfe22715b471d613ad2eac231f29d6c7817b3ffab982aa5c09e4351",
+      "clips": [
+        "Grow cycle",
+        "Vent dome"
+      ],
+      "riggedParts": [
+        "DomeHatch",
+        "GrowLampRing"
+      ],
+      "detachableParts": []
+    },
+    "koi-fish@default": {
+      "template": "koi-fish",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A calico pond koi with sweeping ribbon fins and fluttering pectorals.",
+      "recipeHash": "sha256:4ea52f3ad173ca19f25eb1e3b6f89c2fcd7a945266383274a00a211c76737f7f",
+      "standardHash": "sha256:51c944674f3ef3c92231dd73259d364791c1637045b704491cd2ffc294f02cda",
+      "hdHash": "sha256:70b66e8c9fa8d3ce770c35465ac8b23edfa3afb9f2be619c28896b57faffb67b",
+      "clips": [
+        "Graceful swim"
+      ],
+      "riggedParts": [
+        "TailFin",
+        "PectoralL",
+        "PectoralR"
+      ],
+      "detachableParts": []
+    },
+    "lantern-signpost@default": {
+      "template": "lantern-signpost",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Wrought-iron street signpost with a swaying amber lantern and detachable hanging tavern sign.",
+      "recipeHash": "sha256:d37d4cfdca6eb32cf70ceeb54d905917722bc9005d97c0d1ee48cc27861a4f67",
+      "standardHash": "sha256:27c41b4745498efaea438eea734e92557bdedd2c13eac3861d1b56bee79ddb57",
+      "hdHash": "sha256:7bc916bba700a6b63ee44215182f717b1019b17eed97274538d172a4ab4dbc10",
+      "clips": [
+        "Sway lantern"
+      ],
+      "riggedParts": [
+        "HangingLantern"
+      ],
+      "detachableParts": [
+        "SignBoard"
+      ]
+    },
+    "lunar-lander@default": {
+      "template": "lunar-lander",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Four-legged orbital lunar lander with a hinged boarding ramp and rotating parabolic comm dish.",
+      "recipeHash": "sha256:fbbdea1a450c19cd8a5cce8e332e63e370281709b5bc55b02d48531cd63793cc",
+      "standardHash": "sha256:ab9b550b7a0cd49b18bd1fa6c2578d78a4e9f9052468734ee4bc25ebd896b205",
+      "hdHash": "sha256:b4358af1172b60c30a6d64582215b94ec1e67a8cac33c2f1dcb34ee43031ebe3",
+      "clips": [
+        "Lunar ops",
+        "Dish scan"
+      ],
+      "riggedParts": [
+        "LandingRamp",
+        "CommDish"
+      ],
+      "detachableParts": []
+    },
+    "market-pavilion@default": {
+      "template": "market-pavilion",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Open-sided town square timber pavilion with tiered flared roof, swaying hanging sign, and detachable produce stall.",
+      "recipeHash": "sha256:0ad10a0b8cb9f3f462373db78ec3bda1aca0c3da2268c83ce44c9181662be262",
+      "standardHash": "sha256:c8038dd56bf7672e34aea6bd313bce6b8d9bbc37214b28e3bf1ebcfd1548bb84",
+      "hdHash": "sha256:f3a81806fc2451791437b657b574c89d90ca2b391616b93ad23eb760351a5ae2",
+      "clips": [
+        "Breeze sway"
+      ],
+      "riggedParts": [
+        "HangingSign"
+      ],
+      "detachableParts": [
+        "ProduceStall"
+      ]
+    },
+    "mech-engineer@default": {
+      "template": "mech-engineer",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Heavy hangar engineer with hinged welding mask, braced exo-shoulders, and detachable roll-cage tool harness.",
+      "recipeHash": "sha256:4f057698633fea2209ea3498da6d39ad97cca5051953c089921e961a4a576072",
+      "standardHash": "sha256:43c0c2e047d952d059e427516ec9a8e39de76053fc0162ab2ece97a6f36c8642",
+      "hdHash": "sha256:ee9fc81405c479d8341c3f7e51a03ab6e4fa6fce7f7091ada62df9837ee94992",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "WeldingMask"
+      ],
+      "detachableParts": [
+        "ToolHarness"
+      ]
+    },
+    "medieval-knight@default": {
+      "template": "medieval-knight",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Armored medieval knight with plumed great helm, plate pauldrons, heraldic crest, and detachable shield.",
+      "recipeHash": "sha256:66f30fbe47c78c1bd341dcc5d3f359806f7e20451a20ad9d67991726ba3bf23e",
+      "standardHash": "sha256:c0cd0778870dbac3e20b0af6e677269454787b0d0db3750472530e6960e977a7",
+      "hdHash": "sha256:c6f41240ff1a9639750a2d82be1e7e64bad7582c1a7c4ff214595a975f8db0e1",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "HelmVisor"
+      ],
+      "detachableParts": [
+        "KnightShield"
+      ]
+    },
+    "medieval-knight@obsidian-paladin": {
+      "template": "medieval-knight",
+      "variation": "obsidian-paladin",
+      "label": "Obsidian Paladin",
+      "situation": "Dark fantasy night-watch or boss encounter variant with gunmetal plate and crimson trim.",
+      "recipeHash": "sha256:368e37fb6796a1a9fa5792be113c3dc788e2c8e5014d74723b4c98b1e566e6e0",
+      "standardHash": "sha256:4a3f2b3aad748dd50ff3600f8e4de03148970ab9da309e355b8f29d8aaef42d6",
+      "hdHash": "sha256:8a3c370cad3fdbb76a19796e120139af940767dd9997d5bb3d94621366be7a76",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "HelmVisor"
+      ],
+      "detachableParts": [
+        "KnightShield"
+      ]
+    },
+    "monorail-platform@default": {
+      "template": "monorail-platform",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Elevated futuristic transit platform with sliding safety screen doors and a detachable commuter bench.",
+      "recipeHash": "sha256:054fb74c58d740a840426c211566216dc8145cfb0d2dbae181746ce0a425a0ed",
+      "standardHash": "sha256:81b442c37e6c8700d05647f2020a2bf1d5b05c77b769dcfd62cfde6b676d3d39",
+      "hdHash": "sha256:d04fc88d067e25a4cdabcd268396000015b690f8b184a5c9b2382e792880b460",
+      "clips": [
+        "Board train"
+      ],
+      "riggedParts": [
+        "ScreenDoorL",
+        "ScreenDoorR"
+      ],
+      "detachableParts": [
+        "BenchUnit"
+      ]
+    },
+    "mountain-stag@default": {
+      "template": "mountain-stag",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A highland stag with a proud nodding head and a removable antler crown.",
+      "recipeHash": "sha256:0a7780e668abf154ee5dadd9af3c29abc0729392fff3d90c30d3e12336de3cfc",
+      "standardHash": "sha256:5a6dbecb26022b69b5f78ea5641be5dabd3465c7a84e0ffed7045cd7864a3553",
+      "hdHash": "sha256:2f4123176b92c753ff040e7672ec3dd268fe93328976362f707bb2c8dffecc23",
+      "clips": [
+        "Royal nod"
+      ],
+      "riggedParts": [
+        "StagHead"
+      ],
+      "detachableParts": [
+        "Antlers"
+      ]
+    },
+    "mushroom-fairy-ring@default": {
+      "template": "mushroom-fairy-ring",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A woodland toadstool circle around a pulsing giant mushroom and glowing spores.",
+      "recipeHash": "sha256:6ea8e4763f307a26a2e33ec69144c89f10d74c34f63d40440369a771bc28810d",
+      "standardHash": "sha256:1fd7982e03839f5def9f17be539fbd45d56a0eb4a084488fec1baa74748f9821",
+      "hdHash": "sha256:b4c7a971d390ea08feb2f8d1babf7cd3874b2bb4e8707cf64510271950f04fd3",
+      "clips": [
+        "Spore pulse"
+      ],
+      "riggedParts": [
+        "GiantCap"
+      ],
+      "detachableParts": [
+        "GlowSpores"
+      ]
+    },
+    "neon-arcade-booth@default": {
+      "template": "neon-arcade-booth",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Synthwave cyberpunk street arcade kiosk with illuminated marquee and twin swinging batwing doors.",
+      "recipeHash": "sha256:8819f1a202ab841cbe40a234c1b477d0b5499495f8f1e03b046611bba368cdf2",
+      "standardHash": "sha256:d32b0b3ed1ecb3225ab19fc7e83349c9ef246d17cc2ab2d1e765f4aaa08abe8b",
+      "hdHash": "sha256:8ace8bc98b9c2a425b2d73ac1b95ef0cee4be5281c447c85ce1ac32a50cf9e74",
+      "clips": [
+        "Swing doors"
+      ],
+      "riggedParts": [
+        "SaloonDoorL",
+        "SaloonDoorR"
+      ],
+      "detachableParts": []
+    },
+    "nordic-timber-cabin@default": {
+      "template": "nordic-timber-cabin",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Steep-gabled Nordic log cabin with notched corner logs, stone chimney, hinged plank door, and detachable firewood stack.",
+      "recipeHash": "sha256:c53a7e43cc02a9bf1b8512e90bf94b49bf01b63eb4d4c7730d421304f138491d",
+      "standardHash": "sha256:1bc71edce2b9c635e2cce7095c7d3f0a2b30fb2e1028b7add64ce80751745fdb",
+      "hdHash": "sha256:91523b8a72c360160028f7e7bd3b644fcbc2379beda8122055008a636dff233c",
+      "clips": [
+        "Open cabin door"
+      ],
+      "riggedParts": [
+        "CabinDoor"
+      ],
+      "detachableParts": [
+        "FirewoodStack"
+      ]
+    },
+    "nordic-timber-cabin@snowbound": {
+      "template": "nordic-timber-cabin",
+      "variation": "snowbound",
+      "label": "Snowbound",
+      "situation": "Deep-winter mountain clearing with weathered spruce logs and snow-blanketed pitched roof.",
+      "recipeHash": "sha256:b9be40ab38eef3a8ac0cbb92fb885f970c78b6ef4f0634ec35fd7640ad610178",
+      "standardHash": "sha256:779ec66687a2e4672ddd830acac1e738c41bc8bf3cc3bc5366d6203b510bd436",
+      "hdHash": "sha256:e52447c6bea7ac1b621aa8474a4201af26e6b16890ed9ae16cf8fcdefdd6f083",
+      "clips": [
+        "Open cabin door"
+      ],
+      "riggedParts": [
+        "CabinDoor"
+      ],
+      "detachableParts": [
+        "FirewoodStack",
+        "CabinSnow"
+      ]
+    },
+    "oasis-palm-spring@default": {
+      "template": "oasis-palm-spring",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A turquoise desert spring shaded by curved date palms and a clay amphora.",
+      "recipeHash": "sha256:5fb90f5e14a88948325cf035c25296849cf4d0d393ad9ced730ea0d64ad5c579",
+      "standardHash": "sha256:a735397b465b71d37fb5548bac7b6d2dc10b07b8b6492b45926e71744568da3f",
+      "hdHash": "sha256:171bc82058f9686138555acf20c60814c6e25188337314a671ae04cf6a5149f4",
+      "clips": [
+        "Oasis wind"
+      ],
+      "riggedParts": [
+        "PalmCrown"
+      ],
+      "detachableParts": [
+        "WaterJug"
+      ]
+    },
+    "orbital-airlock@default": {
+      "template": "orbital-airlock",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Pressurized orbital station bulkhead module with twin opposing sliding blast doors.",
+      "recipeHash": "sha256:3808c03ecba931319bd4ba69dbb514e1f02ac7c4d60bceed8ef08e5a4c43a242",
+      "standardHash": "sha256:54942dbd965eb380cfe1b28ec9563d87aa3d643d4c9b9485c75a5b3bd2331a57",
+      "hdHash": "sha256:d77249c9ca01666c73e8fca932c5d75fe26426281324181ca83988d3144bc0e9",
+      "clips": [
+        "Cycle airlock"
+      ],
+      "riggedParts": [
+        "BlastDoorL",
+        "BlastDoorR"
+      ],
+      "detachableParts": []
+    },
+    "orbital-astronaut@default": {
+      "template": "orbital-astronaut",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Deep-space EVA astronaut with hinged gold sun visor, chest telemetry unit, and detachable life support pack.",
+      "recipeHash": "sha256:77c4c8b21887fdbe6d4fea6f4d3ba0b5f249fe50309e23d984d6b65b67708403",
+      "standardHash": "sha256:fcb9d5333be8d3c2bc341c208679378d97aa66f1f2bd86fd4cd1d048d03ba106",
+      "hdHash": "sha256:7665b3fb1a538ee1886519e34ed8a7dfc5e25ceec0bb2faaf83f902d951422d2",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "SunVisor"
+      ],
+      "detachableParts": [
+        "LifeSupportPack"
+      ]
+    },
+    "parcel-delivery-van@default": {
+      "template": "parcel-delivery-van",
+      "variation": "default",
+      "label": "Default",
+      "situation": "High-roof parcel delivery van with double rear cargo doors, interior packages, and rolling wheels.",
+      "recipeHash": "sha256:2e8f3be4aa1804a34f88aeae551893dbe4d88f0f49ad9498bf6a961d27a4aedd",
+      "standardHash": "sha256:154c469f447eabf6065ddc8639dfdb22d3dc329c1e6a1de714601c40570715ea",
+      "hdHash": "sha256:cc38c89fbc29254f4698b2c53dd200a71248df84c26148933776446f2db524f2",
+      "clips": [
+        "Delivery drive",
+        "Open rear doors"
+      ],
+      "riggedParts": [
+        "RearDoorL",
+        "RearDoorR",
+        "WheelFL",
+        "WheelFR"
+      ],
+      "detachableParts": []
+    },
+    "pirate-captain@default": {
+      "template": "pirate-captain",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Buccaneer captain in a gold-trimmed frock coat with perched shoulder parrot and detachable plumed tricorn hat.",
+      "recipeHash": "sha256:9db89501908d4264c142efb108d78e01a67f76d10b79b21130aeb119f490f293",
+      "standardHash": "sha256:52925e02f20112a9a874ed20b5fb60d8b0c51875345d3e83d0e46afcbc841045",
+      "hdHash": "sha256:6634fcaf4edf3ed53e4060a11ae4728e849980125e521e56f51734e4a46339a2",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "ShoulderParrot"
+      ],
+      "detachableParts": [
+        "TricornHat"
+      ]
+    },
+    "plasma-wrench@default": {
+      "template": "plasma-wrench",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Powered sci-fi engineering wrench in a charging dock with a sliding jaw and spinning energy core.",
+      "recipeHash": "sha256:44aec4c803780f798fc7ca35b36ec7062e4f81016835ece66c9e5d51becd2ec7",
+      "standardHash": "sha256:82a4939e1baa9803ca64a5614c1517a979c8614ece6c7a45f6866cfdca87800b",
+      "hdHash": "sha256:a8bca29da6ca9e98b12b2a245f473ed173ddfa8341a03594d3f7aab91f328657",
+      "clips": [
+        "Spin power core",
+        "Adjust jaw"
+      ],
+      "riggedParts": [
+        "JawSlide",
+        "PowerCore"
+      ],
+      "detachableParts": []
+    },
+    "pocket-dragon@default": {
+      "template": "pocket-dragon",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A tabletop companion dragon with golden wings, swept horns, and a hinged roaring jaw.",
+      "recipeHash": "sha256:ba653eeb9ab46d5ca0123e0e42502506957688bd336414e3dccd965d82f62293",
+      "standardHash": "sha256:64e87f14b5c69ddb60c59b3fd4f2a439f64f0d0d01c4f48dc1e725cebd4cac89",
+      "hdHash": "sha256:a93239fd3c91d33d9012b0139ccda037af6c41ff39aa02bf1eee6c2c29b49bc2",
+      "clips": [
+        "Wing flutter",
+        "Mini roar"
+      ],
+      "riggedParts": [
+        "DragonWingL",
+        "DragonWingR",
+        "DragonJaw"
+      ],
+      "detachableParts": []
+    },
+    "post-office-kiosk@default": {
+      "template": "post-office-kiosk",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Street-corner civic postal kiosk with crowned dome roof, hinged mail drop hatch, and hinged clerk service door.",
+      "recipeHash": "sha256:4f23cab7fc99c213474bb5ac75f4c1396031bf4197582342e82b36c404c4a61e",
+      "standardHash": "sha256:4c445fb32392b8466790c102ceac32967f2fe821c2016c15ac6b4e14787a3b7d",
+      "hdHash": "sha256:4200a599b9602d854eb0739c0e2c3b72ffa181423ea56d1498ba7a34edda9262",
+      "clips": [
+        "Mail drop",
+        "Open service door"
+      ],
+      "riggedParts": [
+        "MailHatch",
+        "ServiceDoor"
+      ],
+      "detachableParts": []
+    },
+    "racing-hoverbike@default": {
+      "template": "racing-hoverbike",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Aerodynamic racing hoverbike with steering handlebars and a spinning central axial turbine.",
+      "recipeHash": "sha256:cdae8f234e3d959bac36e5cabfc3776eae150475d8ba25e43245a812eacd8285",
+      "standardHash": "sha256:fcb50b1718572995d6387261e7695535275b2d77f3f9d5807a2fa526b344c852",
+      "hdHash": "sha256:8e546fcae19a36808f09aaaf456e07873055adc2d6405738ba7e72a33704c037",
+      "clips": [
+        "Race rev",
+        "Turbine idle"
+      ],
+      "riggedParts": [
+        "Handlebars",
+        "TurbineCore"
+      ],
+      "detachableParts": []
+    },
+    "railway-boom-gate@default": {
+      "template": "railway-boom-gate",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Counterweighted railway crossing barrier with a lifting striped boom arm and detachable flasher lamps.",
+      "recipeHash": "sha256:28779ac80d1e7fac40fe010b6803256b087604818e6ce5fae860ef71c2462bb0",
+      "standardHash": "sha256:a32829261a2870445029b8a71559cf1fda1e06345a7d8188fc0991269f9fb511",
+      "hdHash": "sha256:ee05a9f2b576b44a51f902dc2be9bf9c3f2e8530737a40f080f07d071f7e99a2",
+      "clips": [
+        "Raise barrier"
+      ],
+      "riggedParts": [
+        "BoomArm"
+      ],
+      "detachableParts": [
+        "WarningLamp"
+      ]
+    },
+    "red-panda@default": {
+      "template": "red-panda",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A fluffy mountain red panda with a bold ringed tail and masked face.",
+      "recipeHash": "sha256:5afbe44a1c171d3988dbf22a2d5faf6ba1ed3806f6b8d5103af0a339056bdc4e",
+      "standardHash": "sha256:ef692c3fe010cdc8c49ca44228361fb6ecb265b00ff74e7e1c62970b1b26e158",
+      "hdHash": "sha256:0369388bceb47e34ca9563544637b52b38456a487a92f0e68972cce38a0479c0",
+      "clips": [
+        "Tail sway"
+      ],
+      "riggedParts": [
+        "RingTail",
+        "PandaHead"
+      ],
+      "detachableParts": []
+    },
+    "relay-drone@cargo-lifter": {
+      "template": "relay-drone",
+      "variation": "cargo-lifter",
+      "label": "Cargo Lifter",
+      "situation": "Industrial supply drop configuration with high-visibility livery and under-slung cargo winch hook.",
+      "recipeHash": "sha256:9e6894369ca3d68e3bee0ecc57ed5a765f702f89eb69440a8795ddd59541efcc",
+      "standardHash": "sha256:a3f3bf06ec6928b4c037fac96330c037b6948d07f3ee404d22d50565212eaf17",
+      "hdHash": "sha256:4a7ba1deb5facb8d5b5cef1d8e814e06449e54cdcf205b8759a6a7024abb33ea",
+      "clips": [
+        "Hover",
+        "Rotor test",
+        "Optics scan",
+        "Winch sway"
+      ],
+      "riggedParts": [
+        "CameraYaw",
+        "CameraPitch",
+        "RotorFL",
+        "RotorFR",
+        "RotorRL",
+        "RotorRR",
+        "CargoHook"
+      ],
+      "detachableParts": [
+        "CargoWinch"
+      ]
+    },
+    "relay-drone@default": {
+      "template": "relay-drone",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A field quadcopter built around a compact sensor pod.",
+      "recipeHash": "sha256:caeabcdb7e5d1979c2d167b1350fbb10444817e27ea44de82b7b67542f9cf00b",
+      "standardHash": "sha256:610d2341d56eaefed5fc6355eefae698c2868792f0c3caed0860072b50c3114f",
+      "hdHash": "sha256:c992118695a2983058dedc20a2e8fbf3dfe2b521b4aed595f808d8cbe2077d61",
+      "clips": [
+        "Hover",
+        "Rotor test",
+        "Optics scan"
+      ],
+      "riggedParts": [
+        "CameraYaw",
+        "CameraPitch",
+        "RotorFL",
+        "RotorFR",
+        "RotorRL",
+        "RotorRR"
+      ],
+      "detachableParts": []
+    },
+    "rescue-firefighter@default": {
+      "template": "rescue-firefighter",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Emergency rescue firefighter with ribbed helmet, hinged face visor, reflective turnout gear, and detachable air tank.",
+      "recipeHash": "sha256:126e02604d762ef155ab28fe12b8e550b0ed6f6a2acb5896e7cec461c566cc8f",
+      "standardHash": "sha256:e9ed646c8ac3a28a82d1b9f2a95b8406df55112b58b71529ffd330f316bb3aab",
+      "hdHash": "sha256:a967932d0163530c769709abee08eafdca35108521bbd1e2b2b12468b7c0aafe",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "FireVisor"
+      ],
+      "detachableParts": [
+        "AirTank"
+      ]
+    },
+    "rescue-helicopter@default": {
+      "template": "rescue-helicopter",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Twin-turbine rescue helicopter with articulated rotors and a sliding side rescue hatch.",
+      "recipeHash": "sha256:dbc5242556dfec438f600b8afc0ce6e578d1adda28ac3a2d8ddbf084422936b5",
+      "standardHash": "sha256:f897cee9a6cd2e03d89d9d955add0d3f7432c1391662e4a94d34fdeab8b021cb",
+      "hdHash": "sha256:df1872ea3b521956c0f5783f76fd818ce38096970f6ac21e7a6f62ce0471dc03",
+      "clips": [
+        "Hover flight",
+        "Rescue hatch"
+      ],
+      "riggedParts": [
+        "MainRotor",
+        "TailRotor",
+        "CabinDoor"
+      ],
+      "detachableParts": []
+    },
+    "retro-arcade-cabinet@default": {
+      "template": "retro-arcade-cabinet",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Classic upright CRT arcade machine with a tilting ball-top joystick and hinged coin service door.",
+      "recipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
+      "standardHash": "sha256:665c9562279526ab411fdc9daeeaf509d09e93774e1ce01cee75890245963326",
+      "hdHash": "sha256:229b5a758a4df1ce76e239fa9d94aa1291b57c0198405552d417d794ef728530",
+      "clips": [
+        "Play joystick",
+        "Open coin door"
+      ],
+      "riggedParts": [
+        "Joystick",
+        "CoinDoor"
+      ],
+      "detachableParts": []
+    },
+    "royal-guard@default": {
+      "template": "royal-guard",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Ceremonial palace sentry in a scarlet braided tunic with gold epaulets, sash, and detachable bearskin shako.",
+      "recipeHash": "sha256:ea1a7660cf6854e16f379c36cd46914971534b2edadc52a8f37ea62374bfe2bc",
+      "standardHash": "sha256:c29b7f8de041909c4275db774381bde2ec94ff657c065e342e429c7033886f69",
+      "hdHash": "sha256:95b493549e52c28bd130570b285133ba79d2e8d2bedd738d03b0f9d89fa3cb1f",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "GuardShako"
+      ]
+    },
+    "runic-lantern-staff@default": {
+      "template": "runic-lantern-staff",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Carved wooden lantern staff in a rune plinth with a rotating crystal cage and swaying charm ring.",
+      "recipeHash": "sha256:98971fe614796ebdd88d8828c21ba7b33c144a83cb337d3d23edcaa6d2fa37e1",
+      "standardHash": "sha256:8efa813b5fb8afb33d8bb5bff32aa2d2e374c186755bb750d32a9a144581e22c",
+      "hdHash": "sha256:7e8a1eab676019c192de15b8b6d5bfdf717994ddb7d5e49c6868f98485736f48",
+      "clips": [
+        "Spin rune cage",
+        "Sway charms"
+      ],
+      "riggedParts": [
+        "RuneCage",
+        "CharmRing"
+      ],
+      "detachableParts": []
+    },
+    "sakura-blossom-tree@default": {
+      "template": "sakura-blossom-tree",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A gnarled cherry blossom tree over a garden mound paired with a carved stone lantern.",
+      "recipeHash": "sha256:48c2ba87735d5af7cb62e6d43260de3fae2b6d4f1f197e56c108af63ac6783dd",
+      "standardHash": "sha256:5560e3777bedf2d1bdb822326ab932eef7833504cc40d4d98c8394034b0207c8",
+      "hdHash": "sha256:122ac8210fe449d678d04078b01868f5fd7f74b454ae2331769a89e66a872f07",
+      "clips": [
+        "Petal breeze"
+      ],
+      "riggedParts": [
+        "BlossomCanopy"
+      ],
+      "detachableParts": [
+        "StoneLantern"
+      ]
+    },
+    "samurai-warden@default": {
+      "template": "samurai-warden",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Armored samurai warden with layered lamellar pauldrons, gilded waist sash, and detachable crescent kabuto.",
+      "recipeHash": "sha256:fcca046b4e1de1de8ffed8a4939bee3164428f4e6eb53335404d6a8d0c5a492f",
+      "standardHash": "sha256:96883d0130de5979e9f18a497bef5c54544f9b994169c848cf1d37fbccd4a686",
+      "hdHash": "sha256:3363ae6202f36d3816678207ca896317235814607086188ed1609a26087e2b72",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "KabutoHelm"
+      ]
+    },
+    "sea-turtle@default": {
+      "template": "sea-turtle",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A domed reef sea turtle with patterned carapace scutes and sweeping flippers.",
+      "recipeHash": "sha256:21327d2270711b2529716dd0977af0e35d5e0aba1d5bd3b5af64ab33a6129674",
+      "standardHash": "sha256:4709cde765d7cfc386e370ea703d9d58ec4d61b356e603d6495af72f405b2712",
+      "hdHash": "sha256:222c3b9beb4d51e300cde521fa7b97aa9291ea09b5c03ab3552e51ce6b148f7f",
+      "clips": [
+        "Ocean glide"
+      ],
+      "riggedParts": [
+        "FlipperL",
+        "FlipperR",
+        "TurtleHead"
+      ],
+      "detachableParts": []
+    },
+    "shoulder-turret-pod@default": {
+      "template": "shoulder-turret-pod",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Pauldron-mounted twin autocannon turret pod with panning azimuth ring and elevating barrels.",
+      "recipeHash": "sha256:cee5aa39882cc665e5a232cfdd9048aad7bf9d88c1f3b2cec5bfad3ac167eb22",
+      "standardHash": "sha256:25337ad0e560a56fe173d6ebc5611e0d16089b6fca10a6c959065b98a0d3ff4e",
+      "hdHash": "sha256:bc0f02501ee5f7f953dea8e0a5a7ca297a3202557d30f44e6ca5d99f0bfb0985",
+      "clips": [
+        "Sweep turret",
+        "Elevate barrels"
+      ],
+      "riggedParts": [
+        "PodYaw",
+        "PodBarrel"
+      ],
+      "detachableParts": []
+    },
+    "siege-catapult@default": {
+      "template": "siege-catapult",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Timber torsion catapult on heavy spoked wheels with a cocking throw arm and stone payload.",
+      "recipeHash": "sha256:4ad6c0c218199a3bd9c386323e50a159fad83b128dd9e4476e03489c0ab2b53c",
+      "standardHash": "sha256:da1f39e82d33739cee75368de67b28a48652b8d97e4921c1e2b7cd5a46fac6d3",
+      "hdHash": "sha256:7630fa5ccc520851803871cdf7c0e3623e36fd4c63bc842d83cd54a9cc9506b0",
+      "clips": [
+        "Cock and launch",
+        "Roll siege"
+      ],
+      "riggedParts": [
+        "ThrowArm",
+        "WheelL",
+        "WheelR"
+      ],
+      "detachableParts": []
+    },
+    "signal-tower@default": {
+      "template": "signal-tower",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A remote communications station with a directional antenna.",
+      "recipeHash": "sha256:59f67ca5b7a69aeb72f6223bbf5b941e5b1dfa9d04ae6495f422342a82f4922d",
+      "standardHash": "sha256:dec1eac8011f83ba79a55aeb740a30a6e74d1316e558e909fe689ba5b68cbc5f",
+      "hdHash": "sha256:253d07eabcbd9faf80c4f96e96536710e065b39c24b90ac527350ca155f095d3",
+      "clips": [
+        "Sweep",
+        "Acquire signal"
+      ],
+      "riggedParts": [
+        "DishMount",
+        "DishTilt"
+      ],
+      "detachableParts": []
+    },
+    "solar-power-hub@default": {
+      "template": "solar-power-hub",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Off-grid photovoltaic substation with a rotating tracking mast and twin tilting solar array wings.",
+      "recipeHash": "sha256:cd8e3d7435d47d85ca77f18999075addad9dac296517ad94f5ea135ade4081b0",
+      "standardHash": "sha256:f90eb0f44e9cc03852af817ac59a6c968ca935f19c62a692561c0639fa99567b",
+      "hdHash": "sha256:c4f0e03e818a1255821f1e2caa2581b69a2e6783d9013a82894f47db91560978",
+      "clips": [
+        "Track sun",
+        "Tilt arrays"
+      ],
+      "riggedParts": [
+        "SolarWingL",
+        "SolarWingR",
+        "ArrayMast"
+      ],
+      "detachableParts": []
+    },
+    "space-medic@default": {
+      "template": "space-medic",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Orbital field medic with luminous halo visor, shoulder cross badges, and detachable cryo trauma pack.",
+      "recipeHash": "sha256:8c0e6b7a8694bb45f7e0cac047b444d275c1d9d79f9b420ea858be6771d6419a",
+      "standardHash": "sha256:acf890cd5071280c7a039d83f9c757b961a29fcd316bfff6405e03bfda2f6c22",
+      "hdHash": "sha256:958c969d0e2d05d6c29f239b04b0d9b43f6d7ff72cab06034f6da547de36794c",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": [
+        "MedPack"
+      ]
+    },
+    "steam-locomotive@default": {
+      "template": "steam-locomotive",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Classic iron steam locomotive with coupled driving wheels and a swinging brass boiler bell.",
+      "recipeHash": "sha256:1037be2e30aef570c8e3c16345161a1a929f7c97751ce299ff7793477e1af76b",
+      "standardHash": "sha256:ab69236b387cbc06353b93a9df5ea43e6e1c13643a43751f5910d74bb05b13f2",
+      "hdHash": "sha256:ab1c7f67f1cdd761f1d53ede811b4924424a13edbb93f508d451bc60bcba5877",
+      "clips": [
+        "Steam roll",
+        "Ring bell"
+      ],
+      "riggedParts": [
+        "DriveWheelL",
+        "DriveWheelR",
+        "BrassBell"
+      ],
+      "detachableParts": []
+    },
+    "steampunk-inventor@default": {
+      "template": "steampunk-inventor",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Clockwork tinkerer wearing a goggled top hat, leather waistcoat, and detachable boiler pack with spinning gear.",
+      "recipeHash": "sha256:12e5a0aece6d776a720ca41d56a08df56d5cee17883e5d8d27d6d4650e5a6fd0",
+      "standardHash": "sha256:b1e1b862a0ea771fde1344e305e863306cbf52e6749cacef640170e56085038b",
+      "hdHash": "sha256:446916b420c3de9a397ca6f3dbd0eb9fd2643d3763caa1044c4d4b0e761ec88c",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [
+        "GearWheel"
+      ],
+      "detachableParts": [
+        "SteamPack"
+      ]
+    },
+    "stone-arch-bridge@default": {
+      "template": "stone-arch-bridge",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A dressed masonry footbridge with keystone arch and twin hanging lanterns.",
+      "recipeHash": "sha256:f057c75887181298c21ef3da73dd6af2121bd79ca8e04e2bfd90aed0c8b78c19",
+      "standardHash": "sha256:1217faf5cb8e3607bcbbf379bc989fb484d79082544de2fc9bbb32a91872a030",
+      "hdHash": "sha256:ccc8f85569031a11ae6985da12b9fe75812032c074cf27159587b256d3fe4109",
+      "clips": [
+        "Lantern sway"
+      ],
+      "riggedParts": [
+        "BridgeLanternL",
+        "BridgeLanternR"
+      ],
+      "detachableParts": []
+    },
+    "stone-lighthouse@default": {
+      "template": "stone-lighthouse",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Tapered coastal stone lighthouse with striped masonry bands, rotating Fresnel beacon, and hinged entry door.",
+      "recipeHash": "sha256:df23f786ee82602e425b1293debbdc6152830452983353991d4e15721c3edb46",
+      "standardHash": "sha256:6b4815c25120f76281173f9c2655a9d0ad93f6839b6299c1889ccf83ecf474be",
+      "hdHash": "sha256:27fb5605f80548536301d4514eedd2bbfff2912f7aa9806f9d779c064258fe4d",
+      "clips": [
+        "Beacon sweep",
+        "Open entry door"
+      ],
+      "riggedParts": [
+        "BeaconLens",
+        "EntryDoor"
+      ],
+      "detachableParts": []
+    },
+    "stone-watermill@default": {
+      "template": "stone-watermill",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Riverside cobble stone watermill with millrace flume, spinning wooden waterwheel, clay roof, and hinged mill door.",
+      "recipeHash": "sha256:9fa8df3fdd89c8d36ca03bf946b5dbab7f96b744deb60ac09a820ef1358233aa",
+      "standardHash": "sha256:84759b1df741111ceb0a968125c0de9417ba1e0cf89a48f4e2b583ef8362a2d5",
+      "hdHash": "sha256:b544cf2195038bbe0a784b7344fa9549690676be66c58384272a54cf16e7e7ce",
+      "clips": [
+        "Turn waterwheel",
+        "Open mill door"
+      ],
+      "riggedParts": [
+        "WaterWheel",
+        "MillDoor"
+      ],
+      "detachableParts": []
+    },
+    "street-vending-unit@default": {
+      "template": "street-vending-unit",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Retro corner beverage vending machine with a hinged dispenser flap and removable stocked cans.",
+      "recipeHash": "sha256:f2b6217a374de344c18f3985df2995a549939edc02100c56a33d4e53ac3903b4",
+      "standardHash": "sha256:91bb3e328372c5069d9e040e32f45535adf43820dec5dbb6e4c6d35727459012",
+      "hdHash": "sha256:e23dcdff1716665a496890ae118d42296938f27e7646be1f2c741ebbd964ff3a",
+      "clips": [
+        "Dispense flap"
+      ],
+      "riggedParts": [
+        "PickupFlap"
+      ],
+      "detachableParts": [
+        "CanDisplay"
+      ]
+    },
+    "survey-bot@default": {
+      "template": "survey-bot",
+      "variation": "default",
+      "label": "Default",
+      "situation": "An articulated field robot built for inspection work.",
+      "recipeHash": "sha256:118bf9eb9957d6e27172eee85b8161935099ba0fab49feb91556efcc7188fb7f",
+      "standardHash": "sha256:12d8757fc3f2801e390a09fa534c234da2c9ad4bf1c96ee0485c1a601c5f5923",
+      "hdHash": "sha256:ba738c333a12c1e8ffdb5c6fd117f00628566e303c3d8cb085b804e518d3f3ee",
+      "clips": [
+        "Idle",
+        "Walk"
+      ],
+      "riggedParts": [],
+      "detachableParts": []
+    },
+    "timber-windmill@default": {
+      "template": "timber-windmill",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Tapered octagonal timber windmill with spinning four-blade lattice sails, stone base, and hinged mill door.",
+      "recipeHash": "sha256:4f709ebcbcc412d89f6b22b2cbc490781a19815796dfe4cd2e376193536ca001",
+      "standardHash": "sha256:62e81810a034e738a18db955dbda1f9cf9f1791e97748964ccdeb94496b35854",
+      "hdHash": "sha256:80d2fa5a6cd3902774a75dc174db72972e482c048bc7bdd5210651e95165d46e",
+      "clips": [
+        "Turn sails",
+        "Open mill door"
+      ],
+      "riggedParts": [
+        "SailRotor",
+        "MillDoor"
+      ],
+      "detachableParts": []
+    },
+    "torii-shrine@default": {
+      "template": "torii-shrine",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Traditional vermilion torii gate with upturned kasagi lintel, swaying bronze temple bell, and detachable stone lanterns.",
+      "recipeHash": "sha256:e20714454410d3e63bda711bdab4c1bac9573ff53d85af7352b6908d4a73d01a",
+      "standardHash": "sha256:559c32ed4448f9339132b4273d4b43fa5baf83de865699943c973fc89745e9d6",
+      "hdHash": "sha256:29e4ceb35a3865dd3f0acf86264d805df0ac737bc25fdca511d486fe3bbfc9a5",
+      "clips": [
+        "Ring shrine bell"
+      ],
+      "riggedParts": [
+        "ShrineBell"
+      ],
+      "detachableParts": [
+        "LanternPair"
+      ]
+    },
+    "town-clock-tower@default": {
+      "template": "town-clock-tower",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Civic sandstone clock tower with open pendulum arcade, four-sided dial, rotating clock hand, and copper spire.",
+      "recipeHash": "sha256:1ff5a5c943c85b48adabf4413f95847e29b46d60884c9b9cee14b2b1d7f13ecf",
+      "standardHash": "sha256:e53ea0c6307c12f463fa917aae833bfef19bc9eabb2138ef43e51ff00d5724d4",
+      "hdHash": "sha256:5a63f63272edfa15b07d7535c44d8fde6b454434190aabebd54adb8d43b1ea81",
+      "clips": [
+        "Tick and chime",
+        "Wind clock"
+      ],
+      "riggedParts": [
+        "Pendulum",
+        "ClockHand"
+      ],
+      "detachableParts": []
+    },
+    "treasure-chest@default": {
+      "template": "treasure-chest",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Iron-bound timber treasure chest with a vaulted hinged lid and removable gold tray.",
+      "recipeHash": "sha256:66cae857e677c981a933f7b977a227d757cdadfd6ae1192008d6fde2f4d8e10f",
+      "standardHash": "sha256:6ca65fe122c2c63b56b29653ceb808e378b06763565fbe39a49d746fffbca4cc",
+      "hdHash": "sha256:ab342a992b0cb857c16e7814189bfc9c9b9e7e04790c10ad26e39a4ae00ee1d1",
+      "clips": [
+        "Open chest"
+      ],
+      "riggedParts": [
+        "ChestLid"
+      ],
+      "detachableParts": [
+        "GoldTray"
+      ]
+    },
+    "twin-jetpack@default": {
+      "template": "twin-jetpack",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Dual-thruster flight pack on a hangar stand with vectoring nozzles and a detachable center fuel cell.",
+      "recipeHash": "sha256:4270288a7b0c0379db207193e74ee29750dcbada28e11bef4677a2dcb10b12cc",
+      "standardHash": "sha256:7485dbd337c982276af5c42aba52c91751208b954124e833046c6ba17b90227e",
+      "hdHash": "sha256:a3b50fa8c62bc27375e8af093db65b5266ae5318e257087d194b9e05af2e643c",
+      "clips": [
+        "Vector thrust"
+      ],
+      "riggedParts": [
+        "NozzleL",
+        "NozzleR"
+      ],
+      "detachableParts": [
+        "FuelCell"
+      ]
+    },
+    "vintage-biplane@default": {
+      "template": "vintage-biplane",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Twin-wing open-cockpit vintage biplane with spinning nose propeller and hinged tail rudder.",
+      "recipeHash": "sha256:09b92038f220ab129cfd9de2ac446a866a67cb571543e68df6952809351433d7",
+      "standardHash": "sha256:79ce2996d5d66a5f28940b1c8c29d50dcf9b66a22e798c1a035c997414dbcf9c",
+      "hdHash": "sha256:a9fbc437f31f3dfd3f63ff9c5e80837562940a29d6c1bb2aff081f8ac2ba2e01",
+      "clips": [
+        "Cruise",
+        "Propeller spin"
+      ],
+      "riggedParts": [
+        "Propeller",
+        "Rudder"
+      ],
+      "detachableParts": []
+    },
+    "vintage-cine-camera@default": {
+      "template": "vintage-cine-camera",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Twin-reel classic film camera on a studio tripod with spinning reels and a side hand crank.",
+      "recipeHash": "sha256:087e6810f5f08f3c7b245d0bd1095ea79158d1173b028766b15519fbc011aa8c",
+      "standardHash": "sha256:731a8d76d5f4a616959c6965610f401014b58483422333f73dbbeddad925bf76",
+      "hdHash": "sha256:34563cd788351f1b2faf24461813d3e288d3a7065b26a6c3f033938b3000675e",
+      "clips": [
+        "Roll film"
+      ],
+      "riggedParts": [
+        "ReelFront",
+        "ReelRear",
+        "HandCrank"
+      ],
+      "detachableParts": []
+    },
+    "volcanic-basalt-vent@default": {
+      "template": "volcanic-basalt-vent",
+      "variation": "default",
+      "label": "Default",
+      "situation": "A ring of hexagonal basalt columns enclosing a surging molten magma core.",
+      "recipeHash": "sha256:281c6bd02f4cdac25ff98346ad0402787da958c837b632ecb9ea86398a7acd59",
+      "standardHash": "sha256:ff5c04b9abb5b4b64591227e0d3bdbca314da699ce0b92d010816d16751860a6",
+      "hdHash": "sha256:7fbba2897e42c915aec3a7cfc108deab8dfd5fd8553ddc601f001cadd3bfee2b",
+      "clips": [
+        "Magma surge"
+      ],
+      "riggedParts": [
+        "MagmaCore"
+      ],
+      "detachableParts": [
+        "ObsidianSpire"
+      ]
+    },
+    "warehouse-forklift@default": {
+      "template": "warehouse-forklift",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Counterbalanced warehouse forklift with an elevating fork carriage and rolling drive wheels.",
+      "recipeHash": "sha256:d5ceea94424f4697898a213c3c4ff9babe773637d6f667f6b43d41063d8d0531",
+      "standardHash": "sha256:40d5400fe338599e70e9abc69f9063da265add5a70965c757ef4cf081c052367",
+      "hdHash": "sha256:f4b3edcb3de764436acdb551c2d6b85e1c9f16f77f6d50b2f0cebdc16ee8da80",
+      "clips": [
+        "Lift and roll",
+        "Lift forks"
+      ],
+      "riggedParts": [
+        "ForkCarriage",
+        "FrontWheelL",
+        "FrontWheelR"
+      ],
+      "detachableParts": []
+    },
+    "winged-kite-shield@default": {
+      "template": "winged-kite-shield",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Heraldic kite shield on an armory easel with deploying left and right armored wing plates.",
+      "recipeHash": "sha256:4c5c464d534113e5c5820d28eaff3d0ed7b11e168f79e7d6202862c7d594cf31",
+      "standardHash": "sha256:1bbba386c233650e2d2ff57a1cfedcb2eb347e9b81476e9fe2e655aec6fc7e6b",
+      "hdHash": "sha256:ab97ec3fba45eb9df378e2d56b9b9afe226fc818f88e5f07762511e5219560cf",
+      "clips": [
+        "Deploy wings"
+      ],
+      "riggedParts": [
+        "WingPlateL",
+        "WingPlateR"
+      ],
+      "detachableParts": []
+    },
+    "wizard-spire@default": {
+      "template": "wizard-spire",
+      "variation": "default",
+      "label": "Default",
+      "situation": "Arcane stone observatory spire crowned with a levitating rotating crystal and hinged portal door.",
+      "recipeHash": "sha256:8b04287d3046544aa0d4900528bbe247ca3b6e0377453b04f489a1f3258677aa",
+      "standardHash": "sha256:0bcf8e4a424dfc584fa5eaab8324f6f1f0f066fe9aba82de04e32ed8e3df1291",
+      "hdHash": "sha256:65ad04397646b158de9c805db49b8b6b787c1f0396938dfb93f493e802b0132f",
+      "clips": [
+        "Channel crystal",
+        "Open tower door"
+      ],
+      "riggedParts": [
+        "ArcaneCrystal",
+        "TowerDoor"
+      ],
+      "detachableParts": []
+    }
+  },
+  "repairs": []
+}

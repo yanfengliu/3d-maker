@@ -2,6 +2,7 @@ import * as T from 'three';
 import type { Recipe } from '../data/recipe';
 import { writeCapabilities, type AssetCapabilities, type RiggedPartSpec } from '../capabilities/schema';
 import { extraAssets } from './collections';
+import { DEFAULT_VARIATION_ID, findVariation, variationsForTemplate } from './variations';
 
 const starterDescriptions: Record<string, string> = {
   'relay-drone': 'Quad-rotor autonomous survey drone with articulated rotors and dual-axis camera gimbal.',
@@ -43,6 +44,17 @@ const starterParts: Record<string, readonly RiggedPartSpec[]> = {
 
 const extraById = new Map(extraAssets.map(asset => [asset.id, asset]));
 
+function uniqueByName<Item extends { name: string }>(items: readonly Item[]): Item[] {
+  const out: Item[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (seen.has(item.name)) continue;
+    seen.add(item.name);
+    out.push(item);
+  }
+  return out;
+}
+
 /** Attach self-describing Form Foundry capabilities to a built procedural original Group. */
 export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): AssetCapabilities {
   root.updateMatrixWorld(true);
@@ -50,19 +62,42 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
   const size = box.isEmpty() ? new T.Vector3(1, 1, 1) : box.getSize(new T.Vector3());
   const round = (n: number) => Math.round(n * 1000) / 1000;
   const extra = extraById.get(recipe.template);
-  const description = extra?.description ?? starterDescriptions[recipe.template];
-  const riggedSource = extra?.riggedParts ?? starterParts[recipe.template] ?? [];
+  const variation = findVariation(recipe.template, recipe.variation);
+  const baseDescription = extra?.description ?? starterDescriptions[recipe.template];
+  const description = variation ? `${variation.label}: ${variation.situation}` : baseDescription;
+  const riggedSource = uniqueByName([
+    ...(extra?.riggedParts ?? starterParts[recipe.template] ?? []),
+    ...(variation?.riggedParts ?? []),
+  ]);
+  const detachableSource = uniqueByName([
+    ...(extra?.detachableParts ?? []),
+    ...(variation?.detachableParts ?? []),
+  ]);
+  const nightZones = uniqueByName([...(extra?.nightZones ?? []), ...(variation?.nightZones ?? [])]);
+  const decals = uniqueByName([...(extra?.decals ?? []), ...(variation?.decals ?? [])]);
   const riggedParts = riggedSource.filter(part => Boolean(root.getObjectByName(part.name)));
-  const detachableParts = (extra?.detachableParts ?? []).filter(part => Boolean(root.getObjectByName(part.name)));
+  const detachableParts = detachableSource.filter(part => Boolean(root.getObjectByName(part.name)));
+  const siblingDefs = variationsForTemplate(recipe.template);
+  const variations = siblingDefs.length
+    ? [
+        { id: DEFAULT_VARIATION_ID, label: 'Default', situation: baseDescription ?? '' },
+        ...siblingDefs.map(v => ({ id: v.id, label: v.label, situation: v.situation })),
+      ]
+    : undefined;
   const capabilities: AssetCapabilities = {
     version: 1,
     name: recipe.name,
     ...(description ? { description } : {}),
-    source: { kind: 'original', id: recipe.template },
+    source: {
+      kind: 'original',
+      id: recipe.template,
+      variation: variation?.id ?? DEFAULT_VARIATION_ID,
+    },
+    ...(variations ? { variations } : {}),
     riggedParts,
     detachableParts,
-    nightZones: [...(extra?.nightZones ?? [])],
-    decals: [...(extra?.decals ?? [])],
+    nightZones,
+    decals,
     dimensions: {
       sizeM: { x: round(size.x), y: round(size.y), z: round(size.z) },
       originY: round(box.isEmpty() ? 0 : box.min.y),

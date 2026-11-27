@@ -133,6 +133,12 @@
       "maxLength": 80,
       "pattern": "\\S"
     },
+    "variation": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Optional registered variation ID for the chosen template (for example \"winter-frost\" or \"cargo-lifter\"). Omit or pass \"default\" for the base version."
+    },
     "primary": {
       "type": "string",
       "pattern": "^#[a-fA-F0-9]{6}$",

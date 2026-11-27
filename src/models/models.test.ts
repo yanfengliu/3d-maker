@@ -2,9 +2,10 @@ import * as T from 'three'
 import { describe, expect, it } from 'vitest'
 import { characterRig } from '../animation/rig'
 import { inspectAsset } from '../capabilities/runtime'
-import { catalog } from '../data/recipe'
+import { listVariations } from '../data/recipe'
 import { extraAssets } from './collections'
 import { buildModel } from './index'
+import { DEFAULT_VARIATION_ID, findVariation } from './variations'
 
 type PaintedMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>
 
@@ -14,7 +15,9 @@ function meshes(root: T.Object3D) {
   return result
 }
 
-describe.each(catalog)('$recipe.name', ({ recipe, category }) => {
+const allModelVariants = listVariations()
+
+describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }) => {
   it('builds finite geometry that uses both requested paint colors', () => {
     const scene = buildModel({ ...recipe, primary: '#ed5a19', accent: '#b6e623' })
     const colors = meshes(scene).flatMap(mesh => [mesh.material].flat().map(material => material.color.getHexString()))
@@ -81,11 +84,15 @@ describe.each(catalog)('$recipe.name', ({ recipe, category }) => {
     const simple = buildModel({ ...recipe, detail: false })
     const caps = inspectAsset(detailed)
     const def = extraAssets.find(asset => asset.id === recipe.template)
+    const variationDef = findVariation(recipe.template, recipe.variation)
     if (def) {
-      expect(caps.riggedParts.map(p => p.name)).toEqual(def.riggedParts.map(p => p.name))
-      expect(caps.detachableParts.map(p => p.name)).toEqual((def.detachableParts ?? []).map(p => p.name))
+      const expectedRigged = [...new Set([...def.riggedParts.map(p => p.name), ...(variationDef?.riggedParts ?? []).map(p => p.name)])]
+      const expectedDetachable = [...new Set([...(def.detachableParts ?? []).map(p => p.name), ...(variationDef?.detachableParts ?? []).map(p => p.name)])]
+      expect(caps.riggedParts.map(p => p.name)).toEqual(expectedRigged)
+      expect(caps.detachableParts.map(p => p.name)).toEqual(expectedDetachable)
       expect(caps.physics?.body).toBe(def.physicsBody)
     }
+    expect(caps.source?.variation).toBe(id === DEFAULT_VARIATION_ID ? DEFAULT_VARIATION_ID : id)
     for (const part of caps.riggedParts) {
       expect(detailed.getObjectByName(part.name)).toBeDefined()
       expect(simple.getObjectByName(part.name)).toBeDefined()

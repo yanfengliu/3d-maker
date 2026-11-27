@@ -334,20 +334,63 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.ok(!(await page.locator('dialog').innerText()).includes('Interactive parts and model capabilities'));
     await page.click('#closeDialog');
 
-    // 7. Verify SDK exports inspectAsset and createAssetController in a real browser module load.
+    // 6c. Model variations: switch Bakery Shopfront to Winter Frost via UI select, toggle RoofSnow, and verify Cargo Lifter GLB + SDK.
+    await page.locator('[data-category="building"]').click();
+    await page.getByRole('button', { name: 'Open Bakery Shopfront', exact: true }).click();
+    await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Bakery Shopfront');
+    await waitFrames(page, 3);
+    const bakeryDefault = await canvasSample(page);
+    const variationOptions = await page.locator('#variation option').evaluateAll(opts => opts.map(o => o.value));
+    assert.deepEqual(variationOptions, ['default', 'winter-frost', 'evening-bistro']);
+    await page.selectOption('#variation', 'winter-frost');
+    await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Bakery Shopfront (Winter)');
+    await waitFrames(page, 4);
+    assert.equal((await page.evaluate(() => window.forgeStudio.getRecipe()?.variation)), 'winter-frost');
+    assert.notEqual((await canvasSample(page)).sig, bakeryDefault.sig, 'Switching to Winter Frost variation did not update viewport');
+    await page.screenshot({ path: join(out, 'variation-bakery-winter.png') });
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable.some(p => p.name === 'RoofSnow'))), true);
+    await page.uncheck('[data-detach-part="RoofSnow"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable.find(p => p.name === 'RoofSnow')?.visible)), false);
+
+    // Switch via agent API to Relay Drone Cargo Lifter and verify exported GLB self-describes its variation.
+    await page.evaluate(() => { window.forgeStudio.selectVariation('cargo-lifter', 'relay-drone'); });
+    await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Relay Drone (Cargo Lifter)');
+    await waitFrames(page, 4);
+    await page.screenshot({ path: join(out, 'variation-drone-cargo.png') });
+    const droneVarGlb = await page.evaluate(async () => {
+      const bytes = await window.forgeStudio.exportGLB();
+      const len = new DataView(bytes).getUint32(12, true);
+      return JSON.parse(new TextDecoder().decode(new Uint8Array(bytes, 20, len)));
+    });
+    const droneVarManifest = droneVarGlb.nodes.map(n => n.extras?.formFoundry).find(Boolean);
+    assert.equal(droneVarManifest.source?.variation, 'cargo-lifter');
+    assert.ok(droneVarManifest.riggedParts.some(p => p.name === 'CargoHook'));
+    assert.ok(droneVarManifest.variations?.some(v => v.id === 'default'));
+
+    // 7. Verify SDK exports inspectAsset, createAssetController, listVariations, and resolveVariationRecipe.
     const sdkPage = await context.newPage();
     await sdkPage.goto(originUrl + '/sdk-check');
     const sdkResult = await sdkPage.evaluate(async () => {
-      const { createAsset, catalog, inspectAsset, createAssetController } = await import('/3d-maker/studio-sdk.js');
+      const { createAsset, catalog, inspectAsset, createAssetController, listVariations, resolveVariationRecipe } = await import('/3d-maker/studio-sdk.js');
       const pod = createAsset(catalog.find(row => row.id === 'cargo-pod').recipe);
       const info = inspectAsset(pod);
       const ctrl = createAssetController(pod);
       const opened = ctrl.openPart('CaseLid');
-      return { parts: info.riggedParts.map(p => p.name), opened, lidRotX: pod.getObjectByName('CaseLid').rotation.x };
+      const lifter = createAsset(resolveVariationRecipe('relay-drone', 'cargo-lifter'));
+      const lifterInfo = inspectAsset(lifter);
+      return {
+        parts: info.riggedParts.map(p => p.name),
+        opened,
+        lidRotX: pod.getObjectByName('CaseLid').rotation.x,
+        variationCount: listVariations('bakery-shopfront').length,
+        lifterVariation: lifterInfo.source?.variation,
+      };
     });
     assert.deepEqual(sdkResult.parts, ['CaseLid']);
     assert.equal(sdkResult.opened, -72);
     assert.ok(sdkResult.lidRotX < -1.2);
+    assert.equal(sdkResult.variationCount, 3);
+    assert.equal(sdkResult.lifterVariation, 'cargo-lifter');
     await sdkPage.close();
     assert.deepEqual(errors, []);
   } finally {

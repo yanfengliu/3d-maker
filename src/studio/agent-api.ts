@@ -1,6 +1,6 @@
 import type { AssetController } from '../capabilities/runtime';
 import type { AssetCapabilities, ColorwayPresetSpec } from '../capabilities/schema';
-import { catalog, type Recipe } from '../data/recipe';
+import { catalog, listVariations, type Recipe } from '../data/recipe';
 import { readInventory } from '../data/inventory';
 import { listImports, type ImportedAsset, type ImportEdits } from '../imports';
 import { showPlayback } from '../ui/inspector';
@@ -22,6 +22,7 @@ export interface StudioHost {
   getImported: () => ImportedAsset | null;
   getController: () => AssetController | null;
   applyRecipe: (input: unknown) => void;
+  selectVariation: (variation: string, template?: string) => void;
   remix: (name?: string) => void;
   save: () => Promise<string>;
   exportGLB: (options?: ExportOptions) => Promise<ArrayBuffer>;
@@ -57,8 +58,10 @@ export function createAgentApi(host: StudioHost) {
 
   return {
     listTemplates: () => structuredClone(catalog),
+    listVariations: (template?: string) => structuredClone(listVariations(template)),
     getRecipe: host.getRecipe,
     applyRecipe: host.applyRecipe,
+    selectVariation: host.selectVariation,
     remix: host.remix,
     save: host.save,
     listInventory: async () => [...readInventory(), ...(await listImports())],

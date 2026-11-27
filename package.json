@@ -16,7 +16,8 @@
     "verify": "npm run test && npm run typecheck && npm run lint && npm run build",
     "check:studio": "node scripts/check-studio.mjs",
     "capture:posters": "node scripts/posters.mjs",
-    "dataset": "node scripts/dataset.mjs"
+    "dataset": "node scripts/dataset.mjs",
+    "variations:lock": "node scripts/lock-variations.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"

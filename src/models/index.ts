@@ -6,6 +6,7 @@ import { extraAssets } from './collections'
 import { drone } from './drone'
 import { cargo, rover, tower } from './equipment'
 import { finishes } from './parts'
+import { findVariation } from './variations'
 
 const extraBuilders = new Map(extraAssets.map(asset => [asset.id, asset.build]))
 
@@ -14,20 +15,24 @@ export function buildModel(recipe: Recipe): T.Group {
   const root = new T.Group()
   root.name = 'Asset'
   const palette = finishes(recipe)
-  switch (recipe.template) {
-    case 'relay-drone': drone(root, palette, recipe.detail); break
-    case 'field-rover': rover(root, palette, recipe.detail); break
-    case 'cargo-pod': cargo(root, palette, recipe.detail); break
-    case 'signal-tower': tower(root, palette, recipe.detail); break
-    case 'survey-bot': character(root, palette, false, recipe.detail); break
-    case 'field-pilot': character(root, palette, true, recipe.detail); break
-    default: {
-      const build = extraBuilders.get(recipe.template)
-      if (!build) throw new Error('Unknown template: ' + recipe.template)
-      build(root, palette, recipe.detail)
-      break
+  const variation = findVariation(recipe.template, recipe.variation)
+  if (!variation?.replaceBase) {
+    switch (recipe.template) {
+      case 'relay-drone': drone(root, palette, recipe.detail); break
+      case 'field-rover': rover(root, palette, recipe.detail); break
+      case 'cargo-pod': cargo(root, palette, recipe.detail); break
+      case 'signal-tower': tower(root, palette, recipe.detail); break
+      case 'survey-bot': character(root, palette, false, recipe.detail); break
+      case 'field-pilot': character(root, palette, true, recipe.detail); break
+      default: {
+        const build = extraBuilders.get(recipe.template)
+        if (!build) throw new Error('Unknown template: ' + recipe.template)
+        build(root, palette, recipe.detail)
+        break
+      }
     }
   }
+  variation?.modify?.(root, palette, recipe.detail)
   root.userData.recipe = { ...recipe }
   root.scale.set(recipe.scale * recipe.proportion, recipe.scale, recipe.scale)
   attachOriginalCapabilities(root, recipe)

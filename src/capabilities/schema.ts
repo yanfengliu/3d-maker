@@ -72,6 +72,12 @@ export interface AssetRuntimeState {
   decalText?: Record<string, string>;
 }
 
+export interface VariationSummary {
+  id: string;
+  label: string;
+  situation: string;
+}
+
 export interface AssetCapabilities {
   version: 1;
   name: string;
@@ -79,9 +85,11 @@ export interface AssetCapabilities {
   source?: {
     kind: 'original' | 'polyfork' | 'local';
     id?: string;
+    variation?: string;
     url?: string;
     kit?: string;
   };
+  variations?: VariationSummary[];
   riggedParts: RiggedPartSpec[];
   detachableParts: DetachablePartSpec[];
   nightZones: NightZoneSpec[];
@@ -291,6 +299,23 @@ function parseClips(value: unknown): { name: string; duration: number; synthesiz
   return clips.length ? clips : undefined;
 }
 
+function parseVariations(value: unknown): VariationSummary[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const rows: VariationSummary[] = [];
+  const seen = new Set<string>();
+  for (const row of value) {
+    if (rows.length >= maxParts) break;
+    if (!isRecord(row)) continue;
+    const id = trimText(row.id, maxNameLen);
+    if (!id || seen.has(id)) continue;
+    const label = trimText(row.label, maxNameLen) ?? humanizeLabel(id);
+    const situation = trimText(row.situation, maxDescLen) ?? '';
+    seen.add(id);
+    rows.push({ id, label, situation });
+  }
+  return rows.length ? rows : undefined;
+}
+
 /** Validate and normalize a Form Foundry capability manifest read from GLB extras or JSON. */
 export function parseCapabilities(value: unknown): AssetCapabilities | null {
   if (!isRecord(value) || value.version !== 1 || typeof value.name !== 'string' || !value.name.trim()) return null;
@@ -307,10 +332,15 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
     result.source = {
       kind: value.source.kind,
       ...(typeof value.source.id === 'string' ? { id: value.source.id } : {}),
+      ...(typeof value.source.variation === 'string' && value.source.variation.trim()
+        ? { variation: value.source.variation.trim().slice(0, maxNameLen) }
+        : {}),
       ...(typeof value.source.url === 'string' ? { url: value.source.url } : {}),
       ...(typeof value.source.kit === 'string' ? { kit: value.source.kit } : {}),
     };
   }
+  const variations = parseVariations(value.variations);
+  if (variations) result.variations = variations;
   const colorZones = parseColorZones(value.colorZones);
   if (colorZones) result.colorZones = colorZones;
   const presets = parsePresets(value.presets);

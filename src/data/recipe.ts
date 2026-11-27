@@ -1,10 +1,19 @@
 import { extraAssets } from '../models/collections/index.ts';
+import {
+  DEFAULT_VARIATION_ID,
+  findVariation,
+  variationKey,
+  variationsForTemplate,
+  type VariationSummary,
+} from '../models/variations.ts';
 
 export type TemplateId = string;
+export type { VariationSummary };
 
 export interface Recipe {
   version: 1;
   template: TemplateId;
+  variation?: string;
   name: string;
   primary: string;
   accent: string;
@@ -20,12 +29,22 @@ export interface CatalogEntry {
   category: 'Object' | 'Character';
   recipe: Recipe;
   description: string;
+  variations: readonly VariationSummary[];
+}
+
+export interface ModelVariationEntry extends VariationSummary {
+  key: string;
+  template: TemplateId;
+  category: CatalogEntry['category'];
+  recipe: Recipe;
 }
 
 function starter(id: TemplateId, code: string, category: CatalogEntry['category'], name: string, primary: string, accent: string, description: string): CatalogEntry {
+  const named = variationsForTemplate(id).map(v => ({ id: v.id, label: v.label, situation: v.situation }));
   return {
     id, code, category, description,
     recipe: { version: 1, template: id, name, primary, accent, scale: 1, proportion: 1, detail: true, quality: 'hd' },
+    variations: [{ id: DEFAULT_VARIATION_ID, label: 'Default', situation: description }, ...named],
   };
 }
 
@@ -69,10 +88,23 @@ function dimension(value: unknown, field: string): number {
 export function parseRecipe(input: unknown): Recipe {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('A recipe must be a JSON object.');
   const value = input as Record<string, unknown>;
-  const allowed = ['version', 'template', 'name', 'primary', 'accent', 'scale', 'proportion', 'detail', 'quality'];
+  const allowed = ['version', 'template', 'variation', 'name', 'primary', 'accent', 'scale', 'proportion', 'detail', 'quality'];
   if (Object.keys(value).some(key => !allowed.includes(key))) throw new Error('The recipe contains an unknown field.');
   if (value.version !== 1) throw new Error('The recipe must use version 1.');
   if (!isTemplate(value.template)) throw new Error('Choose a template from the studio catalog.');
+  let variation: string | undefined;
+  if (value.variation !== undefined) {
+    if (typeof value.variation !== 'string' || !value.variation.trim()) {
+      throw new Error('variation must be a registered variation id.');
+    }
+    const clean = value.variation.trim();
+    if (clean !== DEFAULT_VARIATION_ID) {
+      if (!findVariation(value.template, clean)) {
+        throw new Error(`Unknown variation "${clean}" for template "${value.template}".`);
+      }
+      variation = clean;
+    }
+  }
   if (typeof value.name !== 'string' || !value.name.trim() || Array.from(value.name).length > 80) {
     throw new Error('Give the recipe a name between 1 and 80 characters.');
   }
@@ -81,9 +113,53 @@ export function parseRecipe(input: unknown): Recipe {
     throw new Error('quality must be standard or hd.');
   }
   return {
-    version: 1, template: value.template, name: value.name.trim(), detail: value.detail,
+    version: 1, template: value.template, ...(variation ? { variation } : {}), name: value.name.trim(), detail: value.detail,
     ...(value.quality === undefined ? {} : { quality: value.quality }),
     primary: color(value.primary, 'primary'), accent: color(value.accent, 'accent'),
     scale: dimension(value.scale, 'scale'), proportion: dimension(value.proportion, 'proportion'),
   };
+}
+
+/** Resolve the full recipe for a given template and variation id (defaults to the base model). */
+export function resolveVariationRecipe(template: TemplateId, variation?: string): Recipe {
+  const entry = catalog.find(row => row.id === template);
+  if (!entry) throw new Error('Choose a template from the studio catalog.');
+  if (!variation || variation === DEFAULT_VARIATION_ID) return { ...entry.recipe };
+  const def = findVariation(template, variation);
+  if (!def) throw new Error(`Unknown variation "${variation}" for template "${template}".`);
+  return parseRecipe({
+    ...entry.recipe,
+    ...(def.recipe ?? {}),
+    template,
+    variation: def.id,
+  });
+}
+
+/** Enumerate all stored variations (including 'default') across the whole dataset or for one template. */
+export function listVariations(template?: TemplateId): ModelVariationEntry[] {
+  const entries = template ? catalog.filter(row => row.id === template) : catalog;
+  const rows: ModelVariationEntry[] = [];
+  for (const entry of entries) {
+    rows.push({
+      key: variationKey(entry.id, DEFAULT_VARIATION_ID),
+      template: entry.id,
+      id: DEFAULT_VARIATION_ID,
+      label: 'Default',
+      situation: entry.description,
+      category: entry.category,
+      recipe: { ...entry.recipe },
+    });
+    for (const def of variationsForTemplate(entry.id)) {
+      rows.push({
+        key: variationKey(entry.id, def.id),
+        template: entry.id,
+        id: def.id,
+        label: def.label,
+        situation: def.situation,
+        category: entry.category,
+        recipe: resolveVariationRecipe(entry.id, def.id),
+      });
+    }
+  }
+  return rows;
 }

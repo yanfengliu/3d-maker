@@ -1,6 +1,6 @@
 import { el, escapeHtml } from './dom';
 import { icon } from './icons';
-import type { Recipe } from '../data/recipe';
+import type { Recipe, VariationSummary } from '../data/recipe';
 import type { ImportEdits } from '../imports';
 export const paints = [
   ['Signal yellow', '#efb634'],
@@ -21,6 +21,8 @@ export function paintSlider(input: HTMLInputElement) {
 }
 export interface Editable {
   name: string;
+  variation?: string;
+  variations?: readonly VariationSummary[];
   primary: string;
   accent?: string;
   scale: number;
@@ -31,14 +33,27 @@ export interface Editable {
 export function showProperties(
   value: Editable,
   changed: (patch: Partial<Recipe & ImportEdits>) => void,
+  onSelectVariation?: (variation: string) => void,
 ) {
   const isLocal = value.accent !== undefined;
+  const variations = isLocal && value.variations && value.variations.length > 1 ? value.variations : undefined;
+  const activeVar = value.variation ?? 'default';
+  const activeNote = variations?.find(v => v.id === activeVar)?.situation ?? '';
+  const variationHtml = variations
+    ? `<div class="propgroup variation-group"><label class="accentrow" for="variation"><span>Variation</span><select id="variation">${variations.map(v => `<option value="${escapeHtml(v.id)}" ${v.id === activeVar ? 'selected' : ''}>${escapeHtml(v.label)}</option>`).join('')}</select></label>${activeNote ? `<p class="variation-note">${escapeHtml(activeNote)}</p>` : ''}</div>`
+    : '';
   el('propertiesBody').innerHTML =
     `<div class="propgroup identity"><label class="property-label" for="assetName">Name</label><input class="namefield" id="assetName" value="${escapeHtml(value.name)}" maxlength="80" required/></div>
+  ${variationHtml}
   ${isLocal ? '<div class="propgroup" id="modelParts"></div>' : '<div class="propgroup" id="modelPaint"></div><div class="propgroup" id="modelParts"></div>'}
   <div class="propgroup"><label class="subrow" for="primaryColor"><span>${isLocal ? 'Body color' : 'Overall tint'}</span><span class="hex" id="hex">${value.primary.toUpperCase()}</span></label><div class="paints">${paints.map(([label, color]) => `<button aria-label="${label}" aria-pressed="${String(value.primary.toLowerCase() === color)}" class="swatch" style="--swatch:${color}" data-paint="${color}" title="${label}"></button>`).join('')}<label class="custompaint" title="Custom color">${icon('plus', 14)}<input id="primaryColor" aria-label="${isLocal ? 'Custom body color' : 'Custom overall tint'}" type="color" value="${value.primary}"/></label></div>
   ${value.accent ? `<label class="accentrow" for="accent"><span>Accent color</span><span class="colorchip"><i style="background:${value.accent}"></i><span>${value.accent.toUpperCase()}</span>${icon('chevron', 12)}<input type="color" aria-label="Accent color" id="accent" value="${value.accent}"/></span></label>` : ''}</div>
   <div class="propgroup transforms">${slider('scale', 'Scale', value.scale)}${slider('proportion', isLocal ? 'Body width' : 'Height', value.proportion)}${isLocal ? `<label class="accentrow qualityrow" for="quality">Mesh quality<select id="quality"><option value="hd" ${value.quality === 'hd' ? 'selected' : ''}>HD</option><option value="standard" ${value.quality !== 'hd' ? 'selected' : ''}>Standard</option></select></label>` : ''}${value.detail !== undefined ? `<label class="detailrow"><span>Surface details</span><input id="detail" type="checkbox" role="switch" ${value.detail ? 'checked' : ''}/><i></i></label>` : ''}</div>`;
+  if (variations && onSelectVariation) {
+    el<HTMLSelectElement>('variation').onchange = e => {
+      onSelectVariation((e.currentTarget as HTMLSelectElement).value);
+    };
+  }
   el<HTMLInputElement>('assetName').onchange = (e) => {
     const input = e.currentTarget as HTMLInputElement;
     const name = input.value.trim() || input.defaultValue;

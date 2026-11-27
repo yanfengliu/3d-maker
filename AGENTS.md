@@ -57,6 +57,7 @@ The designated coordinator reads `../fleet/docs/skills/coordinator.md` before pl
 ## Invariants and conventions
 
 - Keep original models procedural. A validated recipe builds a three.js Group with stable animation targets at either quality setting.
+- Keep model variations append-only: never overwrite or delete an existing model or variation for a new look or scenario. Add a new variation in `src/models/variations.ts`, run `npm run variations:lock`, and keep `src/models/variations.lock.json` passing `npm run verify`. See [local rules](docs/policies/local-rules.md).
 - Honor the documented screenshot query and set `window.__shotReady` after five rendered frames. Inspect interactive changes through the real controls, at fixed and freely orbited views. Keep raw captures under ignored output.
 - Keep the local PolyFork dataset outside Git and the public build. The [dataset guide](docs/dataset.md) records provenance and reproduction.
 - Keep source files at most 500 physical lines and use two-space indentation. Never use environment files to adjust measured runtime behavior.
