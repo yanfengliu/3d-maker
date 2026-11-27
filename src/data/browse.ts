@@ -117,11 +117,14 @@ const pageSize = 12;
 const pageCache = new Map<string, { value: PolyforkPage; expires: number }>();
 const cacheLimit = 80;
 const cacheLifetime = 120_000;
+function cachePrefix(filters: BrowseQuery, category: string, size: number) {
+  return JSON.stringify([category, filters.query.trim().toLowerCase(), size]) + '/';
+}
 
 async function remotePage(filters: BrowseQuery, page: number, signal: AbortSignal,
   category: string = filters.category, size = pageSize): Promise<PolyforkPage> {
   signal.throwIfAborted();
-  const key = JSON.stringify([category, filters.query.trim().toLowerCase(), page, size]);
+  const key = cachePrefix(filters, category, size) + String(page);
   const cached = pageCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
 
@@ -138,14 +141,30 @@ async function remotePage(filters: BrowseQuery, page: number, signal: AbortSigna
 
 // A merged class needs its corrected count before user-visible pagination. Read the affected
 // classes in API-sized batches and reuse those pages for subsequent searches with the same terms.
-async function classAssets(filters: BrowseQuery, category: string, signal: AbortSignal): Promise<PolyforkAsset[]> {
-  const first = await remotePage(filters, 1, signal, category, 100);
-  const assets = [...first.assets];
-  for (let page = 2; page <= Math.ceil(first.total / first.perPage); page++) {
-    const next = await remotePage(filters, page, signal, category, 100);
-    assets.push(...next.assets);
+async function classAssets(filters: BrowseQuery, category: string, signal: AbortSignal) {
+  const size = 100, prefix = cachePrefix(filters, category, size);
+  const pages = new Map<number, PolyforkPage>();
+  // Later pages can still be fresh when the first page's count has expired.
+  for (const [key, entry] of pageCache) {
+    if (key.startsWith(prefix) && entry.expires > Date.now()) pages.set(entry.value.page, entry.value);
   }
-  return assets;
+  let error: string | null = null, last = 1, countKnown = false;
+  for (let page = 1; page <= last; page++) {
+    try {
+      const result = await remotePage(filters, page, signal, category, size);
+      pages.set(page, result);
+      if (page === 1) {
+        last = Math.max(1, Math.ceil(result.total / result.perPage));
+        countKnown = true;
+      }
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'The catalog request failed.';
+      if (signal.aborted) break;
+    }
+  }
+  const assets = [...pages.values()].filter(value => !countKnown || value.page <= last)
+    .sort((a,b) => a.page - b.page).flatMap(value => value.assets);
+  return { assets, error };
 }
 
 function localPage(items: BrowseItem[], requested: number, remoteError: string | null = null): BrowsePage {
@@ -179,13 +198,16 @@ export async function browseAssets(filters: BrowseQuery, locals: BrowseLocals, s
     if (filters.category === 'character' || filters.category === 'animal') {
       const classes = filters.category === 'character' ? ['character', 'animal'] : ['animal'];
       const groups = await Promise.all(classes.map(category => classAssets(filters, category, request)));
+      signal?.throwIfAborted();
       const matches = new Map<string, BrowseItem>();
       for (const group of groups) {
-        for (const asset of group) {
+        for (const asset of group.assets) {
           if (asset.category === filters.category && !matches.has(asset.id)) matches.set(asset.id, remoteCard(asset));
         }
       }
-      return localPage([...local, ...matches.values()], filters.page);
+      const failure = groups.find(group => group.error)?.error;
+      const warning = failure ? 'PolyFork catalog results are incomplete. ' + failure : null;
+      return localPage([...local, ...matches.values()], filters.page, warning);
     }
     const first = await remotePage(filters, 1, request);
     const total = local.length + first.total;

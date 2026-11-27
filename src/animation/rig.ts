@@ -46,10 +46,27 @@ function parents(studio: boolean) {
   return result;
 }
 
+/** Express each joint's bind matrix in the hips parent's frame. glTF primitives
+ * may be siblings of Hips, and distinct skins can share joints in different mesh spaces. */
+function jointBindMatrices(skins: SkinnedMesh[], parent: Object3D) {
+  const result = new Map<Bone, Matrix4>();
+  parent.updateWorldMatrix(true, false);
+  const parentInverse = parent.matrixWorld.clone().invert();
+  for (const skin of skins) {
+    skin.updateWorldMatrix(true, false);
+    const fromSkin = parentInverse.clone().multiply(skin.matrixWorld).multiply(skin.bindMatrix.clone().invert());
+    for (const [i, bone] of skin.skeleton.bones.entries()) {
+      const inverse = skin.skeleton.boneInverses[i];
+      if (inverse && !result.has(bone)) result.set(bone, inverse.clone().invert().premultiply(fromSkin));
+    }
+  }
+  return result;
+}
+
 /** Match one skinned humanoid in its bind pose, independently of the displayed animation. */
 export function characterRig(root: Object3D): CharacterRig | null {
   const bones = new Map<string, Bone>();
-  const inverseBind = new Map<Bone, Matrix4>();
+  const skins: SkinnedMesh[] = [];
   const nameCounts = new Map<string, number>();
   const matches = { ambiguous: false, studio: false };
   root.traverse(node => {
@@ -57,27 +74,27 @@ export function characterRig(root: Object3D): CharacterRig | null {
     const recipe: unknown = node.userData.recipe;
     if (record(recipe) && (recipe.template === 'field-pilot' || recipe.template === 'survey-bot')) matches.studio = true;
     if (!(node instanceof SkinnedMesh)) return;
-    for (const [i, bone] of node.skeleton.bones.entries()) {
+    skins.push(node as SkinnedMesh);
+    for (const bone of node.skeleton.bones) {
       // GLTFLoader preserves the authored name here when disambiguating a scene-wide collision.
       const name = typeof bone.userData.name === 'string' ? bone.userData.name : bone.name;
       if (bones.has(name) && bones.get(name) !== bone) matches.ambiguous = true;
       bones.set(name, bone);
-      const inverse = node.skeleton.boneInverses[i];
-      if (inverse) inverseBind.set(bone, inverse);
     }
   });
   const { ambiguous, studio } = matches;
   const hips = bones.get('Hips');
-  if (ambiguous || !hips || !root.getObjectByProperty('uuid', hips.uuid)) return null;
+  if (ambiguous || !hips?.parent || !root.getObjectByProperty('uuid', hips.uuid)) return null;
+  const bindMatrices = jointBindMatrices(skins, hips.parent);
   const hierarchy = parents(studio);
   const offsets = new Map<string, Vector3>();
   for (const [name, parentName] of hierarchy) {
     const bone = bones.get(name), parent = bones.get(parentName);
-    const local = bone && inverseBind.get(bone), parentInverse = parent && inverseBind.get(parent);
-    if (!local || !parentInverse || bone.parent !== parent) return null;
+    const bind = bone && bindMatrices.get(bone), parentBind = parent && bindMatrices.get(parent);
+    if (!bind || !parentBind || bone.parent !== parent) return null;
     // The clip source uses identity local bind rotations and +Y up. Reject rigs whose
     // names match but whose rotated or mirrored bone coordinate frames would twist the mesh.
-    const matrix = local.clone().invert().premultiply(parentInverse);
+    const matrix = parentBind.clone().invert().multiply(bind);
     const offset = new Vector3(), rotation = new Quaternion(), scale = new Vector3();
     matrix.decompose(offset, rotation, scale);
     if (!Number.isFinite(offset.lengthSq()) || offset.lengthSq() === 0 ||
@@ -114,17 +131,12 @@ export function characterRig(root: Object3D): CharacterRig | null {
     });
   }
 
-  // The known rigs parent their hips to the body skin. Its bind matrix removes
-  // scene placement from the inverse bind; preview playback may already have moved Hips.
-  const inverseHips = inverseBind.get(hips);
-  if (!inverseHips) return null;
-  const bind = inverseHips.clone().invert();
-  if (hips.parent instanceof SkinnedMesh) bind.premultiply(hips.parent.bindMatrix.clone().invert());
-  const hipRotation = new Quaternion(), hipScale = new Vector3();
-  bind.decompose(new Vector3(), hipRotation, hipScale);
+  const hipBind = bindMatrices.get(hips);
+  if (!hipBind) return null;
+  const restHips = new Vector3(), hipRotation = new Quaternion(), hipScale = new Vector3();
+  hipBind.decompose(restHips, hipRotation, hipScale);
   if (Math.abs(hipRotation.w) < 0.99999 || hipScale.distanceTo(unitScale) > 0.001) return null;
-  const restHips = hips.parent instanceof SkinnedMesh ? new Vector3().setFromMatrixPosition(bind) : hips.position.clone();
-  for (let parent = hips.parent; parent; parent = parent.parent) {
+  for (let parent: Object3D | null = hips.parent; parent; parent = parent.parent) {
     const rest: unknown = parent.userData.restHips;
     if (numbers(rest, 3)) { restHips.fromArray(rest); break; }
   }

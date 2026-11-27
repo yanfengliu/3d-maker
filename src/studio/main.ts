@@ -101,7 +101,18 @@ function controls() {
 }
 function swap(model: T.Group, refit: boolean) {
   const previous = stage.model;
+  const clip = refit ? undefined : previous?.animations[stage.clipIndex];
+  const playing = stage.playing, fraction = stage.clipFraction;
+  if (clip && !model.animations.some(candidate => candidate.name === clip.name)) addCharacterAnimations(model);
   stage.setModel(model, refit);
+  if (clip) {
+    const next = model.animations.findIndex(candidate => candidate.name === clip.name);
+    if (next >= 0) {
+      stage.setClip(next);
+      stage.seek(fraction);
+      stage.play(playing);
+    }
+  }
   if (previous && previous !== model) disposeModel(previous);
   if (refit) el<HTMLSelectElement>('view').value = 'Perspective';
 }

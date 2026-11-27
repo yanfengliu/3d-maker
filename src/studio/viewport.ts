@@ -231,6 +231,10 @@ export class Viewport {
     for (const [mat, original] of this.wireMaterials) mat.wireframe = on || original;
     this.invalidate();
   }
+  get clipFraction() {
+    const duration = this.action?.getClip().duration;
+    return this.action && duration ? this.action.time / duration : 0;
+  }
   setClip(index: number) {
     this.action?.stop();
     this.action = null;

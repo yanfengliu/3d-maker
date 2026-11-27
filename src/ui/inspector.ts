@@ -109,13 +109,13 @@ export function showAnimation(
     panel.innerHTML = '<p class="empty-mini">This asset has no playable clips.</p>';
     return;
   }
-  const rows = clips.map((clip, i) => `<button type="button" data-clip="${i}" class="clip" aria-pressed="false">${icon('film', 15)}<span>${escapeHtml(clip.name)}</span><small>${clip.duration.toFixed(1)}s</small></button>`).join('');
+  const rows = clips.map((clip, i) => `<button type="button" data-clip="${String(i)}" class="clip" aria-pressed="false">${icon('film', 15)}<span>${escapeHtml(clip.name)}</span><small>${clip.duration.toFixed(1)}s</small></button>`).join('');
   panel.innerHTML = `<section class="propgroup anim motion-picker"><h3 class="micro">ANIMATION CLIPS <span id="motionCount"></span></h3>
     ${canSearch ? '<input type="search" class="namefield" aria-label="Search animations" id="motionSearch" placeholder="Search animations…" autocomplete="off"/>' : ''}
     <div class="cliplist" id="clipList">${rows}<p id="noMotionMatches" hidden>No matching animations.</p></div></section>
     <section class="propgroup anim"><h3 class="micro">PLAYBACK</h3><strong id="motionName"></strong>
     <button class="btn" id="play"></button><label class="rangelabel" for="timeline">Timeline</label><input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/>
-    <label class="accentrow" for="speed">Speed<select id="speed">${[0.5, 1, 1.5, 2].map(n => `<option value="${n}" ${n === speed ? 'selected' : ''}>${n}×</option>`).join('')}</select></label></section>`;
+    <label class="accentrow" for="speed">Speed<select id="speed">${[0.5, 1, 1.5, 2].map(n => `<option value="${String(n)}" ${n === speed ? 'selected' : ''}>${String(n)}×</option>`).join('')}</select></label></section>`;
   const buttons = [...el('clipList').querySelectorAll<HTMLButtonElement>('[data-clip]')];
   function currentClip(selected: number) {
     el('motionName').textContent = clips[selected]?.name ?? '';
@@ -147,7 +147,7 @@ export function showAnimation(
         if (!button.hidden) matches++;
       }
       el('noMotionMatches').hidden = matches > 0;
-      el('motionCount').textContent = query ? matches + ' / ' + clips.length : String(clips.length);
+      el('motionCount').textContent = query ? String(matches) + ' / ' + String(clips.length) : String(clips.length);
       el('clipList').scrollTop = 0;
     };
   }

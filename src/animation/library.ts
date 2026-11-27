@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { gunzipSync, strFromU8 } from 'three/addons/libs/fflate.module.js';
 import type { Object3D } from 'three';
+import { sameMotion } from './duplicates';
 import { bindCharacterClip, characterRig } from './rig';
 
 // Vite inlines these small, individually compressed release assets in the portable game SDK too.
@@ -29,14 +30,21 @@ export function addCharacterAnimations<T extends Object3D>(model: T): T {
   const rig = characterRig(model);
   if (rig) {
     const embedded = new Set(model.animations.map(clip => clip.name));
-    const studioRig = rig.joints.some(joint => joint.sources.length > 1);
     const additions = [];
     for (const [path, url] of Object.entries(packed)) {
       const {name, motion} = readMotion(path, url);
-      // The two original studio cycles have independent choreography.
-      const label = studioRig && (name === 'Idle' || name === 'Walk') && embedded.has(name)
-        ? name + ' (library)' : name;
-      if (!embedded.has(label)) additions.push(bindCharacterClip(rig, label, motion));
+      const candidate = bindCharacterClip(rig, name, motion);
+      // A custom clip can use a publisher's title or even its collision suffix.
+      // Keep each distinct motion and recognize our tracks again after a GLB round trip.
+      let label = name, suffix = 1;
+      while (embedded.has(label)) {
+        if (model.animations.some(clip => clip.name === label && sameMotion(model, clip, candidate))) break;
+        label = suffix === 1 ? name + ' (library)' : name + ' (library ' + String(suffix) + ')';
+        suffix++;
+      }
+      if (embedded.has(label)) continue;
+      candidate.name = label;
+      additions.push(candidate);
     }
     model.animations.push(...additions);
   }

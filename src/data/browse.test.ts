@@ -39,6 +39,23 @@ function stubCatalog(total: number) {
   return fetcher;
 }
 
+function classOutage(totals: Record<string,number>, fails: (source: string, page: number) => boolean) {
+  const requests: string[] = [];
+  vi.stubGlobal('fetch', (raw: URL) => {
+    const source = raw.searchParams.get('class') ?? '', page = Number(raw.searchParams.get('page'));
+    const size = Number(raw.searchParams.get('per_page')), start = (page - 1) * size;
+    requests.push(source + '/' + String(page));
+    if (fails(source,page)) return Promise.resolve(new Response(null, {status:503}));
+    const total = totals[source] ?? 0;
+    const assets = Array.from({length: Math.max(0,Math.min(size,total - start))}, (_, i) => {
+      const id = source + '-' + String(start + i);
+      return {id, title:id, free:true, class:source, has_skeleton:true, triangles:100, download:{glb:'https://polyfork.dev/cdn/' + id + '.glb'}};
+    });
+    return Promise.resolve(Response.json({page, per_page:size, total, assets}));
+  });
+  return requests;
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -156,6 +173,59 @@ describe('unified asset browsing', () => {
     expect(await browseAssets(second, empty)).toMatchObject({ page: 2, total: 15, items: [], remoteError: 'temporary failure' });
     expect((await browseAssets(second, empty)).items.map(item => item.title)).toEqual(['Asset 12','Asset 13','Asset 14']);
     expect(requests).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(['character','animal'])('keeps the other class when %s fails and retries only the missing class', async failed => {
+    let outage = true;
+    const requests = classOutage({character:2, animal:3}, source => outage && source === failed);
+    const filters: BrowseQuery = {...all, source:'polyfork', category:'character', query:'missing ' + failed};
+    const partial = await browseAssets(filters,empty);
+    const available = failed === 'animal' ? 'character' : 'animal';
+    expect(partial.total).toBe(failed === 'animal' ? 2 : 3);
+    expect(partial.items.every(item => item.key.startsWith('polyfork:' + available))).toBe(true);
+    expect(partial.remoteError).toMatch(/PolyFork.*incomplete.*503/);
+    expect(requests.sort()).toEqual(['animal/1','character/1']);
+    outage = false;
+    const complete = await browseAssets(filters,empty);
+    expect(complete.remoteError).toBeNull();
+    expect(complete.total).toBe(5);
+    expect(requests.slice(2)).toEqual([failed + '/1']);
+  });
+
+  it('keeps available pages on either side of a failed class page and reuses them on retry', async () => {
+    let outage = true;
+    const requests = classOutage({character:201, animal:1}, (source,page) => outage && source === 'character' && page === 2);
+    const filters: BrowseQuery = {...all, source:'polyfork', category:'character', query:'middle page outage', page:9};
+    const partial = await browseAssets(filters,empty);
+    expect(partial.total).toBe(102);
+    expect(partial.page).toBe(9);
+    expect(partial.items.map(item => item.key)).toEqual([96,97,98,99,200].map(i => 'polyfork:character-' + String(i)).concat('polyfork:animal-0'));
+    expect(partial.remoteError).toMatch(/incomplete/);
+    expect(requests).toHaveLength(4);
+    outage = false;
+    const complete = await browseAssets(filters,empty);
+    expect(complete.total).toBe(202);
+    expect(complete.remoteError).toBeNull();
+    expect(complete.items[4]?.key).toBe('polyfork:character-100');
+    expect(requests.slice(4)).toEqual(['character/2']);
+  });
+
+  it('keeps a still-fresh later page when its first-page count expires and fails to refresh', async () => {
+    vi.useFakeTimers({toFake:['Date']});
+    const now = Date.now();
+    let initial = true;
+    const requests = classOutage({character:101, animal:0}, (source,page) => {
+      if (initial && page === 2) vi.setSystemTime(now + 30_000);
+      return !initial && source === 'character' && page === 1;
+    });
+    const filters: BrowseQuery = {...all, source:'polyfork', category:'character', query:'retained cached page'};
+    expect((await browseAssets(filters,empty)).total).toBe(101);
+    initial = false;
+    vi.setSystemTime(now + 125_000);
+    const partial = await browseAssets(filters,empty);
+    expect(partial.items.map(item => item.key)).toEqual(['polyfork:character-100']);
+    expect(partial.remoteError).toMatch(/incomplete/);
+    expect(requests.filter(value => value === 'character/2')).toHaveLength(1);
   });
 
   it('shows free models whose triangle count and thumbnail are still unpublished', async () => {

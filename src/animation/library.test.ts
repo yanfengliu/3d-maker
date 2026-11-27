@@ -5,8 +5,13 @@ import { buildModel } from '../models';
 import { createAsset } from '../sdk';
 import { addCharacterAnimations } from './library';
 
-const pilot = catalog.find(item => item.id === 'field-pilot')!.recipe;
-const rover = catalog.find(item => item.id === 'field-rover')!.recipe;
+function recipe(id: string) {
+  const item = catalog.find(row => row.id === id);
+  if (!item) throw new Error('Missing template ' + id);
+  return item.recipe;
+}
+const pilot = recipe('field-pilot');
+const rover = recipe('field-rover');
 
 describe('published character motion library', () => {
   it('loads the complete release and preserves both studio cycles in the game SDK', () => {
@@ -25,6 +30,10 @@ describe('published character motion library', () => {
     addCharacterAnimations(model);
     expect(model.animations[0]).toBe(custom);
     expect(model.animations.filter(clip => clip.name === 'Dance')).toHaveLength(1);
+    expect(model.animations.find(clip => clip.name === 'Dance (library)')?.tracks.length).toBeGreaterThan(0);
+    const restored = buildModel(pilot);
+    restored.animations = model.animations.map(clip => clip.clone());
+    expect(addCharacterAnimations(restored).animations.map(clip => clip.name)).toEqual(model.animations.map(clip => clip.name));
     expect(createAsset(rover).animations.map(c => c.name)).toEqual(buildModel(rover).animations.map(c => c.name));
   });
 });

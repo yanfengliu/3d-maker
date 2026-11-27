@@ -128,6 +128,13 @@ try {
   await page.click('#play');
   await page.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > 0.03);
   await page.click('#play');
+  const pausedAt = Number(await page.locator('#timeline').inputValue());
+  await page.click('#propertiesTab');
+  await page.getByRole('button', { name:'Sage' }).click();
+  await page.click('#animationTab');
+  assert.equal(await page.locator('#motionName').innerText(), 'Swimming');
+  await page.waitForFunction(at => Math.abs(Number(document.querySelector('#timeline').value) - at) < 0.02, pausedAt);
+  assert.match(await page.locator('#play').innerText(), /Play clip/);
   await page.click('#export');
   const pending = page.waitForEvent('download');
   await page.click('#downloadGlb');

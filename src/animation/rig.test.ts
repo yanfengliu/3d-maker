@@ -1,5 +1,5 @@
 import {
-  AnimationMixer, Bone, Group, Object3D, PropertyBinding, Quaternion, Skeleton, SkinnedMesh, Vector3,
+  AnimationMixer, Bone, Group, Matrix4, Object3D, PropertyBinding, Quaternion, Skeleton, SkinnedMesh, Vector3,
 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '../data/recipe';
@@ -75,6 +75,48 @@ describe('shared humanoid clip binding', () => {
     expect(hips.position.y).toBeCloseTo(0.4);
     expect(hips.position.z).toBeCloseTo(-0.1);
     expect(node(scene, 'LeftArm').quaternion.angleTo(identity.clone().slerp(leftArmDown, 0.5))).toBeLessThan(0.001);
+  });
+
+  it.each(['native', 'glTF'])('recovers a posed split skin’s local hips from %s inverse binds under nested transforms', format => {
+    const scene = canonical(0.475, root => {
+      const armature = new Group(), joints = new Group(), skin = root.getObjectByProperty('isSkinnedMesh', true);
+      if (!(skin instanceof SkinnedMesh)) throw new Error('Missing test skin');
+      root.add(armature);
+      armature.position.set(1.1, 0.8, -0.4);
+      armature.rotation.z = 0.3;
+      armature.scale.setScalar(1.3);
+      armature.add(skin, joints);
+      skin.position.set(0.4, -0.2, -0.1);
+      joints.position.set(-0.2, 0.4, 0.7);
+      joints.rotation.x = -0.6;
+      joints.add(node(skin, 'Hips'));
+    });
+    const skin = scene.getObjectByProperty('isSkinnedMesh', true);
+    if (!(skin instanceof SkinnedMesh)) throw new Error('Missing test skin');
+    const primitive = new SkinnedMesh();
+    scene.add(primitive);
+    primitive.position.set(0.3, 0.1, 0.2);
+    primitive.updateWorldMatrix(true, false);
+    primitive.bind(skin.skeleton, primitive.matrixWorld);
+    scene.children.reverse();
+    if (format === 'glTF') {
+      for (const mesh of [skin, primitive]) {
+        // Exported inverses include each primitive’s bind matrix. GLTFLoader binds with identity.
+        const inverses = mesh.skeleton.boneInverses.map(matrix => matrix.clone().multiply(mesh.bindMatrix));
+        mesh.bind(new Skeleton(mesh.skeleton.bones, inverses), new Matrix4());
+      }
+    }
+    scene.position.set(0.8, -2, 0.4);
+    scene.rotation.y = 0.7;
+    scene.scale.setScalar(1.8);
+    const hips = node(scene, 'Hips');
+    hips.position.set(0.1, 0.2, 0.3);
+    const rig = mustRig(scene);
+    expect(rig.restHips.distanceTo(new Vector3(0, 0.475, 0))).toBeLessThan(1e-6);
+    const mix = new AnimationMixer(scene);
+    mix.clipAction(bindCharacterClip(rig, 'Motion', raw)).play();
+    mix.setTime(0.5);
+    expect(hips.position.distanceTo(new Vector3(0.05, 0.4, -0.1))).toBeLessThan(1e-6);
   });
 
   it.each(['field-pilot', 'survey-bot'])('retargets the T-pose and bends the %s elbows about the correct frame', template => {
