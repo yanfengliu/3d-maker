@@ -156,10 +156,40 @@ export function surfaceBasis(normal: readonly [number, number, number]): {
   return { u, n, v };
 }
 
+export function isHiddenPartName(hiddenSet: ReadonlySet<string>, name: string, prefix = ''): boolean {
+  if (hiddenSet.has(name)) return true;
+  return Boolean(prefix && name.startsWith(prefix) && hiddenSet.has(name.slice(prefix.length)));
+}
+
+/** Check whether `node` or any ancestor up to AND including `stopAt` is listed in `hiddenSet`. */
+export function hasHiddenAncestor(
+  node: T.Object3D,
+  stopAt: T.Object3D,
+  hiddenSet: ReadonlySet<string>,
+  prefix = '',
+): boolean {
+  if (!hiddenSet.size) return false;
+  let cur: T.Object3D | null = node;
+  while (cur) {
+    if (cur.name && isHiddenPartName(hiddenSet, cur.name, prefix)) return true;
+    if (typeof cur.userData.localName === 'string' && hiddenSet.has(cur.userData.localName)) return true;
+    if (cur === stopAt) break;
+    cur = cur.parent;
+  }
+  return false;
+}
+
 /**
  * Compute a headless local-to-parent Matrix4 for a `CompositeMountSpec` (used by JSON-only placement checks).
  */
 export function mountLocalMatrix(mount: CompositeMountSpec, hostSurface?: SurfaceSpec): T.Matrix4 {
+  if (mount.slotRestPose) {
+    const p = new T.Vector3(...mount.slotRestPose.at);
+    const r = mount.slotRestPose.rotation ?? [0, 0, 0];
+    const q = new T.Quaternion().setFromEuler(new T.Euler(r[0], r[1], r[2], 'XYZ'));
+    const sc = mount.slotRestPose.scale ?? [1, 1, 1];
+    return new T.Matrix4().compose(p, q, new T.Vector3(sc[0], sc[1], sc[2]));
+  }
   const offset = mount.at ?? [0, 0, 0];
   let pos: T.Vector3;
   if (hostSurface) {
@@ -176,11 +206,12 @@ export function mountLocalMatrix(mount: CompositeMountSpec, hostSurface?: Surfac
   const sc = mount.scale ?? 1;
   const s = typeof sc === 'number' ? new T.Vector3(sc, sc, sc) : new T.Vector3(sc[0], sc[1], sc[2]);
   const local = new T.Matrix4().compose(pos, q, s);
-  if (!hostSurface && mount.attachRestPose) {
+  if (mount.attachRestPose) {
     const aPos = new T.Vector3(...mount.attachRestPose.at);
     const aRot = mount.attachRestPose.rotation ?? [0, 0, 0];
     const aQ = new T.Quaternion().setFromEuler(new T.Euler(aRot[0], aRot[1], aRot[2], 'XYZ'));
-    const attachM = new T.Matrix4().compose(aPos, aQ, new T.Vector3(1, 1, 1));
+    const aSc = mount.attachRestPose.scale ?? [1, 1, 1];
+    const attachM = new T.Matrix4().compose(aPos, aQ, new T.Vector3(aSc[0], aSc[1], aSc[2]));
     return attachM.multiply(local);
   }
   return local;
@@ -398,7 +429,7 @@ export function restoreCompatibleChildState(
     }
   }
   if (prevState.night && freshCaps.nightZones.length) controller.setNight(true);
-  if (prevState.decalText && freshCaps.decals.length) {
+  if ((prevDecalsVisible || prevState.decalText) && freshCaps.decals.length) {
     controller.setDecalsVisible(prevDecalsVisible, prevState.decalText);
   }
 }

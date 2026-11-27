@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { findOwnNodeByName, getRiggedRestPose, traverseOwnSubtree } from './compose-tree';
+import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, traverseOwnSubtree } from './compose-tree';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -112,7 +112,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     const localName = prefix && part.name.startsWith(prefix) ? part.name.slice(prefix.length) : part.name;
     if (hiddenSet.has(part.name) || hiddenSet.has(localName)) continue;
     const node = findOwnNodeByName(root, part.name, prefix);
-    if (!node || !isVisibleInTree(node)) continue;
+    if (!node || !isVisibleInTree(node) || hasHiddenAncestor(node, root, hiddenSet, prefix)) continue;
     checkedParts++;
     const origPos = node.position.clone();
     const origQuat = node.quaternion.clone();

@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { findOwnNodeByName, mountLocalMatrix } from './compose-tree';
+import { findOwnNodeByName, hasHiddenAncestor, isHiddenPartName, mountLocalMatrix } from './compose-tree';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -299,22 +299,6 @@ export function obbContainedIn(inner: OrientedBox, outer: OrientedBox, tolerance
   return true;
 }
 
-function isHiddenName(hiddenSet: ReadonlySet<string>, name: string, prefix = ''): boolean {
-  if (hiddenSet.has(name)) return true;
-  return Boolean(prefix && name.startsWith(prefix) && hiddenSet.has(name.slice(prefix.length)));
-}
-
-function hasHiddenAncestor(node: T.Object3D, stopAt: T.Object3D, hiddenSet: ReadonlySet<string>, prefix: string): boolean {
-  if (!hiddenSet.size) return false;
-  let cur: T.Object3D | null = node;
-  while (cur && cur !== stopAt) {
-    if (cur.name && isHiddenName(hiddenSet, cur.name, prefix)) return true;
-    if (typeof cur.userData.localName === 'string' && hiddenSet.has(cur.userData.localName)) return true;
-    cur = cur.parent;
-  }
-  return false;
-}
-
 function appendResolvedVolumes(
   volumes: OrientedBox[],
   ownerId: string,
@@ -368,7 +352,7 @@ function appendResolvedVolumes(
       if (!includeNoneLayer && layer === 'none') continue;
       const volName = `${namePrefix}${spec.name}`;
       if (spec.node) {
-        if (isHiddenName(hiddenSet, spec.node, nodePrefix)) continue;
+        if (isHiddenPartName(hiddenSet, spec.node, nodePrefix)) continue;
         if (object) {
           const node = findOwnNodeByName(object, spec.node, nodePrefix);
           if (!node || !isVisibleInTree(node) || hasHiddenAncestor(node, object, hiddenSet, nodePrefix)) continue;
@@ -395,7 +379,7 @@ function appendResolvedVolumes(
   if (includeClearanceZones && caps.clearanceZones) {
     for (const zone of caps.clearanceZones) {
       const volName = `${namePrefix}${zone.name}`;
-      if (zone.part && isHiddenName(hiddenSet, zone.part, nodePrefix)) continue;
+      if (zone.part && isHiddenPartName(hiddenSet, zone.part, nodePrefix)) continue;
       if (zone.part && object) {
         const node = findOwnNodeByName(object, zone.part, nodePrefix);
         if (node && (!isVisibleInTree(node) || hasHiddenAncestor(node, object, hiddenSet, nodePrefix))) continue;

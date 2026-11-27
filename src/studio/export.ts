@@ -1,7 +1,8 @@
-import { type BufferGeometry, type Material, Mesh, type Group, type Object3D } from 'three';
+import { type AnimationClip, type BufferGeometry, type Material, Mesh, type Group, type Object3D } from 'three';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import type { CompositeChildSpec } from '../capabilities/compose-schema';
-import { findOwnNodeByName, getLiveController, type ExportPoseProvider } from '../capabilities/compose-tree';
+import { splitTrackTargetAndProperty } from '../capabilities/compose-scope';
+import { findOwnNodeByName, getLiveController, traverseOwnSubtree, type ExportPoseProvider } from '../capabilities/compose-tree';
 import { inspectAsset, isSynthesizedClip, synthesizeRigClips, type AssetController } from '../capabilities/runtime';
 import { readCapabilities, writeCapabilities } from '../capabilities/schema';
 
@@ -19,10 +20,32 @@ function isIdentityTransform(obj: Object3D): boolean {
   );
 }
 
-function unwrapSceneWrapper(source: Object3D): Object3D {
+function collectAnimatedTargets(clips: readonly AnimationClip[]): Set<string> {
+  const targets = new Set<string>();
+  const emptyNames = new Set<string>();
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      const split = splitTrackTargetAndProperty(track.name, emptyNames);
+      if (!split?.targetPart) continue;
+      targets.add(split.targetPart);
+      for (const tok of split.targetPart.split(/[/:]/)) if (tok) targets.add(tok);
+    }
+  }
+  return targets;
+}
+
+/**
+ * Unwrap only synthetic empty GLTFLoader scene wrappers (`name === '' | 'Scene'`, empty `userData`, identity transform,
+ * and untargeted by any animation track) so repeated GLB saves never stack wrapper depth or drop authored groups/metadata.
+ */
+function unwrapSceneWrapper(source: Object3D, clips: readonly AnimationClip[]): Object3D {
+  const targeted = collectAnimatedTargets(clips);
   let cur: Object3D = source;
   while (
-    !('formFoundry' in cur.userData)
+    Object.keys(cur.userData).length === 0
+    && (cur.name === '' || cur.name === 'Scene')
+    && !targeted.has(cur.name)
+    && !targeted.has(cur.uuid)
     && cur.children.length === 1
     && cur.children[0]
     && isIdentityTransform(cur)
@@ -35,13 +58,52 @@ function unwrapSceneWrapper(source: Object3D): Object3D {
   return cur;
 }
 
+/** Rebind unscoped (`scopeNames: false`) composite child clip tracks to exact node UUIDs on the export clone. */
+function rebindUnscopedChildTracks(
+  child: CompositeChildSpec,
+  inner: Object3D,
+  clipPrefix: string,
+  animations: readonly AnimationClip[],
+): void {
+  if (child.nodePrefix) return;
+  const ownNames = new Set<string>();
+  const ownUuids = new Set<string>();
+  traverseOwnSubtree(inner, node => {
+    ownUuids.add(node.uuid);
+    if (node.name) ownNames.add(node.name);
+    if (typeof node.userData.localName === 'string') ownNames.add(node.userData.localName);
+  });
+  const prefix = `${clipPrefix}: `;
+  for (const clip of animations) {
+    if (!clip.name.startsWith(prefix)) continue;
+    for (const track of clip.tracks) {
+      const split = splitTrackTargetAndProperty(track.name, ownNames);
+      if (!split) continue;
+      const { targetPart, propPart } = split;
+      if (!targetPart) {
+        track.name = `${inner.uuid}${propPart}`;
+        continue;
+      }
+      if (ownUuids.has(targetPart)) continue;
+      const tokens = targetPart.split(/[/:]/);
+      const leaf = tokens[tokens.length - 1] ?? targetPart;
+      const resolved = findOwnNodeByName(inner, leaf) ?? findOwnNodeByName(inner, targetPart);
+      if (resolved) track.name = `${resolved.uuid}${propPart}`;
+    }
+  }
+}
+
 /** Capture the rig at rest, preserving detachable subtrees, active part poses, capability manifest, and optional part clips. */
 export function cloneForExport(
   source: Group,
   options?: ExportOptions,
   controller?: AssetController | ExportPoseProvider | null,
 ) {
-  const exportSource = unwrapSceneWrapper(source);
+  const activeController = controller === undefined ? getLiveController(source) : controller;
+  const controllerAnims =
+    activeController && 'getAnimations' in activeController ? activeController.getAnimations() : [];
+  const candidateClips = source.animations.length ? source.animations : controllerAnims;
+  const exportSource = unwrapSceneWrapper(source, candidateClips);
   const root = clone(exportSource);
   const materials = new Map<Material, Material>();
   const paintedGeometry = new Map<BufferGeometry, BufferGeometry>();
@@ -83,18 +145,19 @@ export function cloneForExport(
   }
   copyNode(exportSource, root);
   for (const overlay of overlays) overlay.removeFromParent();
-  const sourceAnims = source.animations.length ? source.animations : exportSource.animations;
+  const sourceAnims = source.animations.length
+    ? source.animations
+    : exportSource.animations.length
+      ? exportSource.animations
+      : controllerAnims;
   root.animations = sourceAnims.map((clip) => clip.clone());
 
-  const activeController = controller === undefined
-    ? (getLiveController(source) ?? getLiveController(exportSource))
+  const resolvedController = controller === undefined
+    ? (activeController ?? getLiveController(exportSource))
     : controller;
-  if (!root.animations.length && activeController && 'getAnimations' in activeController) {
-    root.animations = activeController.getAnimations().map(clip => clip.clone());
-  }
-  const capabilities = activeController ? activeController.syncManifest() : inspectAsset(exportSource, root.animations);
+  const capabilities = resolvedController ? resolvedController.syncManifest() : inspectAsset(exportSource, root.animations);
   // Re-apply authoritative rigged part poses onto the clone so animation mixer resets never bake stale transforms.
-  activeController?.applyPoseToClone(root);
+  resolvedController?.applyPoseToClone(root);
 
   // Keep declared detachable subtrees (including nested composite children) in exported GLB even while hidden.
   const ensureVisible = (node: Object3D | undefined) => {
@@ -123,10 +186,11 @@ export function cloneForExport(
     }
   };
   if (capabilities.children?.length) {
-    walkChildren(capabilities.children, root, '', (child, inner) => {
+    walkChildren(capabilities.children, root, '', (child, inner, childPath) => {
       for (const part of child.capabilities.detachableParts) {
         ensureVisible(findOwnNodeByName(inner, part.name, child.nodePrefix));
       }
+      rebindUnscopedChildTracks(child, inner, childPath.split('/').join(': '), root.animations);
     });
   }
 

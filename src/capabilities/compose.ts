@@ -3,11 +3,16 @@ import type { Recipe } from '../data/recipe';
 import {
   COMPOSITE_CHILD_ID_PATTERN,
   MAX_COMPOSITE_CHILDREN,
-  MAX_SCOPED_NAME_LEN,
   type CompositeChildSpec,
   type CompositeMountSpec,
   type PhysicsCoupling,
 } from './compose-schema';
+import {
+  measureRelativeTransform,
+  pickUniquePrefix,
+  scopeChildSubtree,
+  validateScopedLengths,
+} from './compose-scope';
 import {
   computeCompositeBodies,
   computeCompositePhysics,
@@ -24,7 +29,7 @@ import {
   type SurfaceSpec,
 } from './schema';
 
-export { computeCompositeBodies };
+export { computeCompositeBodies, measureRelativeTransform, pickUniquePrefix, scopeChildSubtree, validateScopedLengths };
 export type { CompositeRigidBodySpec };
 export { validateComposite } from './compose-validate';
 export type { CompositeSurfaceIssue, CompositeValidationResult } from './compose-validate';
@@ -54,205 +59,6 @@ export interface ComposeAssetOptions {
 
 function r3(n: number): number {
   return Math.round((n + 1e-9) * 1000) / 1000 || 0;
-}
-
-function splitTargetAndProperty(
-  trackName: string,
-  knownNames: ReadonlySet<string>,
-): { targetPart: string; propPart: string } | null {
-  if (trackName.startsWith('.')) return { targetPart: '', propPart: trackName };
-  // Prefer longest exact node-name prefix followed by `.` so names with dots (e.g. `Arm.L.position`) stay intact.
-  let longestMatch = '';
-  for (const name of knownNames) {
-    if (name.length > longestMatch.length && trackName.startsWith(`${name}.`)) longestMatch = name;
-  }
-  if (longestMatch) {
-    return { targetPart: longestMatch, propPart: trackName.slice(longestMatch.length) };
-  }
-  const parsed = T.PropertyBinding.parseTrackName(trackName) as {
-    objectName?: string;
-    propertyName?: string;
-  };
-  let splitIdx = -1;
-  if (parsed.objectName) splitIdx = trackName.lastIndexOf(`.${parsed.objectName}`);
-  if (splitIdx <= 0 && parsed.propertyName) splitIdx = trackName.lastIndexOf(`.${parsed.propertyName}`);
-  if (splitIdx <= 0) splitIdx = trackName.indexOf('.');
-  if (splitIdx <= 0) return null;
-  return { targetPart: trackName.slice(0, splitIdx), propPart: trackName.slice(splitIdx) };
-}
-
-function rewriteTrackName(
-  trackName: string,
-  childRoot: T.Object3D,
-  prefix: string,
-  renamedNames: ReadonlySet<string>,
-  uuids: ReadonlySet<string>,
-  nameToUuid: ReadonlyMap<string, string>,
-): string {
-  const split = splitTargetAndProperty(trackName, renamedNames);
-  if (!split) return trackName;
-  const { targetPart, propPart } = split;
-  if (!targetPart) {
-    // Root-relative track (e.g. `.position`) must target the child root node (by UUID when unscoped, or prefixed name).
-    if (!prefix) return `${childRoot.uuid}${propPart}`;
-    return childRoot.name ? `${childRoot.name}${propPart}` : trackName;
-  }
-  if (uuids.has(targetPart)) {
-    // Preserve anonymous UUID bindings intact so GLTFExporter resolves them to the unnamed mesh.
-    return trackName;
-  }
-
-  // Split path segments on both `/` and `:` while preserving exact delimiters.
-  const tokens = targetPart.split(/([/:])/);
-  if (!prefix) {
-    // Unscoped mode (`scopeNames: false`): bind every child track by its target node's exact UUID so duplicate names
-    // never collide in GLTFExporter regardless of sibling declaration or DFS order.
-    const leafToken = tokens[tokens.length - 1] ?? targetPart;
-    const uuid = nameToUuid.get(leafToken) ?? nameToUuid.get(targetPart);
-    return uuid ? `${uuid}${propPart}` : trackName;
-  }
-
-  const rewritten = tokens.map((tok, i) => (i % 2 === 0 && renamedNames.has(tok) ? `${prefix}${tok}` : tok));
-  return `${rewritten.join('')}${propPart}`;
-}
-
-function assertScopedLength(value: string, label: string): void {
-  if (value.length > MAX_SCOPED_NAME_LEN) {
-    throw new Error(
-      `Scoped ${label} "${value}" (${String(value.length)} chars) exceeds maximum length of ${String(MAX_SCOPED_NAME_LEN)}.`,
-    );
-  }
-}
-
-/** Pure pre-flight length check run BEFORE mutating caller input objects so rejected calls leave inputs intact. */
-function validateScopedLengths(
-  childRoot: T.Object3D,
-  childId: string,
-  prefix: string,
-  childCaps?: AssetCapabilities,
-): void {
-  assertScopedLength(`Slot_${childId}`, 'slotNode');
-  childRoot.traverse(node => {
-    if (node.name) assertScopedLength(prefix ? `${prefix}${node.name}` : node.name, 'node name');
-  });
-  for (const clip of childRoot.animations) {
-    assertScopedLength(`${childId}: ${clip.name}`, 'clip name');
-  }
-  if (!prefix || !childCaps) return;
-  for (const p of childCaps.riggedParts) assertScopedLength(`${prefix}${p.name}`, 'rigged part');
-  for (const d of childCaps.detachableParts) assertScopedLength(`${prefix}${d.name}`, 'detachable part');
-  const walkNested = (list: readonly CompositeChildSpec[]) => {
-    for (const sub of list) {
-      assertScopedLength(`${prefix}${sub.slotNode}`, 'slotNode');
-      const nextPref = sub.nodePrefix ? `${prefix}${sub.nodePrefix}` : prefix;
-      assertScopedLength(nextPref, 'nodePrefix');
-      for (const p of sub.capabilities.riggedParts) assertScopedLength(`${nextPref}${p.name}`, 'rigged part');
-      for (const d of sub.capabilities.detachableParts) assertScopedLength(`${nextPref}${d.name}`, 'detachable part');
-      if (sub.capabilities.children?.length) walkNested(sub.capabilities.children);
-    }
-  };
-  if (childCaps.children?.length) walkNested(childCaps.children);
-}
-
-function scopeNestedChildSpecs(children: CompositeChildSpec[], prefix: string): void {
-  for (const sub of children) {
-    sub.slotNode = `${prefix}${sub.slotNode}`;
-    sub.nodePrefix = sub.nodePrefix ? `${prefix}${sub.nodePrefix}` : prefix;
-    if (sub.capabilities.children?.length) {
-      scopeNestedChildSpecs(sub.capabilities.children, prefix);
-    }
-  }
-}
-
-export function pickUniquePrefix(childRoot: T.Object3D, id: string, usedNames: ReadonlySet<string>): string {
-  const candidateNames: string[] = [];
-  childRoot.traverse(node => {
-    if (node.name) candidateNames.push(node.name);
-  });
-  let attempt = 0;
-  for (;;) {
-    const prefix = attempt === 0 ? `${id}__` : `${id}__${String(attempt)}__`;
-    const collides = candidateNames.some(name => usedNames.has(`${prefix}${name}`));
-    if (!collides) return prefix;
-    attempt++;
-  }
-}
-
-/** Measure `target`'s rest transform relative to `hostRoot` so headless JSON placement honors `attachNode`. */
-export function measureAttachRestPose(
-  hostRoot: T.Object3D,
-  target: T.Object3D,
-): { at: [number, number, number]; rotation?: [number, number, number] } {
-  hostRoot.updateMatrixWorld(true);
-  const rel = hostRoot.matrixWorld.clone().invert().multiply(target.matrixWorld);
-  const pos = new T.Vector3();
-  const quat = new T.Quaternion();
-  const scale = new T.Vector3();
-  rel.decompose(pos, quat, scale);
-  const euler = new T.Euler().setFromQuaternion(quat, 'XYZ');
-  const hasRot = Math.abs(euler.x) > 1e-5 || Math.abs(euler.y) > 1e-5 || Math.abs(euler.z) > 1e-5;
-  return {
-    at: [r3(pos.x), r3(pos.y), r3(pos.z)],
-    ...(hasRot ? { rotation: [r3(euler.x), r3(euler.y), r3(euler.z)] } : {}),
-  };
-}
-
-/**
- * Strip embedded manifests from a child subtree, clone all animation clips across the subtree so shared clones never
- * cross-mutate, and rewrite named nodes and non-UUID track bindings with `prefix` (or UUID when unscoped).
- */
-export function scopeChildSubtree(
-  childRoot: T.Object3D,
-  childId: string,
-  prefix: string,
-  childCaps?: AssetCapabilities,
-): void {
-  // Validate every scoped name and clip length BEFORE mutating anything on childRoot!
-  validateScopedLengths(childRoot, childId, prefix, childCaps);
-
-  const originalNames = new Set<string>();
-  const uuids = new Set<string>();
-  const nameToUuid = new Map<string, string>();
-  let needsRootName = false;
-
-  // Clone every clip anywhere in the subtree FIRST (Object3D.clone shares clip refs; nested composites keep clips on inner nodes).
-  childRoot.traverse(node => {
-    if (node.animations.length) {
-      node.animations = node.animations.map(clip => clip.clone());
-    }
-  });
-  for (const clip of childRoot.animations) {
-    for (const track of clip.tracks) {
-      if (track.name.startsWith('.')) needsRootName = true;
-    }
-  }
-  if (needsRootName && !childRoot.name) {
-    assertScopedLength(prefix ? `${prefix}Root` : 'Root', 'node name');
-    childRoot.name = 'Root';
-  }
-
-  childRoot.traverse(node => {
-    node.userData.compositeChild = childId;
-    if ('formFoundry' in node.userData) delete node.userData.formFoundry;
-    uuids.add(node.uuid);
-    if (!node.name) return;
-    originalNames.add(node.name);
-    if (!nameToUuid.has(node.name)) nameToUuid.set(node.name, node.uuid);
-    if (node.userData.localName === undefined) node.userData.localName = node.name;
-    if (prefix) node.name = `${prefix}${node.name}`;
-  });
-
-  childRoot.traverse(node => {
-    for (const clip of node.animations) {
-      for (const track of clip.tracks) {
-        track.name = rewriteTrackName(track.name, childRoot, prefix, originalNames, uuids, nameToUuid);
-      }
-    }
-  });
-
-  if (prefix && childCaps?.children?.length) {
-    scopeNestedChildSpecs(childCaps.children, prefix);
-  }
 }
 
 function measureMinAlongNormalInHost(
@@ -327,6 +133,16 @@ function applySlotTransform(
   }
 }
 
+interface PreparedPart {
+  id: string;
+  label: string;
+  childRoot: T.Object3D;
+  childCaps: AssetCapabilities;
+  preservedRecipe?: Record<string, unknown>;
+  mount: CompositeMountSpec;
+  prefix?: string;
+}
+
 /**
  * Compose two or more independent assets into a single hierarchical Three.js Group while preserving
  * every child's structural recipe/knobs, scoped rigged/detachable/night/decal capabilities, parallel
@@ -341,22 +157,21 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     );
   }
 
-  const root = new T.Group();
-  root.name = options.name.trim();
+  const rootName = options.name.trim();
   const scopeNames = options.scopeNames !== false;
-  const slotById = new Map<string, T.Group>();
-  const childRootById = new Map<string, T.Object3D>();
-  const childSpecById = new Map<string, CompositeChildSpec>();
-  const usedNodeNames = new Set<string>([root.name]);
-  const children: CompositeChildSpec[] = [];
-  const compositeClips: T.AnimationClip[] = [];
+
+  // Stage 1 (pure pre-flight): validate every part's ID, parent order, attachNode, and scoped lengths BEFORE
+  // mutating, renaming, or reparenting ANY caller-supplied `part.object`.
+  const prepared: PreparedPart[] = [];
+  const plannedById = new Map<string, PreparedPart>();
+  const plannedNames = new Set<string>([rootName]);
 
   for (const part of options.parts) {
     const id = part.id.trim();
     if (!COMPOSITE_CHILD_ID_PATTERN.test(id)) {
       throw new Error(`Invalid composite child id "${part.id}". Use letters, numbers, hyphens, or underscores.`);
     }
-    if (slotById.has(id)) throw new Error(`Duplicate composite child id "${id}".`);
+    if (plannedById.has(id)) throw new Error(`Duplicate composite child id "${id}".`);
 
     let childRoot: T.Object3D;
     let preservedRecipe: Record<string, unknown> | undefined;
@@ -390,46 +205,81 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
       ...(part.mount?.joint ? { joint: { ...part.mount.joint } } : {}),
     };
 
+    if (mount.parent) {
+      const parentPrep = plannedById.get(mount.parent);
+      if (!parentPrep) {
+        throw new Error(`Part "${id}" references unknown or later-declared parent "${mount.parent}". Declare parent parts first.`);
+      }
+      if (mount.attachNode && !findOwnNodeByName(parentPrep.childRoot, mount.attachNode)) {
+        throw new Error(`Part "${id}" attachNode "${mount.attachNode}" not found inside parent "${mount.parent}".`);
+      }
+    }
+
+    const prefix = scopeNames ? pickUniquePrefix(childRoot, id, plannedNames) : undefined;
+    validateScopedLengths(childRoot, id, prefix ?? '', childCaps);
+    plannedNames.add(`Slot_${id}`);
+    childRoot.traverse(node => {
+      if (node.name) plannedNames.add(prefix ? `${prefix}${node.name}` : node.name);
+    });
+
+    const entry: PreparedPart = {
+      id,
+      label: part.label?.trim() || childCaps.name,
+      childRoot,
+      childCaps,
+      ...(preservedRecipe ? { preservedRecipe } : {}),
+      mount,
+      ...(prefix ? { prefix } : {}),
+    };
+    prepared.push(entry);
+    plannedById.set(id, entry);
+  }
+
+  // Stage 2 (commit): all parts are valid; scope, attach, seat, and record exact rest transforms.
+  const root = new T.Group();
+  root.name = rootName;
+  const childRootById = new Map<string, T.Object3D>();
+  const childSpecById = new Map<string, CompositeChildSpec>();
+  const children: CompositeChildSpec[] = [];
+  const compositeClips: T.AnimationClip[] = [];
+
+  for (const item of prepared) {
+    const { id, childRoot, childCaps, mount, prefix, preservedRecipe } = item;
     let hostParent: T.Object3D = root;
     let hostRoot: T.Object3D | undefined;
     let hostSurface: SurfaceSpec | undefined;
     if (mount.parent) {
       const parentSpec = childSpecById.get(mount.parent);
       const parentObj = childRootById.get(mount.parent);
-      if (!parentSpec || !parentObj) {
-        throw new Error(`Part "${id}" references unknown or later-declared parent "${mount.parent}". Declare parent parts first.`);
-      }
-      hostRoot = parentObj;
-      if (mount.attachNode) {
-        const target = findOwnNodeByName(parentObj, mount.attachNode, parentSpec.nodePrefix);
-        if (!target) {
-          throw new Error(`Part "${id}" attachNode "${mount.attachNode}" not found inside parent "${mount.parent}".`);
+      if (parentSpec && parentObj) {
+        hostRoot = parentObj;
+        if (mount.attachNode) {
+          const target = findOwnNodeByName(parentObj, mount.attachNode, parentSpec.nodePrefix);
+          if (target) {
+            hostParent = target;
+            mount.attachRestPose = measureRelativeTransform(parentObj, target);
+          }
+        } else {
+          hostParent = parentObj;
         }
-        hostParent = target;
-        mount.attachRestPose = measureAttachRestPose(parentObj, target);
-      } else {
-        hostParent = parentObj;
-      }
-      if (mount.surface) {
-        hostSurface = parentSpec.capabilities.surfaces?.find(s => s.name === mount.surface);
+        if (mount.surface) {
+          hostSurface = parentSpec.capabilities.surfaces?.find(s => s.name === mount.surface);
+        }
       }
     }
 
-    const prefix = scopeNames ? pickUniquePrefix(childRoot, id, usedNodeNames) : undefined;
     scopeChildSubtree(childRoot, id, prefix ?? '', childCaps);
 
     const slotName = `Slot_${id}`;
     const slot = new T.Group();
     slot.name = slotName;
     slot.userData.compositeSlot = id;
-    usedNodeNames.add(slotName);
-    childRoot.traverse(node => {
-      if (node.name) usedNodeNames.add(node.name);
-    });
-
     slot.add(childRoot);
     hostParent.add(slot);
     applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface, Boolean(childCaps.children?.length));
+    if (hostRoot) {
+      mount.slotRestPose = measureRelativeTransform(hostRoot, slot);
+    }
 
     for (const clip of childRoot.animations) {
       const scopedClip = clip.clone();
@@ -439,7 +289,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
 
     const childSpec: CompositeChildSpec = {
       id,
-      label: part.label?.trim() || childCaps.name,
+      label: item.label,
       slotNode: slotName,
       ...(prefix ? { nodePrefix: prefix } : {}),
       mount,
@@ -447,7 +297,6 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
       capabilities: childCaps,
     };
     children.push(childSpec);
-    slotById.set(id, slot);
     childRootById.set(id, childRoot);
     childSpecById.set(id, childSpec);
   }

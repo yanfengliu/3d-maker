@@ -80,18 +80,36 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
       ctrl?.dispose();
       expect(readCapabilities(saved.scene)?.children?.length, `gen ${String(gen)}`).toBe(2);
       expect(saved.animations.length, `gen ${String(gen)} anims`).toBeGreaterThan(0);
+      expect(saved.gltfJson.animations?.every(a => (a.channels?.length ?? 0) > 0), `gen ${String(gen)} channels`).toBe(true);
       expect(validateComposite(saved.scene).placement.valid, `gen ${String(gen)} overlap`).toBe(false);
       currentScene = saved.scene;
       currentAnims = saved.animations;
     }
+
+    // Authored identity wrapper (`AnimatedPivot`) and importer `sourceAsset` metadata are NEVER unwrapped on export (F10)!
+    const pivot = new T.Group(); pivot.name = 'AnimatedPivot';
+    const childComp = composeAsset({ name: 'InnerComp', parts: [{ id: 'b', object: makeBox('B', [0.4, 0.4, 0.4]) }] });
+    pivot.add(childComp);
+    pivot.animations = [new T.AnimationClip('SlidePivot', 1, [new T.VectorKeyframeTrack('AnimatedPivot.position', [0, 1], [0, 0, 0, 1, 0, 0])])];
+    const pivotGlb = await roundTripGlb(pivot);
+    expect(pivotGlb.gltfJson.animations?.[0]?.channels?.length).toBe(1);
+
+    const metaWrapper = new T.Group();
+    metaWrapper.userData.sourceAsset = { id: 'poly-123' };
+    metaWrapper.add(composeAsset({ name: 'MetaInner', parts: [{ id: 'b', object: makeBox('B', [0.4, 0.4, 0.4]) }] }));
+    const metaSnap = cloneForExport(metaWrapper);
+    expect((metaSnap.root.userData.sourceAsset as { id?: string } | undefined)?.id).toBe('poly-123');
+    metaSnap.dispose();
   });
 
-  it('keeps setChildParams atomic when replacement declares a posed part whose node is missing (F4)', () => {
+  it('keeps setChildParams atomic when replacement declares missing posed node, preserves default-label decals, and avoids live manifest writes during Stage 1 failure (F4)', () => {
     const baseRecipe = resolveVariationRecipe('cargo-pod');
-    const makeDoorHost = (includeDoorNode: boolean) => {
+    const makeDoorHost = (includeDoorNode: boolean, withBrokenNested = false) => {
       const g = makeBox('DoorHost', [1, 1, 1], {
         riggedParts: [{ name: 'Door', label: 'Door', type: 'rotate', axis: 'y', range: [0, 90] }],
+        decals: [{ name: 'badge', at: [0, 0.5, 0.51], normal: [0, 0, 1], up: [0, 1, 0], size: [0.3, 0.1] }],
         surfaces: [{ name: 'Top', label: 'Top', at: [0, 1, 0], normal: [0, 1, 0], size: [1, 1], clearanceY: 2 }],
+        ...(withBrokenNested ? { children: [{ id: 'bad', label: 'Bad', slotNode: 'MissingSlot', mount: { coupling: 'weld' as const }, capabilities: { version: 1 as const, name: 'Bad', riggedParts: [], detachableParts: [], nightZones: [], decals: [] } }] } : {}),
       });
       if (includeDoorNode) {
         const door = new T.Group(); door.name = 'Door';
@@ -109,31 +127,50 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     });
     const ctrl = createCompositeController(comp);
     ctrl.openPart('host/Door');
+    // Enable default-label decals (empty decalText!) and verify Stage 1 failure does NOT mutate comp.userData.formFoundry.
+    ctrl.child('host').setDecalsVisible(true);
+    const manifestBeforeFailure: unknown = comp.userData.formFoundry;
+    expect(() => ctrl.setChildParams('host', {}, () => makeDoorHost(true, true))).toThrow('MissingSlot');
+    expect(comp.userData.formFoundry).toBe(manifestBeforeFailure);
+
     const depSlot = comp.getObjectByName('Slot_dep');
-    // Replacement declares Door in manifest but lacks Door node: succeeds safely without throwing or detaching dep!
     ctrl.setChildParams('host', {}, () => makeDoorHost(false));
     expect(depSlot?.parent).toBeTruthy();
+    expect(ctrl.child('host').areDecalsVisible()).toBe(true);
     ctrl.dispose();
   });
 
-  it('resolves attachNode rest pose in headless JSON placement checks (F8)', () => {
-    const crane = makeBox('Crane', [1, 1, 1]);
-    const boom = new T.Group(); boom.name = 'Boom'; boom.position.set(5, 0, 0);
-    crane.add(boom);
+  it('resolves scaled attachNode, attachNode+surface, and posed-boom rebuild rest pose in headless JSON placement checks (F8)', () => {
+    const baseRecipe = resolveVariationRecipe('cargo-pod');
+    const makeScaledCrane = () => {
+      const crane = makeBox('Crane', [1, 1, 1], {
+        riggedParts: [{ name: 'Boom', label: 'Boom', type: 'slide', axis: 'x', range: [0, 4] }],
+        surfaces: [{ name: 'Pad', label: 'Pad', at: [5, 1, 0], normal: [0, 1, 0], size: [4, 2], clearanceY: 2 }],
+      });
+      const boom = new T.Group(); boom.name = 'Boom'; boom.position.set(5, 0, 0); boom.scale.set(2, 1, 1);
+      crane.add(boom);
+      return crane;
+    };
     const rig = composeAsset({
-      name: 'Crane Load',
+      name: 'Scaled Crane Load',
+      buildRecipe: makeScaledCrane,
       parts: [
-        { id: 'crane', object: crane },
-        { id: 'load', object: makeBox('Load', [0.8, 0.8, 0.8]), mount: { parent: 'crane', attachNode: 'Boom', coupling: 'weld' } },
+        { id: 'crane', recipe: baseRecipe },
+        { id: 'load', object: makeBox('Load', [0.4, 0.4, 0.4]), mount: { parent: 'crane', attachNode: 'Boom', at: [1, 0, 0], coupling: 'weld' } },
       ],
     });
-    const rigCaps = inspectAsset(rig);
-    const wallCaps = inspectAsset(makeBox('Wall', [0.5, 2, 2]));
-    const headless = validateScenePlacement([
-      { id: 'rig', capabilities: rigCaps },
-      { id: 'wall', capabilities: wallCaps, position: [5.1, 0, 0] },
-    ]);
-    expect(headless.valid).toBe(false);
+    const wallCaps = inspectAsset(makeBox('Wall', [0.3, 2, 2]));
+    // Boom at x=5, scale.x=2, load local at x=1 -> world x=7 (hits wall at x=7, clears x=6!).
+    expect(validateScenePlacement([{ id: 'rig', capabilities: inspectAsset(rig) }, { id: 'wall', capabilities: wallCaps, position: [7, 0, 0] }]).valid).toBe(false);
+    // Open Boom by +3 (to x=8), rebuild crane, close Boom back to rest (x=5) -> headless JSON MUST still be at x=7 (NOT baked at x=8/10)!
+    const ctrl = createCompositeController(rig);
+    ctrl.setPart('crane/Boom', 3);
+    ctrl.setChildParams('crane', {}, makeScaledCrane);
+    ctrl.closePart('crane/Boom');
+    const rebuiltCaps = ctrl.syncManifest();
+    expect(validateScenePlacement([{ id: 'rig', capabilities: rebuiltCaps }, { id: 'wall', capabilities: wallCaps, position: [7, 0, 0] }]).valid).toBe(false);
+    expect(validateScenePlacement([{ id: 'rig', capabilities: rebuiltCaps }, { id: 'wall', capabilities: wallCaps, position: [10, 0, 0] }]).valid).toBe(true);
+    ctrl.dispose();
   });
 
   it('propagates nested childComposite rebuilds, cleans outer mixer actions, re-seats nested slot, resets timeScale, and preserves static lock after GLB reload (F0, F5, F11)', async () => {
@@ -153,6 +190,7 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     };
 
     const deck = makeBox('Deck', [2, 1, 2], {
+      physics: { body: 'dynamic', massKg: 40 },
       surfaces: [{ name: 'Top', label: 'Top', at: [0, 1, 0], normal: [0, 1, 0], size: [2, 2], clearanceY: 2 }],
     });
     const room = composeAsset({
@@ -189,14 +227,33 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     ctrl.update(0.5);
     expect(house.getObjectByName('room__leaf__Door')?.position.y ?? 0).toBeGreaterThan(0.3);
 
-    // Reload binary GLB and verify locked `physicsBody: 'static'` survives reload even when child rebuilds dynamic!
+    // Reload binary GLB (primary deck is DYNAMIC!) and verify locked `physicsBody: 'static'` survives reload + legacy override!
     const glb = await roundTripGlb(house, undefined, ctrl);
     ctrl.dispose();
     const reloaded = createCompositeController(glb.scene, undefined, glb.animations);
     const afterReloadRebuild = reloaded.setChildParams('room/leaf', {}, () => makeInnerLeaf('PostReload', 0, 'dynamic'));
     expect(afterReloadRebuild.physics?.body).toBe('static');
     expect(computeCompositeBodies(afterReloadRebuild)[0]?.body).toBe('static');
+    // Nested rebuild >256-char full outer qualified clip name throws cleanly without detaching!
+    expect(() => reloaded.setChildParams('room/leaf', {}, () => makeInnerLeaf('q'.repeat(250), 0, 'dynamic'))).toThrow(/exceeds maximum length/);
     reloaded.dispose();
+
+    // Legacy 8dc84b7 GLB using `userData.physicsBodyOverride` without `physics.locked` still preserves static lock on rebuild (F11).
+    const legacy = composeAsset({
+      name: 'Legacy Locked',
+      buildRecipe: () => makeInnerLeaf('L', 0, 'dynamic'),
+      parts: [{ id: 'leaf', recipe: baseRecipe }],
+    });
+    const legCaps = readCapabilities(legacy);
+    if (legCaps?.physics) {
+      legCaps.physics = { body: 'static', massKg: 10 };
+      writeCapabilities(legacy, legCaps);
+    }
+    legacy.userData.physicsBodyOverride = 'static';
+    const legCtrl = createCompositeController(legacy);
+    const legAfter = legCtrl.setChildParams('leaf', {}, () => makeInnerLeaf('L2', 0, 'dynamic'));
+    expect(legAfter.physics?.body).toBe('static');
+    legCtrl.dispose();
   });
 
   it('rewrites dotted/colon track names, checks hidden ancestors before init, isolates unscoped mounted doors & dependent rebuild prefixes, and leaves caller input intact on length rejection (F1, F7, F9, F15)', async () => {
@@ -233,8 +290,9 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     expect(glb.scene.getObjectByName('r__Arm')?.position.y).toBeCloseTo(0.5, 2);
     rCtrl.dispose();
 
-    // 2. Hidden ancestor collider (`Brace` inside hidden `Rack`) passes BEFORE controller init after GLB reload (F7).
+    // 2. Hidden root detachable AND rigged Brace under hidden non-root Rack both pass placement & sweep BEFORE init (F7).
     const rackHost = makeBox('RackHost', [0.4, 0.4, 0.4], {
+      riggedParts: [{ name: 'Brace', label: 'Brace', type: 'rotate', axis: 'y', range: [0, 90] }],
       detachableParts: [{ name: 'Rack', label: 'Rack' }],
       colliders: [
         { name: 'Body', shape: 'box', at: [0, 0.2, 0], size: [0.4, 0.4, 0.4], layer: 'solid' },
@@ -258,14 +316,35 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     hCtrl.dispose();
     expect(validateComposite(hGlb.scene).valid).toBe(true);
 
+    // Hidden asset root itself as detachable part: BraceCol inside hidden root Rack passes before init too!
+    const rootDetach = makeBox('Rack', [0.2, 0.2, 0.2], {
+      detachableParts: [{ name: 'Rack', label: 'Rack' }],
+      colliders: [{ name: 'BraceCol', shape: 'box', at: [0, 0.2, 0.5], size: [0.3, 0.3, 0.5], node: 'Brace', restPose: { at: [0, 0.2, 0.5] }, layer: 'solid' }],
+    });
+    const b2 = new T.Group(); b2.name = 'Brace'; b2.add(new T.Mesh(new T.BoxGeometry(0.3, 0.3, 0.5), new T.MeshStandardMaterial()));
+    rootDetach.add(b2);
+    const hiddenRootComp = composeAsset({
+      name: 'Hidden Root Detach',
+      parts: [
+        { id: 'r', object: rootDetach },
+        { id: 'w', object: makeBox('Wall', [0.4, 0.6, 0.2]), mount: { at: [0, 0, 0.6], coupling: 'surface' } },
+      ],
+    });
+    const hrCtrl = createCompositeController(hiddenRootComp);
+    hrCtrl.setVisible('r/Rack', false);
+    const hrGlb = await roundTripGlb(hiddenRootComp, undefined, hrCtrl);
+    hrCtrl.dispose();
+    expect(validateComposite(hrGlb.scene).valid).toBe(true);
+
     // 3. Unscoped (`scopeNames: false`) mounted child door & duplicate `.position` tracks export distinct target indices,
     // and dependent rebuild (`a__b` mounted under `a`) scans reattached dependent names too (F9).
-    const makeDoorUnit = () => {
+    const makeDoorUnit = (doorFirst = false) => {
       const g = new T.Group(); g.name = 'Unit';
       const frame = new T.Group(); frame.name = 'Frame';
       const door = new T.Group(); door.name = 'Door';
       door.add(new T.Mesh(new T.BoxGeometry(0.2, 0.2, 0.2), new T.MeshStandardMaterial()));
-      g.add(frame, door);
+      if (doorFirst) g.add(door, frame);
+      else g.add(frame, door);
       g.animations = [
         new T.AnimationClip('Swing', 1, [
           new T.VectorKeyframeTrack('Door.position', [0, 1], [0, 0, 0, 0, 0.5, 0]),
@@ -274,12 +353,14 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
       ];
       return g;
     };
+    const baseRecipe = resolveVariationRecipe('cargo-pod');
     const unscopedMounted = composeAsset({
       name: 'Unscoped Mounted',
       scopeNames: false,
+      buildRecipe: () => makeDoorUnit(false),
       parts: [
-        { id: 'outer', object: makeDoorUnit() },
-        { id: 'inner', object: makeDoorUnit(), mount: { parent: 'outer', attachNode: 'Frame', at: [1, 0, 0] } },
+        { id: 'outer', recipe: baseRecipe },
+        { id: 'inner', object: makeDoorUnit(false), mount: { parent: 'outer', attachNode: 'Frame', at: [1, 0, 0] } },
       ],
     });
     const uGlb = await roundTripGlb(unscopedMounted);
@@ -287,8 +368,15 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     const innerCh = uGlb.gltfJson.animations?.find(a => a.name === 'inner: Swing')?.channels ?? [];
     expect(outerCh[0]?.target?.node).not.toBe(innerCh[0]?.target?.node);
     expect(outerCh[1]?.target?.node).not.toBe(innerCh[1]?.target?.node);
+    // After GLB reload + rebuild changing DFS order (Door before Frame), re-export STILL keeps distinct targets (F9)!
+    const uReloadCtrl = createCompositeController(uGlb.scene, undefined, uGlb.animations);
+    uReloadCtrl.setChildParams('outer', {}, () => makeDoorUnit(true));
+    const uGlb2 = await roundTripGlb(uGlb.scene, undefined, uReloadCtrl);
+    uReloadCtrl.dispose();
+    const outerCh2 = uGlb2.gltfJson.animations?.find(a => a.name === 'outer: Swing')?.channels ?? [];
+    const innerCh2 = uGlb2.gltfJson.animations?.find(a => a.name === 'inner: Swing')?.channels ?? [];
+    expect(outerCh2[0]?.target?.node).not.toBe(innerCh2[0]?.target?.node);
 
-    const baseRecipe = resolveVariationRecipe('cargo-pod');
     const depCollide = composeAsset({
       name: 'Dep Prefix Collision',
       buildRecipe: () => makeDoorUnit(),
@@ -326,8 +414,21 @@ describe('Round 2 review regression suite (multi-gen GLB, transactional pose res
     const l4Ctrl = createCompositeController(l4);
     l4Ctrl.dispose();
 
+    const firstPartParent = new T.Group();
+    const firstPart = makeBox('FirstPart', [0.3, 0.3, 0.3]);
+    firstPartParent.add(firstPart);
     const longClipHost = makeBox('ClipHost', [0.2, 0.2, 0.2]);
     longClipHost.animations = [new T.AnimationClip('c'.repeat(250), 1, [])];
-    expect(() => composeAsset({ name: 'Long Clip', parts: [{ id: 'longprefix', object: longClipHost }] })).toThrow(/exceeds maximum length/);
+    expect(() => composeAsset({
+      name: 'Multi Part Fail',
+      parts: [
+        { id: 'first', object: firstPart },
+        { id: 'longprefix', object: longClipHost },
+      ],
+    })).toThrow(/exceeds maximum length/);
+    // First caller object was NOT renamed, stripped, or moved out of its original parent when second part failed (F15)!
+    expect(firstPart.name).toBe('FirstPart');
+    expect(firstPart.parent).toBe(firstPartParent);
+    expect(readCapabilities(firstPart)?.name).toBe('FirstPart');
   });
 });
