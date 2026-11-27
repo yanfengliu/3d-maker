@@ -1,6 +1,6 @@
 # Object studio and asset inventory
 
-Status: active
+Status: complete
 Owner: Codex integration owner
 Created: 2026-11-26
 Updated: 2026-11-26
@@ -34,4 +34,4 @@ Use validated recipe data and named three.js nodes for the original models. Use 
 
 ## Outcome
 
-The dataset contains 3,645 free catalogue entries and two GLBs. A headless browser loaded Polyfork’s Family Traveller, saved and reopened both a source-linked variant and a local-file variant, then deleted both. Its customized GLB export reimported with 31 bones, eight skinned meshes and Idle, Walk and Run clips. The studio at `6a7bd3e` passed 44 unit tests, typecheck, strict lint, both production builds, both dependency audits and the desktop Chrome gate. [Review 0](reviews/0_implementation.md), [review 1](reviews/1_integration.md) and [review 2](reviews/2_integration.md) record the findings and their verification. Publication and fleet-rule synchronization are in progress.
+The dataset contains 3,645 free catalogue entries and two GLBs. A headless browser loaded Polyfork’s Family Traveller, saved and reopened both a source-linked variant and a local-file variant, then deleted both. Its customized GLB export reimported with 31 bones, eight skinned meshes and Idle, Walk and Run clips. The studio at `6a7bd3e` passed 44 unit tests, typecheck, strict lint, both production builds, both dependency audits and the desktop Chrome gate. [Review 0](reviews/0_implementation.md), [review 1](reviews/1_integration.md) and [review 2](reviews/2_integration.md) record the findings and their verification. GitHub Pages published the studio in [run 45937267038](https://github.com/yanfengliu/3d-maker/actions/runs/45937267038). A live desktop Chrome check loaded all six previews, played the Field Pilot clip and exported a 1,605,688-byte HD GLB. The generated fleet block matches the desktop-only default adopted in fleet `484d9e2`.
