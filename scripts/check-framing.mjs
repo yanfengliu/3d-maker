@@ -1,20 +1,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
+import { waitFrames } from './browser.mjs';
 import { inventoryFixture } from './check-inventory.mjs';
-
-async function waitFrames(page, count = 4) {
-  await page.evaluate(
-    (n) =>
-      new Promise((resolve) => {
-        const step = (left) => {
-          if (left <= 0) resolve();
-          else requestAnimationFrame(() => step(left - 1));
-        };
-        step(n);
-      }),
-    count,
-  );
-}
 
 async function selectClip(page, query, expected) {
   const search = page.getByRole('searchbox', { name: 'Search animations' });

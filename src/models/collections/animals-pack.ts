@@ -87,8 +87,8 @@ function buildFox(root: T.Group, p: Finish, detail: boolean) {
   orb(body, p, [0, 0.56, -0.34], [0.23, 0.21, 0.24], p.primary)
   for (const s of [-1, 1]) {
     for (const [z, topY] of [[0.32, 0.45], [-0.34, 0.44]] as const) {
-      cyl(body, p, [s * 0.16, topY * 0.68, z], 0.068, 0.056, topY * 0.64, p.primary)
-      cyl(body, p, [s * 0.16, 0.14, z], 0.056, 0.048, 0.24, p.tire)
+      cyl(body, p, [s * 0.16, topY * 0.72, z], 0.072, 0.06, topY * 0.58, p.primary)
+      cyl(body, p, [s * 0.16, 0.14, z], 0.049, 0.045, 0.24, p.tire)
       orb(body, p, [s * 0.16, 0.045, z + 0.04], [0.068, 0.045, 0.092], p.tire, 8)
     }
   }
@@ -357,7 +357,10 @@ function buildJellyfish(root: T.Group, p: Finish, detail: boolean) {
   const glow = tone(p, 'Bio glow', '#76f2e5', 0.25, 0.1, '#2cc9ba')
   const core = group(root, 'JellyRoot')
   const bell = group(core, 'JellyBell', [0, 0, 0])
-  lathe(bell, p, [0, 0, 0], [[0.56, 1.18], [0.58, 1.32], [0.5, 1.54], [0.34, 1.72], [0.14, 1.82], [0.01, 1.84]], p.primary, [0, 0, 0], 14)
+  lathe(bell, p, [0, 0, 0], [
+    [0.56, 1.18], [0.58, 1.32], [0.5, 1.54], [0.34, 1.72], [0.14, 1.82], [0.01, 1.84],
+    [0.01, 1.76], [0.14, 1.74], [0.32, 1.65], [0.46, 1.48], [0.51, 1.28], [0.5, 1.18], [0.56, 1.18],
+  ], p.primary, [0, 0, 0], 14)
   ring(bell, [0, 1.18, 0], 0.56, 0.06, 0.08, p.accent)
   orb(bell, p, [0, 1.4, 0], [0.28, 0.24, 0.28], p.accent, 10)
   for (let i = 0; i < 8; i++) {

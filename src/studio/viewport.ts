@@ -21,13 +21,23 @@ import {
 
 export { disposeModel };
 export type { Projection };
-export type View = 'Perspective' | 'Front' | 'Top' | 'Side';
-const directions: Record<View, [number, number, number]> = {
+export const VIEWS = ['Perspective', 'Front', 'Back', 'Left', 'Right', 'Top', 'Bottom', 'Side'] as const;
+export type View = (typeof VIEWS)[number];
+export const VIEW_DIRECTIONS: Record<View, [number, number, number]> = {
   Perspective: [5, 3.55, 6.5],
   Front: [0, 0.35, 7],
+  Back: [0, 0.35, -7],
+  Left: [-8, 0.3, 0],
+  Right: [8, 0.3, 0],
   Top: [0, 8, 0.001],
+  Bottom: [0, -8, 0.05],
   Side: [8, 0.3, 0],
 };
+export function parseView(raw: string | null | undefined): View | null {
+  if (!raw) return null;
+  const key = raw.trim().toLowerCase();
+  return VIEWS.find((v) => v.toLowerCase() === key) ?? null;
+}
 
 export class Viewport {
   private renderer: T.WebGLRenderer;
@@ -86,7 +96,7 @@ export class Viewport {
   private createControls(target?: T.Vector3) {
     const controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.enableDamping = false;
-    controls.maxPolarAngle = Math.PI * 0.95;
+    controls.maxPolarAngle = Math.PI - 0.002;
     controls.minZoom = 0.24;
     controls.maxZoom = 9;
     const reachRadius = Math.max(this.radius, this.bounds.isEmpty() ? 1 : this.bounds.getSize(new T.Vector3()).length() / 2);
@@ -175,7 +185,7 @@ export class Viewport {
     const target = this.controls.target.clone();
     const offset = this.camera.position.clone().sub(target);
     const prevDist = Math.max(0.01, offset.length());
-    const dir = offset.lengthSq() > 1e-8 ? offset.normalize() : new T.Vector3(...directions.Perspective).normalize();
+    const dir = offset.lengthSq() > 1e-8 ? offset.normalize() : new T.Vector3(...VIEW_DIRECTIONS.Perspective).normalize();
     const halfH = orthoHalfHeight(this.frameWidth, this.frameHeight, aspect);
     const reachRadius = Math.max(this.radius, this.bounds.isEmpty() ? 1 : this.bounds.getSize(new T.Vector3()).length() / 2);
     if (next === 'perspective') {
@@ -341,7 +351,7 @@ export class Viewport {
     const { aspect } = this.viewportAspect();
     this.baseAspect = aspect;
     const reachRadius = Math.max(this.radius, this.bounds.getSize(new T.Vector3()).length() / 2);
-    const dir = new T.Vector3(...directions[view]).normalize();
+    const dir = new T.Vector3(...VIEW_DIRECTIONS[view]).normalize();
     this.controls.target.copy(this.center);
     this.orthoCamera.position.copy(this.center).addScaledVector(dir, reachRadius * 5.2);
     this.orthoCamera.near = reachRadius * 0.005;

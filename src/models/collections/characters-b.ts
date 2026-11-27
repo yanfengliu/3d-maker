@@ -10,14 +10,14 @@ function buildSpaceMedic(root: T.Group, p: Finish, detail: boolean) {
   // Halo visor crown + comms mic
   const halo = torus(j.head, [0, 0.21, 0.02], 0.265, 0.026, p.primary, p);
   halo.rotation.x = Math.PI / 2;
-  shell(j.head, [0, 0.145, 0.235], [0.38, 0.095, 0.08], p.optic, 0.55);
+  shell(j.head, [0, 0.145, 0.248], [0.38, 0.095, 0.08], p.optic, 0.55);
   box(j.head, [0, 0.21, 0.28], [0.16, 0.032, 0.024], p.accent);
   hose(j.head, [[0.26, 0.06, 0], [0.24, 0.0, 0.18], [0.1, -0.02, 0.27]], 0.012, p.dark, p);
   // Medical chest vest with raised cross emblem
-  shell(j.chest, [0, 0.01, 0.02], [0.64, 0.37, 0.41], p.primary, 0.46);
-  shell(j.chest, [0, 0.02, 0.232], [0.2, 0.2, 0.028], p.stencil, 0.35);
-  box(j.chest, [0, 0.02, 0.252], [0.044, 0.135, 0.018], p.accent);
-  box(j.chest, [0, 0.02, 0.252], [0.135, 0.044, 0.018], p.accent);
+  shell(j.chest, [0, 0.01, 0.015], [0.68, 0.4, 0.45], p.primary, 0.46);
+  shell(j.chest, [0, 0.02, 0.248], [0.2, 0.2, 0.028], p.stencil, 0.35);
+  box(j.chest, [0, 0.02, 0.268], [0.044, 0.135, 0.018], p.accent);
+  box(j.chest, [0, 0.02, 0.268], [0.135, 0.044, 0.018], p.accent);
   // Cross badges on both shoulders
   for (const [arm, s] of [[j.leftArm, 1], [j.rightArm, -1]] as const) {
     shell(arm, [s * 0.125, -0.04, 0], [0.036, 0.145, 0.145], p.stencil, 0.35);
@@ -61,8 +61,8 @@ function buildSamuraiWarden(root: T.Group, p: Finish, detail: boolean) {
   }
   addRivets(helm, [[-0.14, 0.09, 0.24], [0.14, 0.09, 0.24]], p, detail, 0.015, Math.PI / 2);
   // Lamellar cuirass + layered pauldrons + waist sash & tassets
-  shell(j.chest, [0, 0, 0.02], [0.65, 0.37, 0.42], p.primary, 0.42);
-  for (const y of [-0.09, 0.01, 0.11]) box(j.chest, [0, y, 0.235], [0.46, 0.026, 0.022], p.accent);
+  shell(j.chest, [0, 0, 0.02], [0.68, 0.39, 0.44], p.primary, 0.42);
+  for (const y of [-0.09, 0.01, 0.11]) box(j.chest, [0, y, 0.245], [0.46, 0.026, 0.022], p.accent);
   addPauldrons(j, p, detail, 'layered');
   shell(j.hips, [0, 0.075, 0.01], [0.57, 0.11, 0.39], p.accent, 0.38);
   for (const [at, sz] of [
@@ -89,11 +89,11 @@ function buildSteampunkInventor(root: T.Group, p: Finish, detail: boolean) {
   }
   strut(hat, [-0.04, 0.075, 0.255], [0.04, 0.075, 0.255], 0.014, p.accent, 8);
   // Leather waistcoat + pocket chain + pneumatic gauntlet
-  shell(j.chest, [0, 0, 0.02], [0.64, 0.37, 0.42], p.primary, 0.44);
-  hose(j.chest, [[-0.02, 0.04, 0.235], [0.09, -0.05, 0.25], [0.19, 0.02, 0.235]], 0.012, p.accent, p);
-  tube(j.chest, [-0.15, 0.06, 0.238], 0.055, 0.055, 0.026, p.accent, 12).rotation.x = Math.PI / 2;
+  shell(j.chest, [0, 0, 0.02], [0.67, 0.39, 0.44], p.primary, 0.44);
+  hose(j.chest, [[-0.02, 0.04, 0.245], [0.09, -0.05, 0.26], [0.19, 0.02, 0.245]], 0.012, p.accent, p);
+  tube(j.chest, [-0.15, 0.06, 0.248], 0.055, 0.055, 0.026, p.accent, 12).rotation.x = Math.PI / 2;
   tube(j.rightForeArm, [0, -0.15, 0.01], 0.112, 0.118, 0.16, p.accent, 12);
-  addRivets(j.chest, [[0, 0.1, 0.236], [0, 0.02, 0.236], [0, -0.06, 0.236]], p, detail, 0.014, Math.PI / 2);
+  addRivets(j.chest, [[0, 0.1, 0.246], [0, 0.02, 0.246], [0, -0.06, 0.246]], p, detail, 0.014, Math.PI / 2);
   // Detachable SteamPack with spinning GearWheel
   const pack = group(j.chest, 'SteamPack', [0, -0.02, -0.43]);
   tube(pack, [0, -0.02, -0.02], 0.185, 0.185, 0.44, p.accent, 16);
@@ -135,7 +135,7 @@ function buildForestRanger(root: T.Group, p: Finish, detail: boolean) {
   }
   hose(j.chest, [[0.2, 0.18, 0.18], [0, 0, 0.255], [-0.21, -0.17, 0.19]], 0.026, p.accent, p);
   // Archer's bracer & hip pouches
-  tube(j.leftForeArm, [0, -0.14, 0.01], 0.105, 0.105, 0.18, p.accent, 12);
+  tube(j.leftForeArm, [0, -0.14, 0], 0.122, 0.122, 0.18, p.accent, 12);
   for (const s of [-1, 1]) shell(j.hips, [s * 0.29, 0.02, 0.06], [0.1, 0.14, 0.15], p.accent, 0.35);
   // Detachable ArrowQuiver slung diagonally across back
   const quiver = group(j.chest, 'ArrowQuiver', [0.04, 0.01, -0.4]);
@@ -191,19 +191,19 @@ function buildRoyalGuard(root: T.Group, p: Finish, detail: boolean) {
   hose(shako, [[-0.22, 0, 0.05], [-0.14, -0.22, 0.2], [0, -0.27, 0.24], [0.14, -0.22, 0.2], [0.22, 0, 0.05]], 0.014, p.accent, p);
   cone(shako, [0.24, 0.32, 0.02], 0.042, 0.22, p.stencil, p, 10);
   // Scarlet ceremonial tunic + gold frog braid + sash + gold epaulets
-  shell(j.chest, [0, 0, 0.02], [0.65, 0.38, 0.42], p.primary, 0.42);
+  shell(j.chest, [0, 0, 0.02], [0.67, 0.39, 0.45], p.primary, 0.42);
   tube(j.chest, [0, 0.195, 0], 0.165, 0.175, 0.075, p.primary, 14);
   tube(j.chest, [0, 0.225, 0], 0.17, 0.17, 0.022, p.accent, 14);
-  hose(j.chest, [[-0.22, 0.17, 0.19], [0, 0, 0.255], [0.21, -0.17, 0.19]], 0.036, p.stencil, p);
+  hose(j.chest, [[-0.22, 0.17, 0.19], [0, 0, 0.27], [0.21, -0.17, 0.19]], 0.036, p.stencil, p);
   if (detail) {
-    for (const y of [-0.1, -0.02, 0.06, 0.14]) box(j.chest, [0, y, 0.238], [0.26, 0.022, 0.018], p.accent);
+    for (const y of [-0.1, -0.02, 0.06, 0.14]) box(j.chest, [0, y, 0.254], [0.26, 0.022, 0.018], p.accent);
   }
   addPauldrons(j, p, detail, 'epaulet');
   // Ceremonial belt + tunic skirt
-  shell(j.hips, [0, 0.075, 0.01], [0.57, 0.09, 0.39], p.stencil, 0.35);
-  box(j.hips, [0, 0.075, 0.215], [0.11, 0.1, 0.03], p.accent);
-  shell(j.hips, [0, -0.09, 0.01], [0.58, 0.23, 0.39], p.primary, 0.42);
-  shell(j.hips, [0, -0.195, 0.01], [0.59, 0.03, 0.4], p.accent, 0.42);
+  shell(j.hips, [0, 0.075, 0.01], [0.58, 0.115, 0.42], p.stencil, 0.35);
+  box(j.hips, [0, 0.075, 0.228], [0.11, 0.1, 0.03], p.accent);
+  shell(j.hips, [0, -0.09, 0.01], [0.58, 0.23, 0.42], p.primary, 0.42);
+  shell(j.hips, [0, -0.195, 0.01], [0.59, 0.03, 0.43], p.accent, 0.42);
 }
 
 function buildPirateCaptain(root: T.Group, p: Finish, detail: boolean) {
@@ -223,15 +223,15 @@ function buildPirateCaptain(root: T.Group, p: Finish, detail: boolean) {
   const plume = cone(hat, [-0.14, 0.26, -0.08], 0.055, 0.34, p.stencil, p, 10);
   plume.rotation.set(-0.55, 0, 0.42);
   // High upturned coat collar, cravat, baldric & coat tails
-  shell(j.chest, [0, 0, 0.02], [0.65, 0.38, 0.42], p.primary, 0.42);
+  shell(j.chest, [0, 0, 0.02], [0.67, 0.39, 0.45], p.primary, 0.42);
   for (const s of [-1, 1]) {
-    const lapel = box(j.chest, [s * 0.16, 0.14, 0.22], [0.14, 0.18, 0.035], p.primary);
+    const lapel = box(j.chest, [s * 0.16, 0.14, 0.232], [0.14, 0.18, 0.035], p.primary);
     lapel.rotation.set(-0.2, s * 0.22, -s * 0.25);
     box(lapel, [0, 0.085, 0.008], [0.14, 0.022, 0.038], p.accent);
   }
-  shell(j.chest, [0, 0.08, 0.235], [0.14, 0.18, 0.04], p.stencil, 0.48);
-  hose(j.chest, [[-0.21, 0.17, 0.18], [0, -0.01, 0.265], [0.22, -0.17, 0.19]], 0.034, p.dark, p);
-  box(j.chest, [0, -0.01, 0.285], [0.095, 0.095, 0.028], p.accent);
+  shell(j.chest, [0, 0.08, 0.245], [0.14, 0.18, 0.04], p.stencil, 0.48);
+  hose(j.chest, [[-0.21, 0.17, 0.18], [0, -0.01, 0.275], [0.22, -0.17, 0.19]], 0.034, p.dark, p);
+  box(j.chest, [0, -0.01, 0.295], [0.095, 0.095, 0.028], p.accent);
   // Rigged ShoulderParrot perched on right shoulder
   shell(j.chest, [-0.31, 0.19, -0.01], [0.16, 0.045, 0.16], p.dark, 0.42);
   const parrot = group(j.chest, 'ShoulderParrot', [-0.31, 0.22, 0]);
@@ -249,7 +249,7 @@ function buildPirateCaptain(root: T.Group, p: Finish, detail: boolean) {
     tube(fore, [0, -0.2, 0.01], 0.125, 0.108, 0.11, p.primary, 12);
     if (detail) tube(fore, [0, -0.15, 0.01], 0.129, 0.129, 0.024, p.accent, 12);
   }
-  addRivets(j.chest, [[-0.12, 0.06, 0.24], [0.12, 0.06, 0.24], [-0.12, -0.06, 0.24], [0.12, -0.06, 0.24]], p, detail, 0.015, Math.PI / 2);
+  addRivets(j.chest, [[-0.12, 0.06, 0.255], [0.12, 0.06, 0.255], [-0.12, -0.06, 0.255], [0.12, -0.06, 0.255]], p, detail, 0.015, Math.PI / 2);
 }
 
 function buildOrbitalAstronaut(root: T.Group, p: Finish, detail: boolean) {

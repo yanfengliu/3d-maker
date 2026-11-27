@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { waitFrames } from './browser.mjs';
 
 const origin = 'https://polyfork.dev';
 const assetId = 'shopfront-fixture-01';
@@ -107,13 +108,6 @@ async function canvasSample(page) {
     }
     return { darkBg, warmGlow, sig };
   });
-}
-
-async function waitFrames(page, count = 4) {
-  await page.evaluate(n => new Promise(resolve => {
-    const step = left => { if (left <= 0) resolve(); else requestAnimationFrame(() => step(left - 1)); };
-    step(n);
-  }), count);
 }
 
 export async function verifyCapabilities(browser, originUrl, site, out) {

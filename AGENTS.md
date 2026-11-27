@@ -50,13 +50,14 @@ The designated coordinator reads `../fleet/docs/skills/coordinator.md` before pl
 
 ## Gates
 
-- `npm run verify` runs Vitest, strict TypeScript, ESLint with zero warnings, and the production app and SDK builds on Node 24.
-- `npm run check:studio` drives Chrome through the built studio, inspects displayed models, and round-trips saved and exported assets. See [gates](docs/policies/gates.md).
+- `npm run verify` runs Vitest (including deterministic 3D craft invariants in `src/models/craft-invariants.test.ts` and the append-only variation lock guard), strict TypeScript, ESLint with zero warnings, and the production app and SDK builds on Node 24.
+- `npm run check:studio` drives Chrome through the built studio, inspects displayed models, and round-trips saved and exported assets; `npm run check:studio:ci` runs the fast headless CI smoke subset. See [gates](docs/policies/gates.md).
+- `npm run inspect:model -- <id>` renders full-resolution `Front`, `Back`, `Left`, `Right`, `Top`, `Bottom`, and `3/4` views plus geometry metrics into ignored `output/inspect/`.
 - After dependency changes, `npm audit --audit-level=high` and `npm audit --omit=dev --audit-level=high` must both report zero vulnerabilities.
 
 ## Invariants and conventions
 
-- Keep original models procedural. A validated recipe builds a three.js Group with stable animation targets at either quality setting.
+- Keep original models procedural. A validated recipe builds a three.js Group with stable animation targets at either quality setting. Follow [model craft guidelines](docs/design/model-craft.md) and inspect every new or edited model across all six cardinal views (`npm run inspect:model`).
 - Keep model variations append-only: never overwrite or delete an existing model or variation for a new look or scenario. Add a new variation in `src/models/variations.ts`, run `npm run variations:lock`, and keep `src/models/variations.lock.json` passing `npm run verify`. See [local rules](docs/policies/local-rules.md).
 - Honor the documented screenshot query and set `window.__shotReady` after five rendered frames. Inspect interactive changes through the real controls, at fixed and freely orbited views. Keep raw captures under ignored output.
 - Keep the local PolyFork dataset outside Git and the public build. The [dataset guide](docs/dataset.md) records provenance and reproduction.

@@ -90,7 +90,7 @@ function canalBoathouse(root: T.Group, p: Finish, detail: boolean) {
   box(gate, [0, 0.06, 0.025], [1.0, 0.06, 0.03], p.edge);
   tube(b, [0.92, 0.78, 0.72], 0.058, 0.07, 1.0, p.dark, 12);
   const crane = group(b, 'MooringCrane', [0.92, 1.22, 0.72]);
-  tube(crane, [0, 0, 0], 0.08, 0.08, 0.12, p.alloy, 12);
+  tube(crane, [0, 0, 0], 0.08, 0.08, 0.15, p.alloy, 12);
   strut(crane, [0, 0, 0], [-0.46, 0.34, 0.36], 0.038, p.accent, 10);
   strut(crane, [0, -0.34, 0], [-0.3, 0.22, 0.24], 0.026, p.edge, 8);
   strut(crane, [-0.46, 0.34, 0.36], [-0.46, -0.22, 0.36], 0.016, p.alloy, 8);
@@ -116,12 +116,12 @@ function canalBoathouse(root: T.Group, p: Finish, detail: boolean) {
 function stoneWatermill(root: T.Group, p: Finish, detail: boolean) {
   const b = group(root, 'Watermill');
   shell(b, [0, 0.11, 0], [2.48, 0.22, 1.82], p.dark, 0.08);
-  box(b, [0.92, 0.16, 0], [0.54, 0.12, 1.78], p.optic);
+  box(b, [0.92, 0.175, 0], [0.52, 0.12, 1.72], p.optic);
   shell(b, [-0.28, 0.88, 0], [1.62, 1.32, 1.5], p.primary, 0.1);
   pitchedRoof(b, [-0.28, 1.54, 0], 1.86, 0.74, 1.72, p.primary, p.accent, p, detail);
   shell(b, [-0.94, 1.98, -0.36], [0.32, 0.86, 0.32], p.edge, 0.14);
   box(b, [0.88, 1.5, -0.58], [0.32, 0.16, 0.72], p.dark);
-  box(b, [0.88, 1.56, -0.56], [0.22, 0.05, 0.68], p.optic);
+  box(b, [0.88, 1.565, -0.54], [0.22, 0.05, 0.68], p.optic);
   strut(b, [0.88, 0.22, -0.8], [0.88, 1.44, -0.8], 0.042, p.dark, 10);
   hingedDoor(b, 'MillDoor', [-0.56, 0.22, 0.77], 0.44, 0.84, p.accent, p.edge, p);
   box(b, [0.14, 0.86, 0.76], [0.38, 0.44, 0.055], p.stencil);
@@ -275,7 +275,7 @@ function nordicTimberCabin(root: T.Group, p: Finish, detail: boolean) {
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 5 - (row % 2); col++) {
       const z = -0.26 + col * 0.13 + (row % 2) * 0.065;
-      tube(stack, [0.04, 0.08 + row * 0.11, z], 0.052, 0.052, 0.34, row % 2 === 0 ? p.primary : p.stencil, 10).rotation.z = Math.PI / 2;
+      tube(stack, [0.06, 0.052 + row * 0.098, z], 0.052, 0.052, 0.36, row % 2 === 0 ? p.primary : p.stencil, 10).rotation.z = Math.PI / 2;
     }
   }
   if (detail) {
@@ -305,9 +305,10 @@ function marketPavilion(root: T.Group, p: Finish, detail: boolean) {
   shell(b, [0, 2.04, 0], [1.26, 0.24, 0.98], p.accent, 0.2);
   shell(b, [0, 2.24, 0], [0.92, 0.2, 0.72], p.primary, 0.24);
   tube(b, [0, 2.4, 0], 0.03, 0.055, 0.14, p.alloy, 10);
-  strut(b, [-1.02, 1.4, 0.78], [-1.02, 1.4, 1.12], 0.022, p.alloy, 10);
+  strut(b, [-1.02, 1.4, 0.76], [-1.02, 1.4, 1.04], 0.022, p.alloy, 10);
+  strut(b, [-1.2, 1.4, 1.02], [-0.84, 1.4, 1.02], 0.02, p.alloy, 10);
   const sign = group(b, 'HangingSign', [-1.02, 1.38, 1.02]);
-  for (const dx of [-0.14, 0.14]) strut(sign, [dx, 0, 0], [dx, -0.14, 0], 0.012, p.alloy, 8);
+  for (const dx of [-0.14, 0.14]) strut(sign, [dx, 0.02, 0], [dx, -0.15, 0], 0.012, p.alloy, 8);
   box(sign, [0, -0.28, 0], [0.44, 0.28, 0.05], p.accent);
   box(sign, [0, -0.28, 0], [0.34, 0.2, 0.06], p.stencil);
   const stall = group(b, 'ProduceStall', [0.06, 0.16, 0.02]);
@@ -387,6 +388,7 @@ function harborBellTower(root: T.Group, p: Finish, detail: boolean) {
   ring(b, [0, 1.56, 0.6], 0.15, 0.032, 0.05, p.dark).rotation.x = Math.PI / 2;
   tube(b, [0, 1.56, 0.59], 0.12, 0.12, 0.03, p.optic, 12).rotation.x = Math.PI / 2;
   quad((sx, sz) => box(b, [sx * 0.44, 2.48, sz * 0.44], [0.2, 0.9, 0.2], p.primary));
+  for (const sx of [-1, 1]) box(b, [sx * 0.44, 2.82, 0], [0.12, 0.1, 0.96], p.dark);
   box(b, [0, 2.82, 0], [0.96, 0.1, 0.12], p.dark);
   const bell = group(b, 'HarborBell', [0, 2.78, 0]);
   box(bell, [0, 0.02, 0], [0.46, 0.09, 0.14], p.dark);
@@ -401,7 +403,7 @@ function harborBellTower(root: T.Group, p: Finish, detail: boolean) {
   const vane = group(b, 'WeatherVane', [0, 3.78, 0]);
   box(vane, [0, 0, 0], [0.56, 0.035, 0.035], p.alloy);
   tube(vane, [0.3, 0, 0], 0.005, 0.065, 0.14, p.accent, 10).rotation.z = -Math.PI / 2;
-  box(vane, [-0.22, 0.04, 0], [0.18, 0.14, 0.035], p.accent);
+  box(vane, [-0.22, 0.04, 0], [0.18, 0.14, 0.022], p.accent);
   if (detail) {
     for (const s of [-1, 1]) ring(b, [s * 0.88, 0.2, 0.2], 0.09, 0.022, 0.03, p.alloy).rotation.z = Math.PI / 2;
     for (const y of [0.54, 0.88, 1.22]) for (const s of [-1, 1]) box(b, [s * 0.68, y, 0.62], [0.09, 0.14, 0.12], p.edge);

@@ -141,12 +141,15 @@ function addCabinSnowbound(root: T.Group, p: Finish, detail: boolean) {
   const snow = snowMaterial();
   const drifts = group(root, 'CabinSnow');
   addSnowCap(drifts, [-0.18, 1.32, 0.02], 2.16, 0.94, 1.96, snow, p.hd, detail);
+  const stack = root.getObjectByName('FirewoodStack');
   if (p.hd) {
     shell(drifts, [-1.04, 2.41, -0.26], [0.46, 0.08, 0.54], snow, 0.42);
-    shell(drifts, [0.94, 1.03, -0.08], [0.48, 0.065, 0.86], snow, 0.35).rotation.z = -0.34;
+    if (stack) shell(stack, [0.06, 0.81, 0], [0.49, 0.065, 0.89], snow, 0.35).rotation.z = -0.34;
+    else shell(drifts, [0.94, 1.03, -0.08], [0.49, 0.065, 0.89], snow, 0.35).rotation.z = -0.34;
   } else {
     box(drifts, [-1.04, 2.41, -0.26], [0.44, 0.07, 0.52], snow);
-    box(drifts, [0.94, 1.03, -0.08], [0.46, 0.06, 0.84], snow).rotation.z = -0.34;
+    if (stack) box(stack, [0.06, 0.81, 0], [0.48, 0.06, 0.88], snow).rotation.z = -0.34;
+    else box(drifts, [0.94, 1.03, -0.08], [0.48, 0.06, 0.88], snow).rotation.z = -0.34;
   }
   if (detail) {
     box(drifts, [-0.44, 0.17, 1.06], [0.62, 0.036, 0.14], snow);

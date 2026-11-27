@@ -3,11 +3,13 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { resolve, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studioBrowser } from './browser.mjs';
+import { studioBrowser, waitFrames } from './browser.mjs';
 import { inventoryFixture, showSaved, verifyBrowsing, verifyInitialInventory } from './check-inventory.mjs';
 import { verifyClipFraming } from './check-framing.mjs';
 import { verifyCapabilities } from './check-capabilities.mjs';
 import { verifyRemixes } from './check-remixes.mjs';
+
+const ciSmoke = process.argv.includes('--ci');
 
 const project = fileURLToPath(new URL('../', import.meta.url));
 const out = join(project, 'output/studio');
@@ -130,19 +132,31 @@ try {
   assert.notEqual((await pixels()).signature, before.signature);
   await page.screenshot({ path: join(out, 'orbit.png') });
   await page.selectOption('#view', 'Top');
-  await page.waitForTimeout(120);
-  assert.notEqual((await pixels()).signature, before.signature);
+  await waitFrames(page, 3);
+  const topSig = (await pixels()).signature;
+  assert.notEqual(topSig, before.signature);
+  await page.selectOption('#view', 'Bottom');
+  await waitFrames(page, 3);
+  const bottomSig = (await pixels()).signature;
+  assert.notEqual(bottomSig, topSig, 'Switching to Bottom view did not change viewport rendering');
+  await page.selectOption('#view', 'Back');
+  await waitFrames(page, 3);
+  assert.notEqual((await pixels()).signature, bottomSig, 'Switching to Back view did not change viewport rendering');
   assert.match(await page.locator('#play').innerText(), /Play clip/);
   assert.equal(await page.locator('#timeline').inputValue(), '0');
   for (const area of ['Properties','Animation']) {
     assert.ok(await page.getByRole('region', {name:area, exact:true}).isVisible());
   }
   await page.setViewportSize({width:1408,height:960});
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await waitFrames(page, 2);
   const resized = await pixels();
   assert.ok(resized.dark > 200 && resized.paint > 100, 'Resizing the workspace cleared the viewport');
   await page.setViewportSize({width:1440,height:1000});
-  await verifyBrowsing(page, fixture, out);
+  if (!ciSmoke) await verifyBrowsing(page, fixture, out);
+  else {
+    await page.getByRole('button', { name: 'Open Field Pilot', exact: true }).click();
+    await page.waitForFunction(() => window.forgeStudio.getRecipe()?.template === 'field-pilot');
+  }
   await page.locator('#assetName').fill('Game Pilot');
   await page.locator('#assetName').press('Tab');
   await page.getByRole('button', { name: 'Terracotta' }).click();
@@ -249,41 +263,53 @@ try {
   await page.waitForFunction(async () => (await window.forgeStudio.listInventory()).length === 1);
   const staleError=await stale.evaluate(async()=>{try{await window.forgeStudio.save();return '';}catch(error){return error.message;}});
   assert.match(staleError,/removed|no longer|deleted/i);await stale.close();
-  const playback = await context.newPage();
-  await playback.goto(origin + site + '?asset=field-pilot');
-  assert.match(await playback.locator('#play').innerText(), /Pause/);
-  await playback.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > .03);
-  await playback.keyboard.press('Space');
-  assert.match(await playback.locator('#play').innerText(), /Play clip/);
-  const search = playback.getByRole('searchbox', {name:'Search animations'});
-  await search.fill('Zombie');
-  await search.press('End');
-  await search.press('Space');
-  assert.equal(await search.inputValue(), 'Zombie ');
-  assert.match(await playback.locator('#play').innerText(), /Play clip/);
-  await playback.getByRole('searchbox', {name:'Search animations'}).fill('Zombie walk');
-  await playback.locator('[data-clip]:visible').click();
-  assert.match(await playback.locator('#play').innerText(), /Pause/);
-  await playback.keyboard.press('Space');
-  assert.match(await playback.locator('#play').innerText(), /Play clip/);
-  await playback.keyboard.press('Space');
-  assert.match(await playback.locator('#play').innerText(), /Pause/);
-  await playback.check('#playAllClips');
-  await playback.locator('#timeline').press('End');
-  await playback.waitForFunction(() => document.querySelector('#motionName').textContent === 'Idle');
-  // Rebuilding a character during a native clip must keep the entire playlist.
-  await playback.getByRole('button', {name:'Sage'}).click();
-  // A property edit must preserve the full active playlist and its viewport transport.
-  await playback.waitForFunction(() => document.querySelector('#play')?.title === 'Play or pause Agree (Space)', undefined, {timeout:15000});
-  await playback.close();
+  if (!ciSmoke) {
+    const playback = await context.newPage();
+    await playback.goto(origin + site + '?asset=field-pilot');
+    assert.match(await playback.locator('#play').innerText(), /Pause/);
+    await playback.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > .03);
+    await playback.keyboard.press('Space');
+    assert.match(await playback.locator('#play').innerText(), /Play clip/);
+    const search = playback.getByRole('searchbox', {name:'Search animations'});
+    await search.fill('Zombie');
+    await search.press('End');
+    await search.press('Space');
+    assert.equal(await search.inputValue(), 'Zombie ');
+    assert.match(await playback.locator('#play').innerText(), /Play clip/);
+    await playback.getByRole('searchbox', {name:'Search animations'}).fill('Zombie walk');
+    await playback.locator('[data-clip]:visible').click();
+    assert.match(await playback.locator('#play').innerText(), /Pause/);
+    await playback.keyboard.press('Space');
+    assert.match(await playback.locator('#play').innerText(), /Play clip/);
+    await playback.keyboard.press('Space');
+    assert.match(await playback.locator('#play').innerText(), /Pause/);
+    await playback.check('#playAllClips');
+    await playback.locator('#timeline').press('End');
+    await playback.waitForFunction(() => document.querySelector('#motionName').textContent === 'Idle');
+    // Rebuilding a character during a native clip must keep the entire playlist.
+    await playback.getByRole('button', {name:'Sage'}).click();
+    // A property edit must preserve the full active playlist and its viewport transport.
+    await playback.waitForFunction(() => document.querySelector('#play')?.title === 'Play or pause Agree (Space)', undefined, {timeout:15000});
+    await playback.close();
+  }
   const sdk = await browser.newPage();
   await sdk.goto(origin + '/sdk-check');
-  const result = await sdk.evaluate(async () => {
-    const { createAsset, catalog } = await import('/3d-maker/studio-sdk.js');
+  const result = await sdk.evaluate(async (smoke) => {
+    const { createAsset, catalog, inspectAsset, createAssetController, listVariations, resolveVariationRecipe } = await import('/3d-maker/studio-sdk.js');
     const { Group, AnimationMixer } = await import('three');
+    const sample = smoke ? catalog.slice(0, 8) : catalog;
+    const pod = createAsset(catalog.find((row) => row.id === 'cargo-pod').recipe);
+    const podInfo = inspectAsset(pod);
+    const opened = createAssetController(pod).openPart('CaseLid');
+    const lifter = createAsset(resolveVariationRecipe('relay-drone', 'cargo-lifter'));
     return {
-      expected: catalog.length,
-      rows: catalog.map((row) => {
+      expected: sample.length,
+      totalCatalog: catalog.length,
+      podParts: podInfo.riggedParts.map((p) => p.name),
+      opened,
+      lifterVariation: inspectAsset(lifter).source?.variation,
+      bakeryVariations: listVariations('bakery-shopfront').length,
+      rows: sample.map((row) => {
         const group = createAsset(row.recipe);
         const mixer = new AnimationMixer(group);
         mixer.clipAction(group.animations[0]).play();
@@ -291,15 +317,25 @@ try {
         return { id: row.id, group: group instanceof Group, clips: group.animations.length };
       }),
     };
-  });
-  assert.ok(result.expected >= 6 && result.rows.length === result.expected);
+  }, ciSmoke);
+  assert.ok(result.totalCatalog >= 6 && result.rows.length === result.expected);
   assert.ok(result.rows.every((r) => r.group && r.clips > 0));
+  assert.deepEqual(result.podParts, ['CaseLid']);
+  assert.equal(result.opened, -72);
+  assert.equal(result.lifterVariation, 'cargo-lifter');
+  assert.equal(result.bakeryVariations, 3);
   assert.deepEqual(failures, []);
-  await verifyClipFraming(browser, origin, site, out);
-  await verifyCapabilities(browser, origin, site, out);
-  await verifyRemixes(browser, origin, site, project);
+  if (!ciSmoke) {
+    await Promise.all([
+      verifyClipFraming(browser, origin, site, out),
+      verifyCapabilities(browser, origin, site, out),
+      verifyRemixes(browser, origin, site, project),
+    ]);
+  }
   console.log(
-    'Verified unified browsing, categories, search, pagination, catalog recovery and same-page selection alongside the editor, inventory round-trips, animation, GLB and SDK checks.',
+    ciSmoke
+      ? 'Verified CI studio smoke checks (boot, WebGL pixels, projection & cross-port persistence, 6-angle views, inventory toggles, save/reload, GLB round-trip, and SDK).'
+      : 'Verified unified browsing, categories, search, pagination, catalog recovery and same-page selection alongside the editor, inventory round-trips, animation, GLB, framing, capabilities, remixes, and SDK checks.',
   );
   console.log('Viewport pixel sample', before);
 } finally {

@@ -77,7 +77,7 @@ function brassSpyglass(root: T.Group, p: Finish, detail: boolean) {
   cyl(lt, [0, 0, 0.14], 0.118, 0.128, 0.34, p.primary, 'z', 16);
   cyl(lt, [0, 0, 0.36], 0.148, 0.125, 0.2, p.primary, 'z', 16);
   band(lt, [0, 0, 0.46], 0.158, 0.028, 0.055, p.alloy, 'z');
-  cyl(lt, [0, 0, 0.44], 0.128, 0.128, 0.04, p.optic, 'z', 16);
+  cyl(lt, [0, 0, 0.45], 0.128, 0.128, 0.04, p.optic, 'z', 16);
   const cap = group(lt, 'LensCap', [0, 0.155, 0.48]);
   cyl(cap, [0, -0.155, 0.02], 0.152, 0.152, 0.045, p.primary, 'z', 16);
   box(cap, [0, 0, -0.01], [0.08, 0.045, 0.055], p.edge);
@@ -132,7 +132,7 @@ function runicLanternStaff(root: T.Group, p: Finish, detail: boolean) {
   ring(s, [0, 0.16, 0], 0.35, 0.04, 0.045, p.accent);
   tube(s, [0, 0.24, 0], 0.14, 0.22, 0.18, p.edge, 10);
   tube(s, [0, 0.98, 0], 0.056, 0.066, 1.44, p.primary, 12);
-  tube(s, [0, 0.92, 0], 0.066, 0.066, 0.36, p.tire, 12);
+  tube(s, [0, 0.92, 0], 0.074, 0.074, 0.36, p.tire, 12);
   for (const y of [0.72, 1.12, 1.62]) ring(s, [0, y, 0], 0.078, 0.022, 0.055, p.alloy);
   strut(s, [0, 1.66, 0], [-0.18, 2.02, 0], 0.052, p.primary, 10);
   strut(s, [-0.18, 2.02, 0], [0.06, 2.28, 0], 0.048, p.primary, 10);
@@ -150,12 +150,12 @@ function runicLanternStaff(root: T.Group, p: Finish, detail: boolean) {
   tube(cage, [0, -0.09, 0], 0.1, 0.01, 0.18, p.optic, 8);
   const charm = group(root, 'CharmRing', [-0.28, 1.52, 0]);
   torus(charm, [0, -0.1, 0], 0.09, 0.02, p.alloy, p.hd);
-  for (const [cx, cy] of [[-0.06, -0.24], [0, -0.28], [0.06, -0.24]] as const) box(charm, [cx, cy, 0], [0.038, 0.095, 0.022], p.accent);
+  for (const [cx, cy] of [[-0.06, -0.22], [0, -0.25], [0.06, -0.22]] as const) box(charm, [cx, cy, 0], [0.038, 0.095, 0.022], p.accent);
   if (detail) {
     orb(s, [-0.18, 2.04, 0], 0.072, p.accent, p.hd);
     for (let i = 0; i < 6; i++) {
       const a = (i * Math.PI) / 3;
-      box(s, [Math.sin(a) * 0.36, 0.08, Math.cos(a) * 0.36], [0.08, 0.06, 0.03], p.stencil).rotation.y = a;
+      box(s, [Math.sin(a) * 0.41, 0.08, Math.cos(a) * 0.41], [0.08, 0.06, 0.03], p.stencil).rotation.y = a;
     }
     if (p.hd) ring(cage, [0, 0, 0], 0.19, 0.018, 0.032, p.accent);
   }
@@ -210,10 +210,10 @@ function brassPocketCompass(root: T.Group, p: Finish, detail: boolean) {
   tube(base, [0, 0.28, 0], 0.28, 0.36, 0.28, p.edge, 14);
   ring(base, [0, 0.42, 0], 0.44, 0.055, 0.09, p.primary);
   tube(base, [0, 0.52, 0], 0.44, 0.4, 0.18, p.primary, 20);
-  tube(base, [0, 0.59, 0], 0.38, 0.38, 0.04, p.stencil, 20);
+  tube(base, [0, 0.6, 0], 0.38, 0.38, 0.04, p.stencil, 20);
   ring(base, [0, 0.63, 0], 0.44, 0.055, 0.07, p.primary);
-  cyl(base, [0, 0.54, 0.48], 0.065, 0.055, 0.12, p.primary, 'z', 12);
-  torus(base, [0, 0.54, 0.6], 0.1, 0.024, p.primary, p.hd);
+  cyl(base, [0, 0.54, 0.50], 0.065, 0.055, 0.16, p.primary, 'z', 12);
+  torus(base, [0, 0.54, 0.60], 0.1, 0.024, p.primary, p.hd);
   const needle = group(root, 'Needle', [0, 0.635, 0]);
   tube(needle, [0, 0.02, 0], 0.042, 0.048, 0.045, p.primary, 12);
   cyl(needle, [0, 0.015, 0.16], 0.008, 0.05, 0.3, p.accent, 'z', 8);
@@ -227,7 +227,7 @@ function brassPocketCompass(root: T.Group, p: Finish, detail: boolean) {
   if (detail) {
     for (let i = 0; i < 8; i++) {
       const a = (i * Math.PI) / 4;
-      box(base, [Math.sin(a) * 0.31, 0.615, Math.cos(a) * 0.31], [0.022, 0.014, 0.09], i === 0 ? p.accent : p.dark).rotation.y = a;
+      box(base, [Math.sin(a) * 0.31, 0.623, Math.cos(a) * 0.31], [0.022, 0.014, 0.09], i === 0 ? p.accent : p.dark).rotation.y = a;
     }
     if (p.hd) for (const sx of [-0.36, 0.36]) fastener(base, [sx, 0.165, 0.36], p, 0.026);
   }
@@ -289,7 +289,7 @@ function twinJetpack(root: T.Group, p: Finish, detail: boolean) {
     const noz = group(root, name, [x, 0.5, 0.08]);
     tube(noz, [0, -0.12, 0], 0.095, 0.145, 0.24, p.edge, 16);
     ring(noz, [0, -0.22, 0], 0.152, 0.025, 0.045, p.alloy);
-    tube(noz, [0, -0.18, 0], 0.085, 0.105, 0.12, p.optic, 14);
+    tube(noz, [0, -0.195, 0], 0.085, 0.105, 0.12, p.optic, 14);
   }
   const fuel = group(root, 'FuelCell', [0, 0.84, 0.2]);
   tube(fuel, [0, 0, 0], 0.11, 0.11, 0.44, p.accent, 14);

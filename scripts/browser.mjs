@@ -22,3 +22,22 @@ export async function studioBrowser() {
     args,
   });
 }
+
+export async function waitFrames(page, count = 4, timeoutMs = 10_000) {
+  await page.evaluate(
+    ({ n, ms }) =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`waitFrames(${n}) timed out after ${ms}ms`)), ms);
+        const step = (left) => {
+          if (left <= 0) {
+            clearTimeout(timer);
+            resolve();
+          } else {
+            requestAnimationFrame(() => step(left - 1));
+          }
+        };
+        step(n);
+      }),
+    { n: count, ms: timeoutMs },
+  );
+}

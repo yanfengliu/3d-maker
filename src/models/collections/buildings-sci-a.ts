@@ -76,18 +76,20 @@ function buildCyberRamenKiosk(root: T.Group, p: Finish, detail: boolean) {
   for (const y of [-0.22, -0.08, 0.06, 0.2]) box(shutter, [0, y, 0.02], [1.52, 0.05, 0.048], p.edge);
   box(shutter, [0, -0.29, 0.03], [0.46, 0.05, 0.05], p.accent);
   // Hanging cantilevered neon sign
-  strut(base, [1.0, 1.86, 0.36], [1.34, 1.86, 0.36], 0.032, p.alloy, 10);
+  strut(base, [1.0, 1.86, 0.36], [1.32, 1.86, 0.36], 0.032, p.alloy, 10);
+  strut(base, [1.26, 1.86, 0.18], [1.26, 1.86, 0.54], 0.022, p.alloy, 8);
   const sign = group(base, 'NeonSign', [1.26, 1.84, 0.36]);
+  for (const dz of [-0.14, 0.14]) strut(sign, [0, 0.02, dz], [0, -0.1, dz], 0.018, p.alloy, 8);
   shell(sign, [0, -0.44, 0], [0.12, 0.72, 0.44], p.dark, 0.22);
   box(sign, [0, -0.44, 0], [0.15, 0.56, 0.34], p.accent);
   box(sign, [0, -0.44, 0], [0.17, 0.34, 0.22], p.optic);
   // Detachable counter stools
   const stools = group(base, 'StoolSet');
   for (const x of [-0.62, 0, 0.62]) {
-    tube(stools, [x, 0.24, 0.84], 0.045, 0.065, 0.48, p.alloy, 10);
-    tube(stools, [x, 0.03, 0.84], 0.16, 0.18, 0.06, p.dark, 12);
-    tube(stools, [x, 0.52, 0.84], 0.17, 0.16, 0.09, p.accent, 12);
-    torus(stools, [x, 0.2, 0.84], 0.12, 0.018, p.tire, p.hd).rotation.x = Math.PI / 2;
+    tube(stools, [x, 0.34, 0.8], 0.045, 0.065, 0.38, p.alloy, 10);
+    tube(stools, [x, 0.17, 0.8], 0.14, 0.15, 0.06, p.dark, 12);
+    tube(stools, [x, 0.54, 0.8], 0.17, 0.16, 0.09, p.accent, 12);
+    torus(stools, [x, 0.28, 0.8], 0.12, 0.018, p.tire, p.hd).rotation.x = Math.PI / 2;
   }
   if (detail) {
     for (const x of [-0.72, -0.24, 0.24, 0.72]) tube(base, [x, 1.54, 0.88], 0.075, 0.075, 0.16, p.accent, 10);
@@ -145,7 +147,10 @@ function buildOrbitalAirlock(root: T.Group, p: Finish, detail: boolean) {
     light(base, [0, 1.88, 0.84], [0.46, 0.12, 0.08], p);
     shell(base, [0.82, 1.04, 0.88], [0.18, 0.28, 0.08], p.dark, 0.2);
     box(base, [0.82, 1.08, 0.92], [0.11, 0.12, 0.048], p.optic);
-    for (const sx of [-1, 1]) strut(base, [sx * 0.64, 0.66, 0.9], [sx * 0.64, 1.38, 0.9], 0.022, p.alloy, 10);
+    for (const sx of [-1, 1]) {
+      strut(base, [sx * 0.64, 0.66, 0.9], [sx * 0.64, 1.38, 0.9], 0.022, p.alloy, 10);
+      for (const y of [0.7, 1.34]) strut(base, [sx * 0.64, y, 0.82], [sx * 0.64, y, 0.9], 0.018, p.dark, 8);
+    }
     if (p.hd) {
       ringBolts(base, 0, 2.26, -0.08, 0.62, 8, p);
       for (const sx of [-1, 1]) hose(base, [[sx * 1.12, 1.34, 0.34], [sx * 1.06, 1.56, 0.44], [sx * 0.88, 1.62, 0.32]], 0.032, p.tire, true);
@@ -229,7 +234,7 @@ function buildWizardSpire(root: T.Group, p: Finish, detail: boolean) {
     const rib = shell(base, [Math.sin(a) * 0.78, 0.92, Math.cos(a) * 0.78], [0.22, 1.48, 0.3], p.edge, 0.26);
     rib.rotation.y = a;
   }
-  shell(base, [0, 0.1, 0.92], [0.84, 0.2, 0.44], p.edge, 0.2);
+  shell(base, [0, 0.12, 0.92], [0.84, 0.2, 0.36], p.edge, 0.2);
   box(base, [0, 0.68, 0.74], [0.56, 0.94, 0.14], p.inset);
   // Hinged tower door (hinge on right jamb +x so +85 deg swings outward +z)
   const door = group(base, 'TowerDoor', [0.26, 0.68, 0.81]);
@@ -393,7 +398,7 @@ function buildCargoGantryCrane(root: T.Group, p: Finish, detail: boolean) {
   // Sliding trolley + nested hoist hook
   const trolleyPos: Point = [0, 2.48, 0];
   const trolley = group(base, 'CraneTrolley', trolleyPos);
-  shell(trolley, [0, 0.06, 0], [0.66, 0.26, 0.72], p.accent, 0.2);
+  shell(trolley, [0, 0.06, 0], [0.66, 0.26, 0.78], p.accent, 0.2);
   tube(trolley, [0, 0.12, 0], 0.14, 0.14, 0.52, p.dark, 12).rotation.x = Math.PI / 2;
   const hookPos: Point = [0, -1.06, 0];
   const hook = group(trolley, 'HoistHook', hookPos);

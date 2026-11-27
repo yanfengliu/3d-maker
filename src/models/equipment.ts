@@ -82,7 +82,7 @@ export function cargo(root: T.Group, p: Finish, detail: boolean) {
   for (const x of [-0.47, 0, 0.47]) shell(base, [x, 1.107, 0], [0.377, 0.116, 0.77], p.edge, 0.37)
   const lid = group(base, 'CaseLid', [0, 1.074, -0.589])
   shell(lid, [0, 0.103, 0.586], [2.022, 0.218, 1.306], p.primary, 0.36)
-  shell(lid, [0, 0.213, 0.586], [1.74, 0.063, 1.04], p.accent, 0.45)
+  shell(lid, [0, 0.213, 0.586], [1.68, 0.063, 1.04], p.accent, 0.45)
   for (const x of [-0.752, 0.752]) shell(lid, [x, 0.125, 0.584], [0.24, 0.259, 1.326], p.dark, 0.43)
   if (detail) {
     for (const z of [0.28, 0.47, 0.66, 0.85]) box(lid, [0, 0.25, z], [0.89, 0.027, 0.075], p.primary)

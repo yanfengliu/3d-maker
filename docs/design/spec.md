@@ -24,4 +24,4 @@ The AI tools panel accepts a structured recipe or a text edit. The natural-langu
 
 ## Capture contract
 
-`?asset=field-pilot` selects a starter by ID. `?shot=1` starts at rest. Add `&view=Front`, `Top` or `Side` for a fixed preset and `&noui=1` for a full-frame model. The renderer preserves its drawing buffer and sets `window.__shotReady` after five rendered frames. The default perspective shows the model from above its front-right corner.
+`?asset=field-pilot` selects a starter by ID. `?shot=1` starts at rest. Add `&view=Front`, `Back`, `Left`, `Right`, `Top`, `Bottom`, `Side`, or `Perspective` for a fixed preset, `&grid=0` to hide the floor grid for clean silhouette and underside inspection, and `&noui=1` for a full-frame model. The renderer preserves its drawing buffer and sets `window.__shotReady` after five rendered frames. The default perspective shows the model from above its front-right corner.

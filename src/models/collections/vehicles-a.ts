@@ -107,7 +107,7 @@ function buildVintageBiplane(root: T.Group, p: Finish, detail: boolean) {
   dome(prop, [0, 0, 0.06], [0.11, 0.11, 0.14], p.alloy, p.hd);
   for (const s of [-1, 1]) {
     shell(prop, [0, s * 0.26, 0.01], [0.10, 0.46, 0.036], p.dark, 0.48).rotation.y = s * 0.26;
-    box(prop, [0, s * 0.46, 0.01], [0.085, 0.065, 0.038], p.accent).rotation.y = s * 0.26;
+    box(prop, [0, s * 0.46, 0.01], [0.085, 0.065, 0.050], p.accent).rotation.y = s * 0.26;
   }
   if (detail) {
     for (const s of [-1, 1]) {
@@ -142,7 +142,7 @@ function buildSteamLocomotive(root: T.Group, p: Finish, detail: boolean) {
   for (const s of [-1, 1]) {
     box(f, [s * 0.575, 1.24, -0.92], [0.03, 0.34, 0.52], p.optic);
     shell(f, [s * 0.56, 0.44, 0.96], [0.22, 0.24, 0.48], p.edge, 0.35);
-    box(f, [s * 0.56, 0.62, 0.18], [0.16, 0.06, 1.62], p.accent);
+    box(f, [s * 0.56, 0.62, 0.18], [0.19, 0.06, 1.62], p.accent);
     shell(f, [s * 0.24, 0.24, 1.46], [0.54, 0.26, 0.36], p.dark, 0.42).rotation.y = s * 0.42;
     strut(f, [s * 0.12, 1.36, 0.56], [s * 0.10, 1.56, 0.56], 0.022, p.dark, 8);
   }
@@ -273,7 +273,7 @@ function buildCityTramcar(root: T.Group, p: Finish, detail: boolean) {
   shell(car, [0, 1.24, 0], [1.20, 0.56, 3.24], p.accent, 0.28);
   shell(car, [0, 1.60, 0], [1.24, 0.18, 3.28], p.primary, 0.38);
   shell(car, [0, 1.72, 0], [0.84, 0.12, 2.46], p.edge, 0.42);
-  box(car, [0.58, 0.94, 0], [0.12, 0.94, 0.72], p.inset);
+  box(car, [0.58, 0.94, 0], [0.12, 0.90, 0.70], p.inset);
   for (const ez of [-1, 1]) {
     box(car, [0, 1.24, ez * 1.625], [0.86, 0.38, 0.04], p.optic);
     box(car, [0, 1.54, ez * 1.61], [0.56, 0.11, 0.04], p.dark);
@@ -320,11 +320,11 @@ function buildCoastalSailboat(root: T.Group, p: Finish, detail: boolean) {
   shell(boat, [0, 0.54, -0.04], [1.04, 0.38, 2.16], p.primary, 0.66);
   shell(boat, [0, 0.62, 0.94], [0.64, 0.34, 0.88], p.primary, 0.78);
   shell(boat, [0, 0.76, -0.02], [0.96, 0.09, 2.28], p.accent, 0.66);
-  shell(boat, [0, 0.78, -0.78], [0.66, 0.14, 0.74], p.inset, 0.38);
+  shell(boat, [0, 0.78, -0.70], [0.64, 0.14, 0.64], p.inset, 0.38);
   shell(boat, [0, 0.92, 0.22], [0.64, 0.24, 0.84], p.stencil, 0.48);
   tube(boat, [0, 2.16, 0.16], 0.036, 0.056, 2.52, p.alloy, 12);
   strut(boat, [-0.36, 2.34, 0.16], [0.36, 2.34, 0.16], 0.018, p.alloy, 8);
-  strut(boat, [0, 0.82, 1.32], [0, 3.36, 0.16], 0.012, p.edge, 6);
+  strut(boat, [0, 0.82, 1.32], [0, 3.36, 0.16], 0.009, p.edge, 6);
   for (const s of [-1, 1]) strut(boat, [s * 0.44, 0.80, 0.06], [0, 3.24, 0.16], 0.012, p.edge, 6);
   const sail = (parent: T.Object3D, pts: [number, number][], ctrl: [number, number], mat: T.Material, at: Point) => {
     const sh = new T.Shape();
@@ -332,11 +332,11 @@ function buildCoastalSailboat(root: T.Group, p: Finish, detail: boolean) {
     sh.lineTo(pts[1]?.[0] ?? 0, pts[1]?.[1] ?? 0);
     sh.quadraticCurveTo(ctrl[0], ctrl[1], pts[2]?.[0] ?? 0, pts[2]?.[1] ?? 0);
     sh.closePath();
-    const geo = new T.ExtrudeGeometry(sh, { depth: 0.025, curveSegments: p.hd ? 18 : 6, bevelEnabled: p.hd, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2 });
+    const geo = new T.ExtrudeGeometry(sh, { depth: 0.032, curveSegments: p.hd ? 18 : 6, bevelEnabled: p.hd, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2 });
     geo.rotateY(-Math.PI / 2);
     mesh(parent, geo, mat, at);
   };
-  sail(boat, [[0, 0.98], [1.12, 0.96], [0.04, 3.26]], [0.56, 2.18], p.stencil, [0.012, 0, 0.22]);
+  sail(boat, [[0, 0.98], [1.12, 0.96], [0.04, 3.26]], [0.56, 2.18], p.stencil, [0.016, 0, 0.22]);
   const boom = group(boat, 'MainBoom', [0, 1.14, 0.12]);
   strut(boom, [0, 0, 0], [0, 0, -1.24], 0.032, p.alloy, 10);
   sail(boom, [[0, 0.04], [-1.18, 0.04], [-0.02, 2.22]], [-0.76, 1.24], p.accent, [0.013, 0, 0]);
@@ -364,19 +364,21 @@ function buildWarehouseForklift(root: T.Group, p: Finish, detail: boolean) {
   shell(b, [0, 0.66, -0.78], [1.06, 0.64, 0.54], p.primary, 0.48);
   shell(b, [0, 0.46, -1.04], [0.96, 0.22, 0.16], p.dark, 0.32);
   shell(b, [0, 0.70, 0.08], [0.84, 0.14, 0.86], p.dark, 0.28);
+  box(b, [0, 0.79, -0.26], [0.32, 0.14, 0.28], p.dark);
   shell(b, [0, 0.94, -0.26], [0.42, 0.34, 0.36], p.tire, 0.36);
-  strut(b, [0, 0.72, 0.34], [0, 1.12, 0.16], 0.036, p.dark, 10);
+  strut(b, [0, 0.72, 0.34], [0, 1.15, 0.14], 0.036, p.dark, 10);
   torus(b, [0, 1.15, 0.14], 0.14, 0.024, p.tire, p.hd).rotation.x = 1.1;
   for (const s of [-1, 1]) {
     strut(b, [s * 0.44, 0.74, 0.46], [s * 0.42, 1.82, 0.34], 0.034, p.dark, 10);
     strut(b, [s * 0.44, 0.94, -0.64], [s * 0.42, 1.82, -0.60], 0.034, p.dark, 10);
+    strut(b, [s * 0.34, 0.48, 0.50], [s * 0.34, 0.48, 0.72], 0.044, p.edge, 8);
     shell(b, [s * 0.34, 1.08, 0.72], [0.11, 1.88, 0.14], p.dark, 0.22);
   }
   shell(b, [0, 1.84, -0.14], [0.94, 0.08, 1.06], p.dark, 0.3);
   tube(b, [0, 1.94, -0.52], 0.065, 0.075, 0.12, p.accent, 12);
   tube(b, [0, 1.04, 0.68], 0.055, 0.06, 1.76, p.alloy, 12);
-  box(b, [0, 1.96, 0.72], [0.76, 0.09, 0.14], p.edge);
-  const forkBase: Point = [0, 0.14, 0.84];
+  box(b, [0, 1.96, 0.72], [0.78, 0.09, 0.16], p.edge);
+  const forkBase: Point = [0, 0.14, 0.81];
   const carriage = group(b, 'ForkCarriage', forkBase);
   shell(carriage, [0, 0.24, 0], [0.84, 0.50, 0.09], p.edge, 0.25);
   box(carriage, [0, 0.48, 0], [0.82, 0.06, 0.08], p.accent);
@@ -385,7 +387,8 @@ function buildWarehouseForklift(root: T.Group, p: Finish, detail: boolean) {
     shell(carriage, [s * 0.24, -0.02, 0.44], [0.11, 0.055, 0.78], p.alloy, 0.22);
   }
   wheelPair(b, 0.54, 0.28, 0.42, 0.16, p, detail, p.accent, 6, ['FrontWheelL', 'FrontWheelR']);
-  wheelPair(b, 0.46, 0.22, -0.70, 0.14, p, detail, p.edge, 5, ['RearWheelL', 'RearWheelR']);
+  wheelPair(b, 0.52, 0.22, -0.70, 0.14, p, detail, p.edge, 5, ['RearWheelL', 'RearWheelR']);
+  strut(b, [-0.52, 0.22, -0.70], [0.52, 0.22, -0.70], 0.04, p.dark, 8);
   if (detail) {
     for (const x of [-0.28, -0.14, 0, 0.14, 0.28]) box(b, [x, 1.84, -0.14], [0.04, 0.095, 0.92], p.edge);
     for (const s of [-1, 1]) {
@@ -421,7 +424,7 @@ function buildDesertHoverSkiff(root: T.Group, p: Finish, detail: boolean) {
   const crate = group(skiff, 'CargoCrate', [0, 0.74, -0.56]);
   shell(crate, [0, 0, 0], [0.76, 0.42, 0.68], p.accent, 0.26);
   shell(crate, [0, 0.21, 0], [0.80, 0.08, 0.72], p.dark, 0.32);
-  for (const x of [-0.24, 0.24]) box(crate, [x, 0.02, 0], [0.06, 0.46, 0.71], p.edge);
+  for (const x of [-0.24, 0.24]) box(crate, [x, 0.02, 0], [0.06, 0.48, 0.74], p.edge);
   for (const [side, name] of [[1, 'ThrusterL'], [-1, 'ThrusterR']] as const) {
     strut(skiff, [side * 0.66, 0.56, -0.82], [side * 0.88, 0.68, -0.82], 0.055, p.alloy, 10);
     const pod = group(skiff, name, [side * 0.96, 0.68, -0.82]);

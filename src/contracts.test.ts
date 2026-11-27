@@ -108,6 +108,7 @@ describe('cross-module schema, paint, SDK, and llms.txt contracts', () => {
       syncViewportTools: () => undefined,
       applyPreset: () => undefined,
       setProjection: () => undefined,
+      setView: () => undefined,
     } as unknown as StudioHost;
     const apiMethods = Object.keys(createAgentApi(stubHost)).sort();
 

@@ -183,7 +183,7 @@ function timberWindmill(root: T.Group, p: Finish, detail: boolean) {
     arm.rotation.z = (i * Math.PI) / 2 + 0.32;
     box(arm, [0, 0.62, 0], [0.065, 1.24, 0.065], p.dark);
     box(arm, [0.14, 0.72, -0.02], [0.24, 0.94, 0.045], p.stencil).rotation.y = 0.2;
-    box(arm, [0.25, 0.72, -0.04], [0.05, 0.96, 0.05], p.accent).rotation.y = 0.2;
+    box(arm, [0.25, 0.72, -0.042], [0.05, 0.96, 0.058], p.accent).rotation.y = 0.2;
     if (detail) for (const y of [0.38, 0.62, 0.86, 1.1]) box(arm, [0.13, y, 0.015], [0.26, 0.026, 0.026], p.dark);
   }
   windowBox(b, [0, 1.98, 0.53], 0.26, 0.32, p, detail);
@@ -210,7 +210,7 @@ function townClockTower(root: T.Group, p: Finish, detail: boolean) {
   quad((sx, sz) => box(b, [sx * 0.54, 0.84, sz * 0.54], [0.28, 1.28, 0.28], p.primary));
   shell(b, [0, 1.54, 0], [1.46, 0.16, 1.46], p.stencil, 0.14);
   const pend = group(b, 'Pendulum', [0, 1.44, 0]);
-  strut(pend, [0, 0, 0], [0, -0.94, 0], 0.024, p.alloy, 10);
+  strut(pend, [0, 0.06, 0], [0, -0.94, 0], 0.024, p.alloy, 10);
   tube(pend, [0, -0.96, 0], 0.18, 0.18, 0.06, p.accent, 14).rotation.x = Math.PI / 2;
   ring(pend, [0, -0.96, 0], 0.19, 0.025, 0.07, p.alloy).rotation.x = Math.PI / 2;
   shell(b, [0, 2.02, 0], [1.24, 0.84, 1.24], p.primary, 0.12);
@@ -257,7 +257,7 @@ function toriiShrine(root: T.Group, p: Finish, detail: boolean) {
     tube(b, [s * 0.75, 1.32, 0], 0.105, 0.122, 1.88, p.primary, 14).rotation.z = s * 0.035;
     box(b, [s * 1.06, 1.82, 0], [0.1, 0.16, 0.15], p.accent);
   }
-  box(b, [0, 1.82, 0], [2.22, 0.13, 0.12], p.primary);
+  box(b, [0, 1.82, 0], [2.16, 0.13, 0.12], p.primary);
   box(b, [0, 2.04, 0], [0.26, 0.34, 0.1], p.accent);
   box(b, [0, 2.04, 0.052], [0.16, 0.24, 0.02], p.stencil);
   shell(b, [0, 2.26, 0], [2.04, 0.15, 0.22], p.primary, 0.12);

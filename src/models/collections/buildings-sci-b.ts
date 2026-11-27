@@ -121,7 +121,7 @@ function buildMonorailPlatform(root: T.Group, p: Finish, detail: boolean) {
   const doorR = group(base, 'ScreenDoorR', posR);
   for (const door of [doorL, doorR]) {
     shell(door, [0, 0, 0], [0.5, 1.12, 0.07], p.alloy, 0.14);
-    box(door, [0, 0.08, 0.01], [0.38, 0.72, 0.05], p.optic);
+    box(door, [0, 0.08, 0], [0.38, 0.72, 0.082], p.optic);
     box(door, [0, -0.26, 0.03], [0.42, 0.09, 0.05], p.accent);
   }
   // Detachable commuter bench unit
@@ -133,6 +133,7 @@ function buildMonorailPlatform(root: T.Group, p: Finish, detail: boolean) {
   if (detail) {
     shell(base, [0, 1.94, 0.2], [1.14, 0.24, 0.16], p.dark, 0.2);
     box(base, [0, 1.94, 0.29], [0.96, 0.14, 0.048], p.optic);
+    for (const sx of [-0.42, 0.42]) strut(base, [sx, 2.04, 0.2], [sx, 2.24, 0.2], 0.02, p.alloy, 8);
     shell(base, [-1.36, 0.94, -0.12], [0.34, 1.24, 0.22], p.dark, 0.2);
     box(base, [-1.36, 1.1, 0], [0.24, 0.44, 0.05], p.stencil);
     for (const x of [-0.7, 0, 0.7]) box(base, [x, 2.14, 0], [0.44, 0.05, 0.14], p.stencil);
@@ -201,7 +202,7 @@ function buildNeonArcadeBooth(root: T.Group, p: Finish, detail: boolean) {
   }
   shell(base, [0, 1.06, -0.62], [1.46, 1.82, 0.26], p.primary, 0.14);
   // Interior illuminated arcade cabinet
-  shell(base, [0, 0.88, -0.24], [0.76, 1.38, 0.46], p.dark, 0.18);
+  shell(base, [0, 0.86, -0.24], [0.76, 1.44, 0.46], p.dark, 0.18);
   const crt = box(base, [0, 1.16, 0.01], [0.58, 0.42, 0.06], p.optic);
   crt.rotation.x = -0.24;
   box(base, [0, 0.82, 0.06], [0.64, 0.12, 0.24], p.accent);
@@ -211,6 +212,10 @@ function buildNeonArcadeBooth(root: T.Group, p: Finish, detail: boolean) {
   box(base, [0, 2.16, 0.84], [1.96, 0.22, 0.07], p.accent);
   box(base, [0, 2.46, 0.48], [1.52, 0.16, 0.06], p.optic);
   // Hinged cyberpunk saloon doors (sway outward +z symmetrically)
+  for (const sx of [-1, 1]) {
+    tube(base, [sx * 0.56, 0.78, 0.62], 0.02, 0.02, 0.72, p.alloy, 8);
+    for (const y of [0.5, 1.06]) strut(base, [sx * 0.64, y, 0.62], [sx * 0.54, y, 0.62], 0.024, p.alloy, 8);
+  }
   const doorL = group(base, 'SaloonDoorL', [-0.56, 0.78, 0.62]);
   const doorR = group(base, 'SaloonDoorR', [0.56, 0.78, 0.62]);
   for (const [door, dir] of [[doorL, 1], [doorR, -1]] as const) {
@@ -352,7 +357,7 @@ function buildFloatingSkyDock(root: T.Group, p: Finish, detail: boolean) {
   for (const sx of [-0.08, 0.8]) box(base, [sx, 1.0, 0.02], [0.14, 0.05, 0.78], p.accent);
   // Flight-control bridge tower on port-aft deck
   shell(base, [-0.84, 1.48, -0.34], [0.88, 0.98, 0.96], p.primary, 0.22);
-  shell(base, [-0.84, 1.72, -0.18], [0.76, 0.32, 0.74], p.optic, 0.2);
+  shell(base, [-0.84, 1.7, -0.15], [0.76, 0.32, 0.78], p.optic, 0.2);
   shell(base, [-0.84, 2.02, -0.34], [0.94, 0.14, 1.0], p.edge, 0.22);
   // Rotating guidance beacon pylon atop control tower
   const beacon = group(base, 'BeaconPylon', [-0.84, 2.08, -0.34]);

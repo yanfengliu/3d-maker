@@ -31,7 +31,7 @@ import { createAgentApi, type ForgeStudioApi } from './agent-api';
 import { createInspectorBridge } from './inspector-bridge';
 import { parseProjection, readProjectionPreference, saveProjectionPreference, type Projection } from './projection';
 import { setupShelf } from './shelf';
-import { Viewport, disposeModel, type View } from './viewport';
+import { Viewport, disposeModel, parseView, type View } from './viewport';
 
 const params = new URLSearchParams(window.location.search);
 el('app').innerHTML = layout;
@@ -424,8 +424,14 @@ function setProjection(mode: Projection) {
   el<HTMLSelectElement>('projection').value = valid;
   saveProjectionPreference(valid);
 }
+function setView(mode: View) {
+  const valid = parseView(mode);
+  if (!valid) throw new Error('Unknown camera view.');
+  stage.view(valid);
+  el<HTMLSelectElement>('view').value = valid === 'Side' ? 'Right' : valid;
+}
 el('fit').onclick = () => { stage.place(true); el<HTMLSelectElement>('view').value = 'Perspective'; };
-el<HTMLSelectElement>('view').onchange = e => { stage.view((e.currentTarget as HTMLSelectElement).value as View); };
+el<HTMLSelectElement>('view').onchange = e => { setView((e.currentTarget as HTMLSelectElement).value as View); };
 el<HTMLSelectElement>('projection').onchange = e => { setProjection((e.currentTarget as HTMLSelectElement).value as Projection); };
 el('expand').onclick = () => {
   void (document.fullscreenElement ? document.exitFullscreen() : el('scenePanel').requestFullscreen()).catch(report);
@@ -448,20 +454,22 @@ const api = createAgentApi({
     if (!availableClips()[index]) throw new Error('Unknown animation clip.');
     stage.setClip(index); stage.play(true); ui.renderControls();
   },
-  syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset, setProjection,
+  syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset, setProjection, setView,
 });
 declare global { interface Window { forgeStudio: ForgeStudioApi; __shotReady: boolean; } }
 window.forgeStudio = api;
 window.__shotReady = false;
+if (params.get('grid') === '0') {
+  grid = false;
+  stage.showGrid(false);
+  el('grid').setAttribute('aria-pressed', 'false');
+}
 const startId = params.get('asset');
 const startVariation = params.get('variation') ?? undefined;
 const startRow = catalog.find(row => row.id === startId);
 choose(startRow ? resolveVariationRecipe(startRow.id, startVariation) : initial);
-const shotView = params.get('view');
-if (params.get('shot') === '1' && shotView && ['Front', 'Top', 'Side'].includes(shotView)) {
-  stage.view(shotView as View);
-  el<HTMLSelectElement>('view').value = shotView;
-}
+const shotView = parseView(params.get('view'));
+if (params.get('shot') === '1' && shotView) setView(shotView);
 if (!document.body.classList.contains('shot-only')) {
   shelf.start();
   const refreshInventory = () => { void shelf.refreshSaved().catch(report); };

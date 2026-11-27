@@ -25,8 +25,8 @@
       "label": "Default",
       "situation": "A cluster of tiered alpine spruces on a mossy knoll with a removable camp boulder.",
       "recipeHash": "sha256:206a89c6078ce0f7a11a6570bdd8016d6330784557349e9de8585562ae44da37",
-      "standardHash": "sha256:47052129d2f65515192dc0221a88f1644c89863448b1b43332c8b033998dc184",
-      "hdHash": "sha256:8cbc5d4eb27d4092e6d0ac7c4944e6fcfec822094a6e08568ec8782a5393bf8c",
+      "standardHash": "sha256:637abf61347923bacff34c7a8b25a9e5c0f2c6a49c7f2a53d0b1b9196cfe6424",
+      "hdHash": "sha256:20f3e61fdd963bff7dde849655ce369ec7ce267de88ed0bfcca8bc53eeb47b40",
       "clips": [
         "Alpine breeze"
       ],
@@ -62,8 +62,8 @@
       "label": "Default",
       "situation": "Robed arcane spellcaster with draped shoulder mantle, hip-slung spellbook, and detachable wizard hat.",
       "recipeHash": "sha256:43d5a555404059911b3ed43900df19901ef0a7b4bd87e93ed1beb2c2207115fc",
-      "standardHash": "sha256:b75baa8b968c42ffe298aa004add4de94fd3aa80053e97eb3fd5249a202180d6",
-      "hdHash": "sha256:1fcdcfa3d3b7b4351652d19460d17a46d0ffa94d524a77cf09d01ddd2c1ee6d3",
+      "standardHash": "sha256:f8b0d156feb31aa01e7a6d0e453e406c2ba391d2d8d51f89a9458da0ee4f5174",
+      "hdHash": "sha256:11d0c4d8ea9ada3b092a9755e455413b881dce5f737ab81b6e14464133234320",
       "clips": [
         "Idle",
         "Walk"
@@ -79,8 +79,8 @@
       "label": "Default",
       "situation": "Polar expedition scout in a fur-ruffed down parka with snow goggles and detachable alpine pack.",
       "recipeHash": "sha256:98a0be584c525ce4ce670a44a98af95bc0651c51c828a93791e422bf40e63022",
-      "standardHash": "sha256:c0c1a479a51bb6342aaaf19acdbd7bc2a71787a516057df824aac930caad7d77",
-      "hdHash": "sha256:b8a43fdfd37aa840a5930d303b701832f5893b136c86094b6c5a7cc9dfeef9d4",
+      "standardHash": "sha256:e2cfc93f30fbee1365ce932cce8d38d06ac53a41ebcc064e3a69688c5ed59486",
+      "hdHash": "sha256:345595f4c37a6cb50755bcb7c345db4dcce9b60aab194f76b440a931e403bfed",
       "clips": [
         "Idle",
         "Walk"
@@ -96,8 +96,8 @@
       "label": "Default",
       "situation": "Tracked polar expedition snowcat with a tilting snowplow, rotating beacon, and detachable roof rack.",
       "recipeHash": "sha256:44d78d92870d66bcf67eb3b2a82d4000dbf0817693d9a3b2d30374fe5eb4ceb1",
-      "standardHash": "sha256:19c77a38b01d0479a28a457515473a5d0fb0952b5b5009e7bc61102b177efe08",
-      "hdHash": "sha256:b4e6faf08e155d4b7094573d7ae8b53d63d2c5fac1488dbb9989ff3e33b31323",
+      "standardHash": "sha256:f36b7fb58713f09e985a6769325bb44c43440458003b61e35bb93a7fa5387995",
+      "hdHash": "sha256:6e91d7ea6d0f8ab249d1766c2ce40ee63c9cd0780583996047117fdeac337c97",
       "clips": [
         "Polar patrol",
         "Plow tilt"
@@ -134,8 +134,8 @@
       "label": "Default",
       "situation": "Culinary artisan wearing a double-breasted coat, bistro neckerchief, waist apron, and detachable pleated toque.",
       "recipeHash": "sha256:dbc7faa316b9cc6f26f5753e5bb38878bce4c23bd3cefbc4b50b019df2ac5d53",
-      "standardHash": "sha256:013274daa2511fc011c46ed09b34c441dbdc57cd663b284698de9b71ad106e95",
-      "hdHash": "sha256:65b30b471f259fecf670230b69df870c4d46e4a1f0d73930198f7af85d8a25c5",
+      "standardHash": "sha256:3bde1e33025322d13f598e33d06eb4eaeb0fd858f6468ecf0fcc6726963380c5",
+      "hdHash": "sha256:33e8fafadc42f722779b5dbd9bf3762035453ce1b2407d4aeb0d55842b4c9123",
       "clips": [
         "Idle",
         "Walk"
@@ -212,8 +212,8 @@
       "label": "Default",
       "situation": "A serene stone water basin with a rocking bamboo fountain and zen moss boulder.",
       "recipeHash": "sha256:e3fd51a12478a788ea9195db58ba663876d4b8bca8e01e39f9bdfe73e7ac2c5b",
-      "standardHash": "sha256:8874cb13ac0f3b6b69fb093f690e88be6898b2acad9ec220c271cbb581f3464b",
-      "hdHash": "sha256:0e4c842cdfaca0d84b0af68af8b8efd0c15c284334a23691a54785bc298542c6",
+      "standardHash": "sha256:083628f23927752a9a74d4599cc1ea3eccd416f0385d805098e32877f53b567f",
+      "hdHash": "sha256:1f02658f07c6658835903781ece6564aa9c88e93fd7090704a9baf3ad5e84a9f",
       "clips": [
         "Water tip"
       ],
@@ -267,8 +267,8 @@
       "label": "Default",
       "situation": "Hunter-case nautical pocket compass on a navigator plinth with a hinged dome lid and spinning needle.",
       "recipeHash": "sha256:821fb9158a02469457db0316c972fcbe175c453f5e9276e70696515f64cd92bd",
-      "standardHash": "sha256:602030abbae8a27c36edf6b5fee7da35f26c37756261b121ea523c93e32dc2fb",
-      "hdHash": "sha256:18142c44a833cc3273f441ee50ba4685f41c92f4bdeba4f0ce9e4013d79f2f4e",
+      "standardHash": "sha256:76e69bef5baf8007424a875af93aa49794e7fa0041997062316df900ea46d737",
+      "hdHash": "sha256:95f9e2bde1a4b01237b2b175ca94f86de87427de500f00bb134632b1f1eee585",
       "clips": [
         "Open compass",
         "Seek north"
@@ -285,8 +285,8 @@
       "label": "Default",
       "situation": "Leather-wrapped brass telescope on a tabletop cradle with a telescoping lens tube and hinged cap.",
       "recipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
-      "standardHash": "sha256:c1debc9b93e215a6afa08bf50988d8e187e5c1ef6090b0b648bc4702527e7c99",
-      "hdHash": "sha256:0b1c1a915a7f28c6b53a065c23bd218bb0ccce55de9b1ca206702698375b7b07",
+      "standardHash": "sha256:6a0f6f8b4b034c09cb88c44496236c8bd7dcd0c523b1ab4d05505798121abc21",
+      "hdHash": "sha256:11c2bd262799c5e7cf4840e1d91990b6316c1cc7e8542ed07f918def844e1333",
       "clips": [
         "Extend spyglass",
         "Flip lens cap"
@@ -303,8 +303,8 @@
       "label": "Default",
       "situation": "Stilt-mounted canal boathouse with timber pier, lifting slipway gate, and swinging dockside mooring crane.",
       "recipeHash": "sha256:a77fdd66344578bce10d14f960b13f059cb60eb1fe805b23da77699b803ba6a8",
-      "standardHash": "sha256:88b9711223d0fb92ec1707ee2029760d493aafb968f0001e7ba4fcfcd2f3042a",
-      "hdHash": "sha256:26b7566d10f836f0c7f136fb367af54d3f2a9a4c78a27e0365dc0a54251f23f0",
+      "standardHash": "sha256:282dffd51553c51a84c3b9bbc3f6ed321e61c250bb8978a21d33ff02fc3db5b9",
+      "hdHash": "sha256:7da1527ae8d321895a4b969ba49d763ecb0be14e466570c8431972bb58756161",
       "clips": [
         "Launch boat",
         "Swing mooring crane"
@@ -321,8 +321,8 @@
       "label": "Default",
       "situation": "Industrial rail-mounted A-frame gantry crane with a traversing trolley and lowering hoist hook.",
       "recipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
-      "standardHash": "sha256:3a0d2962ffa5d99bebb56525ad78dee17de3d2c1c8669192d27113d10b7a8e38",
-      "hdHash": "sha256:a0fabb6a93b408f254c1a8dc2a822cf3682028002eb7b43e951ff686839a16ac",
+      "standardHash": "sha256:1e9946feab305cdae1eb939fa8d54fb01ad9f60e2cc17514ee9ae7e074e5c142",
+      "hdHash": "sha256:8308ec6427f294418821c3c35cdfa909e1f18af047fdbfaf7e8aebd1bfce62b8",
       "clips": [
         "Transfer cargo"
       ],
@@ -338,8 +338,8 @@
       "label": "Default",
       "situation": "A reinforced equipment pod for field transport.",
       "recipeHash": "sha256:9b0fd88dc5027fd01a8c33cc7774369297fdb8d958405ee866672af5aff240e3",
-      "standardHash": "sha256:1be4f15b95200c402db986615836b7d9d61176ac620b69596b175929bb738520",
-      "hdHash": "sha256:db062dbd4baaae8db41b9078fd14680ec163a1898cc4e6d5a01c3fa965238c19",
+      "standardHash": "sha256:50f530c89effdbfcaa7939e8eae8210862b6081dec8127505464a6b9e7b046e5",
+      "hdHash": "sha256:809fa32d0165709a82c0e9aa0e02e37912cdf1cf07d0761689fd7caddc2394f0",
       "clips": [
         "Open case"
       ],
@@ -372,8 +372,8 @@
       "label": "Default",
       "situation": "Double-ended urban streetcar with parting sliding doors and a tilting roof pantograph.",
       "recipeHash": "sha256:ed19620bbdbdab1a939005f063be144091f6f8af6b90b6e79a8105365a7e0a67",
-      "standardHash": "sha256:a1766769834168254321576085b468376cec186ad72818764d9416782c7662dd",
-      "hdHash": "sha256:51e8e7b3982d4fc586d14b0c49774367d55d7bed56608115ccba119ff8f9a0ad",
+      "standardHash": "sha256:bb37a2c44aadc797199eccae24d0b51a0eac685cb4f7cba0572a40c8da98ff7b",
+      "hdHash": "sha256:2b33787694cd983d75539c46589a579c0ad1b71e96a7b11d1e03fe236a705870",
       "clips": [
         "Boarding stop",
         "Pantograph raise"
@@ -411,8 +411,8 @@
       "label": "Default",
       "situation": "Sloop-rigged coastal sailboat with a swinging mainsail boom and articulated tiller rudder.",
       "recipeHash": "sha256:10ff6e85a4f6eb10522c6c1eb957997d2e6fd1a0a8eff62663148ef9a68f6b87",
-      "standardHash": "sha256:16bc50ec2a6b21633ec81c60fd8918a761f95111da188a55d7051344c840ae9e",
-      "hdHash": "sha256:2ff5a83d556bba82b9aa7308a10968a0a1429b64dfa1ec3ea511c23f8b9721a3",
+      "standardHash": "sha256:ec8b0dab22265d3007b2348fcb80eb669dcff18932691db5bbdd46d90ffd7ae7",
+      "hdHash": "sha256:2c19d7e1b03eaed53b34f60bdb365293c753834915bb073f6e4e893d2b1f08b2",
       "clips": [
         "Tack breeze"
       ],
@@ -428,8 +428,8 @@
       "label": "Default",
       "situation": "A glowing reef jellyfish with a pulsing dome bell and swirling tentacle crown.",
       "recipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
-      "standardHash": "sha256:0cbe93d83342bab9e4df6bb1b72c0713d1f9a2de3d8f6f5b14937c711c4f3519",
-      "hdHash": "sha256:2ffd4e48e6bd7b35d08ecc525bd6eaa8447a6d75c7a042a02af832dedd2c3fcd",
+      "standardHash": "sha256:1de8b55bfce273a71dc5b8d857e2d6ed8ed057fb6368e0a89fd7a819c4e38235",
+      "hdHash": "sha256:a108e221fad4bf019ea79294bf012b148210ce856a9148b6ef6be52bf96f827a",
       "clips": [
         "Pulse drift"
       ],
@@ -500,8 +500,8 @@
       "label": "Default",
       "situation": "Neon-lit street-food kiosk with a rolling counter shutter, swaying sign, and detachable stools.",
       "recipeHash": "sha256:c5a0c0f411c2f8362a1b0d7819ec2ad722681515abb6d7330c05621166aba713",
-      "standardHash": "sha256:9b361bc5ca2d9529c8f2ff17b7f8e6abeb76ee7f94a4699fccc7ed4f6ed7d78a",
-      "hdHash": "sha256:ec7a1017b5e845c056a2bdba62435fe7333c39c424de5d5249b8a48667de4262",
+      "standardHash": "sha256:54f5d781df4edb2c253e98c6ad30263c700b519ca28d1370621efafd72930d02",
+      "hdHash": "sha256:fc094147c892f468068f7f0de1c67eaf13ce30b8ab74827ac0d4fae0e80a7f37",
       "clips": [
         "Open shutter",
         "Sign sway"
@@ -520,8 +520,8 @@
       "label": "Default",
       "situation": "Hard-hat deep-sea diver wearing a brass porthole helmet, weighted belt, and detachable twin dive tanks.",
       "recipeHash": "sha256:6c7e2578e9b69aad8408e49c9995b5cf643c41a773dd76ada2f9c98978147972",
-      "standardHash": "sha256:df450263655226b8fd7d6b378c44e52ce8172b3c4b0b9755bfe9b4408c7a07c1",
-      "hdHash": "sha256:4dc0027729c44283052e82e57e945db2c607a143084ffbc63f2decbf6ce6a178",
+      "standardHash": "sha256:dbedc875b493b1e63b6503d4d323cd3dc8d84d42cf7ed59d2159defdcf12f883",
+      "hdHash": "sha256:5ced1592fa7863c41651641fc8b0c8b97d02cab32d1bef7550e57aba54dbe3b8",
       "clips": [
         "Idle",
         "Walk"
@@ -537,8 +537,8 @@
       "label": "Default",
       "situation": "Deep-sea research submersible with a shrouded stern propeller and dual articulated grab arms.",
       "recipeHash": "sha256:9a242938b644c51f8937c4ff5ea88a1f62c24f78ed6276b0d46cb029cd8ce420",
-      "standardHash": "sha256:bd819af8fd79b97847c78d4fd435bf9b3f519ec58e6aca0cd4038e053f8cb97e",
-      "hdHash": "sha256:a1a0f0942e8763320fcb0f90349a72dd2ddbd8a979da11f85220114e0aaa7968",
+      "standardHash": "sha256:50791ee7596864aee8dd988f4a70b7c613e8f1a1323951b82c6d1991a2d25a65",
+      "hdHash": "sha256:1ed2fc63c8fc0993c85cbd5064036a2b6c18351a06082ca17405ca648b50bc31",
       "clips": [
         "Deep dive",
         "Sample grab"
@@ -574,8 +574,8 @@
       "label": "Default",
       "situation": "Expedition desert hover skiff with tilting ducted thrusters and a removable aft cargo crate.",
       "recipeHash": "sha256:a0d26d1a2a9dd85bb9bc241ea7619249dc4658204f2a8d04fe4194fcbdd2b2d6",
-      "standardHash": "sha256:10bdd882197bb5a3a45e106ff183b9c80d4d1eaeaf873e0d989fa27841ee290e",
-      "hdHash": "sha256:9a52a94501b0bbb7c929c8ee10356fd8867c9e02a8456aedf06f69235976bef5",
+      "standardHash": "sha256:eb5e8c89ba217d9a832107d49c76b672307828400a65daba08f24572b8f9f812",
+      "hdHash": "sha256:a88cf51838b74afc1d1e53ff0e33c5f0da077a595383763eabad58362754bb36",
       "clips": [
         "Vector thrust"
       ],
@@ -593,8 +593,8 @@
       "label": "Default",
       "situation": "Dune wayfarer with layered head wrap, indigo shoulder drape, hip canteen, and detachable woven satchel.",
       "recipeHash": "sha256:c1d565a5b8c52635011b0c2aec404c47c82292cf7ff6a42c9de440ee9880d1c5",
-      "standardHash": "sha256:3835636752bafbddf314ae0274312d0452991a688d3803bcea9c9631d967d616",
-      "hdHash": "sha256:8ac247d8e0543e4561957c772cb762c6d3a0800660a52a7a71f47c476b607fda",
+      "standardHash": "sha256:836a10fb808a25a3e78d515e4777acf0de0201446045c35433f24f3d744c479e",
+      "hdHash": "sha256:d86b4fe6220af1243ea0b28ac972d722cdfb629c8d90eaa11cb0937378a02ad1",
       "clips": [
         "Idle",
         "Walk"
@@ -664,8 +664,8 @@
       "label": "Default",
       "situation": "Canopied street espresso cart with rolling spoked wheels and a brass lever brew head.",
       "recipeHash": "sha256:0d3384d488e998aefb33d529137ed9fd3d04671eb71578202294791795c94ee9",
-      "standardHash": "sha256:157756ee1a8d0a55e026430aee9bfe421c111403d5023baec9b35d5c1f91365b",
-      "hdHash": "sha256:a85edf63257b8ffbe494dcc1b2dc76429341c1b3af446365fbc182c46bb57548",
+      "standardHash": "sha256:92e3e43819032af578dfd06f8f18c729f5e658ecf8db5c3daec9e60a22a4a015",
+      "hdHash": "sha256:c9edd78bbb9af531706a8f13ec64cd64936446c08ed199e4df74b7d792527e07",
       "clips": [
         "Pull brew lever",
         "Roll cart"
@@ -776,8 +776,8 @@
       "label": "Default",
       "situation": "Repulsor-lifted airship docking pad with a deploying boarding ramp and rotating guidance beacon.",
       "recipeHash": "sha256:91a68e204f4faa76810958df47f8141ad33b20c8f71573b32ab826386a2627c3",
-      "standardHash": "sha256:f768fe48717f12d386cb854fbe5e663e9fc5f36fb36d9ce008f735cc404eac03",
-      "hdHash": "sha256:1b0f8f98922905ac929bc4dbcb850ca2f507c003286e6ad1043d80980ed12e7e",
+      "standardHash": "sha256:736e999524530261782240befbf358f04d95aa292accf48a3c511442563b7c03",
+      "hdHash": "sha256:c46b58ee73fc382548e466220cd43b088004f6c6dfb6ff056a98c544cc8c79e5",
       "clips": [
         "Beacon sweep",
         "Deploy ramp"
@@ -794,8 +794,8 @@
       "label": "Default",
       "situation": "An alert woodland fox with a bushy snow-tipped tail and swiveling head.",
       "recipeHash": "sha256:f1be7d2c2ee8a9392e497f8e81b21af2dbb70386a56957c4012fe86c13e9ffb0",
-      "standardHash": "sha256:ad5fb777f2f4fcd2dce4064243874a5d759274cb4b960c4da282f2b8a9b407f6",
-      "hdHash": "sha256:aa6fd6a59f2f29de02f00cb0a7038f8d7bda644d087dab5698a0c06664b3fc2b",
+      "standardHash": "sha256:e9cdd090d81b6b20703295c2735c96d667a3b7ad5807ca631d139d77b44a66a3",
+      "hdHash": "sha256:0e0fcfd15ff4fb538125786d359a36c704355833c19d874613781bae3d24c4f3",
       "clips": [
         "Alert wag",
         "Head scan"
@@ -812,8 +812,8 @@
       "label": "Default",
       "situation": "Woodland archer with pointed hood, leaf-clasped cloak, leather bracer, and detachable feathered quiver.",
       "recipeHash": "sha256:7d75dd03c72a5c55e2e474246f8a798e2f06b37636a3f7e690509fc9b7770ad9",
-      "standardHash": "sha256:2820ee7b26e37717fd24a21dd1ecb7fc9e45692d1e1870e9b773dfb7093b4a1d",
-      "hdHash": "sha256:540af678615105582d81cccc86e4a636dcd864b43d6a3d2547fe9af74d702d2d",
+      "standardHash": "sha256:bdaf1ec58f24ef117d6aad0398131fdec765276e8aa8151f37422b1523b8bd9a",
+      "hdHash": "sha256:08a389c2713403a5a8ccfa42888227b329110eae2d1651d093aedd83963ee5f0",
       "clips": [
         "Idle",
         "Walk"
@@ -919,8 +919,8 @@
       "label": "Default",
       "situation": "Pier-side masonry bell tower with open arched belfry, swinging bronze fog bell, and rotating rooftop weather vane.",
       "recipeHash": "sha256:988c91773eeb482dc1a77058f027ab611d32c3d27d65c4eb45b72f6b5ef3ee16",
-      "standardHash": "sha256:ab91874218d6072d08117bbea4af45355043d013dd8e5fe5bf363fb88e164a29",
-      "hdHash": "sha256:78c9a375842b14fd72cf0bd522857b3d3ace5281d9bda868e72c8ecbf0f526d9",
+      "standardHash": "sha256:52beb7fb875536e898dbd93fff7d31072e5180d82642645be09cf5b8b14d5b82",
+      "hdHash": "sha256:b6aeb1dd637883cc1f76200479c8eac5b56c3ddf15923b5621fe6710ace2559b",
       "clips": [
         "Toll fog bell",
         "Wind shift"
@@ -957,8 +957,8 @@
       "label": "Default",
       "situation": "Striped teardrop hot air balloon with a swaying wicker gondola and detachable ballast sandbags.",
       "recipeHash": "sha256:e43b1e7ac8213b2ebe1fe1adbc88992ac227558230570be04a3e2e43aaa284b7",
-      "standardHash": "sha256:59e424de7cf5d7ee288c558dda9e1e93e83d8cd7ff1f922d92e11a1b967b08d4",
-      "hdHash": "sha256:4aee21f35df70ed81989a465abd4174011a0bf30864defa16fe97aa9d385c25a",
+      "standardHash": "sha256:2c10741511b466cecced6647787d4810170548310054f9ae7d27a3d2dd406d89",
+      "hdHash": "sha256:7c0a015ebd458db459e0d9a4c0b17883507a4d240077ea7146c37a001fbe9f8c",
       "clips": [
         "Gentle drift"
       ],
@@ -1029,8 +1029,8 @@
       "label": "Default",
       "situation": "Four-legged orbital lunar lander with a hinged boarding ramp and rotating parabolic comm dish.",
       "recipeHash": "sha256:fbbdea1a450c19cd8a5cce8e332e63e370281709b5bc55b02d48531cd63793cc",
-      "standardHash": "sha256:ab9b550b7a0cd49b18bd1fa6c2578d78a4e9f9052468734ee4bc25ebd896b205",
-      "hdHash": "sha256:b4358af1172b60c30a6d64582215b94ec1e67a8cac33c2f1dcb34ee43031ebe3",
+      "standardHash": "sha256:1b94aa527e3e782950ca3bdc6a0f986c968bb819b3546582f47f9381a485928f",
+      "hdHash": "sha256:56f14e6477a7d21b99ad07254fe8d0a5759534c6bed9edc453da636dafcc5a18",
       "clips": [
         "Lunar ops",
         "Dish scan"
@@ -1047,8 +1047,8 @@
       "label": "Default",
       "situation": "Open-sided town square timber pavilion with tiered flared roof, swaying hanging sign, and detachable produce stall.",
       "recipeHash": "sha256:0ad10a0b8cb9f3f462373db78ec3bda1aca0c3da2268c83ce44c9181662be262",
-      "standardHash": "sha256:c8038dd56bf7672e34aea6bd313bce6b8d9bbc37214b28e3bf1ebcfd1548bb84",
-      "hdHash": "sha256:f3a81806fc2451791437b657b574c89d90ca2b391616b93ad23eb760351a5ae2",
+      "standardHash": "sha256:8b07b82df1b2ee1f6cd7fcb9c35200c1e3fec35adc495dd5a10c979a0193651a",
+      "hdHash": "sha256:5fd62ca736018371dd595169de354880c69074c6a6651e80a58e345bfe45587d",
       "clips": [
         "Breeze sway"
       ],
@@ -1084,8 +1084,8 @@
       "label": "Default",
       "situation": "Armored medieval knight with plumed great helm, plate pauldrons, heraldic crest, and detachable shield.",
       "recipeHash": "sha256:66f30fbe47c78c1bd341dcc5d3f359806f7e20451a20ad9d67991726ba3bf23e",
-      "standardHash": "sha256:c0cd0778870dbac3e20b0af6e677269454787b0d0db3750472530e6960e977a7",
-      "hdHash": "sha256:c6f41240ff1a9639750a2d82be1e7e64bad7582c1a7c4ff214595a975f8db0e1",
+      "standardHash": "sha256:bd167bee868bc21b74ac8b015a92ff726ec7b1227ab8e9e7ee1243143718e9b5",
+      "hdHash": "sha256:dab23a702833103eca92e2493dced2117b3758ae19e75cf897834ce32afcb4c0",
       "clips": [
         "Idle",
         "Walk"
@@ -1103,8 +1103,8 @@
       "label": "Obsidian Paladin",
       "situation": "Dark fantasy night-watch or boss encounter variant with gunmetal plate and crimson trim.",
       "recipeHash": "sha256:368e37fb6796a1a9fa5792be113c3dc788e2c8e5014d74723b4c98b1e566e6e0",
-      "standardHash": "sha256:4a3f2b3aad748dd50ff3600f8e4de03148970ab9da309e355b8f29d8aaef42d6",
-      "hdHash": "sha256:8a3c370cad3fdbb76a19796e120139af940767dd9997d5bb3d94621366be7a76",
+      "standardHash": "sha256:0fd6fe3640b3afd1573e690b1fb33e6dcd282537cba897e7a3ea746e725c2b48",
+      "hdHash": "sha256:6b394d9f1d0853d3c5a5509492ec0cf2d5541f7071d1ba2bde2705fa31db7eef",
       "clips": [
         "Idle",
         "Walk"
@@ -1122,8 +1122,8 @@
       "label": "Default",
       "situation": "Elevated futuristic transit platform with sliding safety screen doors and a detachable commuter bench.",
       "recipeHash": "sha256:054fb74c58d740a840426c211566216dc8145cfb0d2dbae181746ce0a425a0ed",
-      "standardHash": "sha256:81b442c37e6c8700d05647f2020a2bf1d5b05c77b769dcfd62cfde6b676d3d39",
-      "hdHash": "sha256:d04fc88d067e25a4cdabcd268396000015b690f8b184a5c9b2382e792880b460",
+      "standardHash": "sha256:8754c55f481237d442855606b5b6cc0831d2ad4a73088503c5d1de8517aa42c3",
+      "hdHash": "sha256:beab2484efc149eb17604364051de9a40fc75214ae6e74e8aa6b5124b481cd11",
       "clips": [
         "Board train"
       ],
@@ -1177,8 +1177,8 @@
       "label": "Default",
       "situation": "Synthwave cyberpunk street arcade kiosk with illuminated marquee and twin swinging batwing doors.",
       "recipeHash": "sha256:8819f1a202ab841cbe40a234c1b477d0b5499495f8f1e03b046611bba368cdf2",
-      "standardHash": "sha256:d32b0b3ed1ecb3225ab19fc7e83349c9ef246d17cc2ab2d1e765f4aaa08abe8b",
-      "hdHash": "sha256:8ace8bc98b9c2a425b2d73ac1b95ef0cee4be5281c447c85ce1ac32a50cf9e74",
+      "standardHash": "sha256:f2fc084ef3135698fe722672563e6e68223c95d9a18d739f983c3a1596362806",
+      "hdHash": "sha256:426dc4fcfd35ee490f6f1318f067faedf1d5d1fade0a21593211c7ebd7ceff7a",
       "clips": [
         "Swing doors"
       ],
@@ -1194,8 +1194,8 @@
       "label": "Default",
       "situation": "Steep-gabled Nordic log cabin with notched corner logs, stone chimney, hinged plank door, and detachable firewood stack.",
       "recipeHash": "sha256:c53a7e43cc02a9bf1b8512e90bf94b49bf01b63eb4d4c7730d421304f138491d",
-      "standardHash": "sha256:1bc71edce2b9c635e2cce7095c7d3f0a2b30fb2e1028b7add64ce80751745fdb",
-      "hdHash": "sha256:91523b8a72c360160028f7e7bd3b644fcbc2379beda8122055008a636dff233c",
+      "standardHash": "sha256:96fed8fed3931481b4efed560190919886e8802bef750d0f52a4d9fc0c30190c",
+      "hdHash": "sha256:c0b54c36ce07eccbca850f13164ed0f8ff7e3445811f4bfcb05f4e1181b9a8bc",
       "clips": [
         "Open cabin door"
       ],
@@ -1212,8 +1212,8 @@
       "label": "Snowbound",
       "situation": "Deep-winter mountain clearing with weathered spruce logs and snow-blanketed pitched roof.",
       "recipeHash": "sha256:b9be40ab38eef3a8ac0cbb92fb885f970c78b6ef4f0634ec35fd7640ad610178",
-      "standardHash": "sha256:779ec66687a2e4672ddd830acac1e738c41bc8bf3cc3bc5366d6203b510bd436",
-      "hdHash": "sha256:e52447c6bea7ac1b621aa8474a4201af26e6b16890ed9ae16cf8fcdefdd6f083",
+      "standardHash": "sha256:f73aa65dfcaa21e5cae031addda7a804c2c60d4f2d0fb9167d25afb5a0f3b333",
+      "hdHash": "sha256:da7077dca53762ef32739c10986646316ad94380a7f3c8e21c1476ee693fb3f2",
       "clips": [
         "Open cabin door"
       ],
@@ -1249,8 +1249,8 @@
       "label": "Default",
       "situation": "Pressurized orbital station bulkhead module with twin opposing sliding blast doors.",
       "recipeHash": "sha256:3808c03ecba931319bd4ba69dbb514e1f02ac7c4d60bceed8ef08e5a4c43a242",
-      "standardHash": "sha256:54942dbd965eb380cfe1b28ec9563d87aa3d643d4c9b9485c75a5b3bd2331a57",
-      "hdHash": "sha256:d77249c9ca01666c73e8fca932c5d75fe26426281324181ca83988d3144bc0e9",
+      "standardHash": "sha256:ae2e2116790635f842425cf6529f00151feb2893b246178b828fd4fbc4646d52",
+      "hdHash": "sha256:a5290482688984ce72ad4fbabacec7ad984ef18dacf831d2ca9ec84049f22167",
       "clips": [
         "Cycle airlock"
       ],
@@ -1285,8 +1285,8 @@
       "label": "Default",
       "situation": "High-roof parcel delivery van with double rear cargo doors, interior packages, and rolling wheels.",
       "recipeHash": "sha256:2e8f3be4aa1804a34f88aeae551893dbe4d88f0f49ad9498bf6a961d27a4aedd",
-      "standardHash": "sha256:154c469f447eabf6065ddc8639dfdb22d3dc329c1e6a1de714601c40570715ea",
-      "hdHash": "sha256:cc38c89fbc29254f4698b2c53dd200a71248df84c26148933776446f2db524f2",
+      "standardHash": "sha256:c0b7d3d989375bc86cacfe1ebb561afa2e0d6fdcba130730481a9695dd04a238",
+      "hdHash": "sha256:99c48bc4aef9b24cb70927f1484f12af029162c72402744393ee82be68d79239",
       "clips": [
         "Delivery drive",
         "Open rear doors"
@@ -1305,8 +1305,8 @@
       "label": "Default",
       "situation": "Buccaneer captain in a gold-trimmed frock coat with perched shoulder parrot and detachable plumed tricorn hat.",
       "recipeHash": "sha256:9db89501908d4264c142efb108d78e01a67f76d10b79b21130aeb119f490f293",
-      "standardHash": "sha256:52925e02f20112a9a874ed20b5fb60d8b0c51875345d3e83d0e46afcbc841045",
-      "hdHash": "sha256:6634fcaf4edf3ed53e4060a11ae4728e849980125e521e56f51734e4a46339a2",
+      "standardHash": "sha256:c0ecce4fb1dc29a4be700201ef656ddb8a98af52a65a1480e0bfbd718acd6864",
+      "hdHash": "sha256:261d8645a61fe97a7c21c886efaa1384cd64a86fdd4ee276b8ea466189c8f1fd",
       "clips": [
         "Idle",
         "Walk"
@@ -1379,8 +1379,8 @@
       "label": "Default",
       "situation": "Aerodynamic racing hoverbike with steering handlebars and a spinning central axial turbine.",
       "recipeHash": "sha256:cdae8f234e3d959bac36e5cabfc3776eae150475d8ba25e43245a812eacd8285",
-      "standardHash": "sha256:fcb50b1718572995d6387261e7695535275b2d77f3f9d5807a2fa526b344c852",
-      "hdHash": "sha256:8e546fcae19a36808f09aaaf456e07873055adc2d6405738ba7e72a33704c037",
+      "standardHash": "sha256:40b74b529972826e355aff32ddf41e60c82ff8f36d66233beb0d645d1ba46b80",
+      "hdHash": "sha256:b8ba1245f21c789b09082e5fe3e29bee0a5a44c408a800e1a6b9c753c99724d1",
       "clips": [
         "Race rev",
         "Turbine idle"
@@ -1520,8 +1520,8 @@
       "label": "Default",
       "situation": "Classic upright CRT arcade machine with a tilting ball-top joystick and hinged coin service door.",
       "recipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
-      "standardHash": "sha256:665c9562279526ab411fdc9daeeaf509d09e93774e1ce01cee75890245963326",
-      "hdHash": "sha256:229b5a758a4df1ce76e239fa9d94aa1291b57c0198405552d417d794ef728530",
+      "standardHash": "sha256:07b749407eca69449474c125e727bf0cf24fdfe9f6e5cbd6bb4ee0cf20ae4c25",
+      "hdHash": "sha256:c95d9e1678b239a70a1707667d1fcdbf4b0e3806874fea0a5ecc2b5bd1241ac2",
       "clips": [
         "Play joystick",
         "Open coin door"
@@ -1538,8 +1538,8 @@
       "label": "Default",
       "situation": "Ceremonial palace sentry in a scarlet braided tunic with gold epaulets, sash, and detachable bearskin shako.",
       "recipeHash": "sha256:ea1a7660cf6854e16f379c36cd46914971534b2edadc52a8f37ea62374bfe2bc",
-      "standardHash": "sha256:c29b7f8de041909c4275db774381bde2ec94ff657c065e342e429c7033886f69",
-      "hdHash": "sha256:95b493549e52c28bd130570b285133ba79d2e8d2bedd738d03b0f9d89fa3cb1f",
+      "standardHash": "sha256:64ab88e543425c24b7872aeea8486502651b8c1fa8f4461c595498204d065995",
+      "hdHash": "sha256:4065f17bec2c553e906b1c1a6ef44daa9d9d84fd774fd7cb57928cb666c328dc",
       "clips": [
         "Idle",
         "Walk"
@@ -1555,8 +1555,8 @@
       "label": "Default",
       "situation": "Carved wooden lantern staff in a rune plinth with a rotating crystal cage and swaying charm ring.",
       "recipeHash": "sha256:98971fe614796ebdd88d8828c21ba7b33c144a83cb337d3d23edcaa6d2fa37e1",
-      "standardHash": "sha256:8efa813b5fb8afb33d8bb5bff32aa2d2e374c186755bb750d32a9a144581e22c",
-      "hdHash": "sha256:7e8a1eab676019c192de15b8b6d5bfdf717994ddb7d5e49c6868f98485736f48",
+      "standardHash": "sha256:fcdd01725724fbd3bf4ad8c923a8bde72ec93e50a411b76b60d9a28d794782f9",
+      "hdHash": "sha256:a38a920b2814bf70eb7f5df22d8d932dd188ef48ac73a6a7430fc04fa0e4c5cd",
       "clips": [
         "Spin rune cage",
         "Sway charms"
@@ -1573,8 +1573,8 @@
       "label": "Default",
       "situation": "A gnarled cherry blossom tree over a garden mound paired with a carved stone lantern.",
       "recipeHash": "sha256:48c2ba87735d5af7cb62e6d43260de3fae2b6d4f1f197e56c108af63ac6783dd",
-      "standardHash": "sha256:5560e3777bedf2d1bdb822326ab932eef7833504cc40d4d98c8394034b0207c8",
-      "hdHash": "sha256:122ac8210fe449d678d04078b01868f5fd7f74b454ae2331769a89e66a872f07",
+      "standardHash": "sha256:0bb70c54777d5a8e0046c9f239800d971cded1b9d0ecc02f1e4be38b1184c85e",
+      "hdHash": "sha256:d7b83efba5566eda8d281242375d59a553fbc716444a07a9ca154970bbca87aa",
       "clips": [
         "Petal breeze"
       ],
@@ -1591,8 +1591,8 @@
       "label": "Default",
       "situation": "Armored samurai warden with layered lamellar pauldrons, gilded waist sash, and detachable crescent kabuto.",
       "recipeHash": "sha256:fcca046b4e1de1de8ffed8a4939bee3164428f4e6eb53335404d6a8d0c5a492f",
-      "standardHash": "sha256:96883d0130de5979e9f18a497bef5c54544f9b994169c848cf1d37fbccd4a686",
-      "hdHash": "sha256:3363ae6202f36d3816678207ca896317235814607086188ed1609a26087e2b72",
+      "standardHash": "sha256:0ed9d6a6c309d7f95afa39935f1e99ae69ae61554ff8e2678d30fa65a7d13117",
+      "hdHash": "sha256:4e390ec6367972644ca5f9146049fed4c5506b704d58b94046785be5faad4a51",
       "clips": [
         "Idle",
         "Walk"
@@ -1700,8 +1700,8 @@
       "label": "Default",
       "situation": "Orbital field medic with luminous halo visor, shoulder cross badges, and detachable cryo trauma pack.",
       "recipeHash": "sha256:8c0e6b7a8694bb45f7e0cac047b444d275c1d9d79f9b420ea858be6771d6419a",
-      "standardHash": "sha256:acf890cd5071280c7a039d83f9c757b961a29fcd316bfff6405e03bfda2f6c22",
-      "hdHash": "sha256:958c969d0e2d05d6c29f239b04b0d9b43f6d7ff72cab06034f6da547de36794c",
+      "standardHash": "sha256:d9ec293bf5895c08870c78bb2424fb5e521d1d13225df43354b120f79b628c1b",
+      "hdHash": "sha256:b544e2dea11b327b5497d001d5e067738bcc8173cc5817eba38473582858714d",
       "clips": [
         "Idle",
         "Walk"
@@ -1717,8 +1717,8 @@
       "label": "Default",
       "situation": "Classic iron steam locomotive with coupled driving wheels and a swinging brass boiler bell.",
       "recipeHash": "sha256:1037be2e30aef570c8e3c16345161a1a929f7c97751ce299ff7793477e1af76b",
-      "standardHash": "sha256:ab69236b387cbc06353b93a9df5ea43e6e1c13643a43751f5910d74bb05b13f2",
-      "hdHash": "sha256:ab1c7f67f1cdd761f1d53ede811b4924424a13edbb93f508d451bc60bcba5877",
+      "standardHash": "sha256:13ce82bc2b6bd39f5e245b66445f7ccb3e7bc3252fd0b2e1fe2f883f96255d75",
+      "hdHash": "sha256:72e02a62037100b5598d169cc3760c813ee58a569f9533eebd2999cce40931d5",
       "clips": [
         "Steam roll",
         "Ring bell"
@@ -1736,8 +1736,8 @@
       "label": "Default",
       "situation": "Clockwork tinkerer wearing a goggled top hat, leather waistcoat, and detachable boiler pack with spinning gear.",
       "recipeHash": "sha256:12e5a0aece6d776a720ca41d56a08df56d5cee17883e5d8d27d6d4650e5a6fd0",
-      "standardHash": "sha256:b1e1b862a0ea771fde1344e305e863306cbf52e6749cacef640170e56085038b",
-      "hdHash": "sha256:446916b420c3de9a397ca6f3dbd0eb9fd2643d3763caa1044c4d4b0e761ec88c",
+      "standardHash": "sha256:2dad0e492221a7e9d0d794d9b44187e87cd33308fc26120dcdfb760fee4b5423",
+      "hdHash": "sha256:16091a3839651ae6f74a282f00dca58450812a5020ef14217247e99bd90e5bed",
       "clips": [
         "Idle",
         "Walk"
@@ -1755,8 +1755,8 @@
       "label": "Default",
       "situation": "A dressed masonry footbridge with keystone arch and twin hanging lanterns.",
       "recipeHash": "sha256:f057c75887181298c21ef3da73dd6af2121bd79ca8e04e2bfd90aed0c8b78c19",
-      "standardHash": "sha256:1217faf5cb8e3607bcbbf379bc989fb484d79082544de2fc9bbb32a91872a030",
-      "hdHash": "sha256:ccc8f85569031a11ae6985da12b9fe75812032c074cf27159587b256d3fe4109",
+      "standardHash": "sha256:21338912e409f781910e02f6162aa7be1b4859d0dc48a4385ab192135403cbe8",
+      "hdHash": "sha256:14d80048851ac4e298d05a689cb321cc6761b87685ccf2193af60e47616e2c82",
       "clips": [
         "Lantern sway"
       ],
@@ -1790,8 +1790,8 @@
       "label": "Default",
       "situation": "Riverside cobble stone watermill with millrace flume, spinning wooden waterwheel, clay roof, and hinged mill door.",
       "recipeHash": "sha256:9fa8df3fdd89c8d36ca03bf946b5dbab7f96b744deb60ac09a820ef1358233aa",
-      "standardHash": "sha256:84759b1df741111ceb0a968125c0de9417ba1e0cf89a48f4e2b583ef8362a2d5",
-      "hdHash": "sha256:b544cf2195038bbe0a784b7344fa9549690676be66c58384272a54cf16e7e7ce",
+      "standardHash": "sha256:01ceae9660fe8c8c229995c133689bb81141686350cce52ac9556cc91729be6b",
+      "hdHash": "sha256:f5ecf9fd79a7cf2d66dc20557ac82b251287819d915acd2669c07d9e408518db",
       "clips": [
         "Turn waterwheel",
         "Open mill door"
@@ -1808,8 +1808,8 @@
       "label": "Default",
       "situation": "Retro corner beverage vending machine with a hinged dispenser flap and removable stocked cans.",
       "recipeHash": "sha256:f2b6217a374de344c18f3985df2995a549939edc02100c56a33d4e53ac3903b4",
-      "standardHash": "sha256:91bb3e328372c5069d9e040e32f45535adf43820dec5dbb6e4c6d35727459012",
-      "hdHash": "sha256:e23dcdff1716665a496890ae118d42296938f27e7646be1f2c741ebbd964ff3a",
+      "standardHash": "sha256:979a516b5cdd6c7cee41a81a7dfc8f17804301804dea0d525a5ae7d651c4fe79",
+      "hdHash": "sha256:c3855acacf66983b00a2bb1d4f0c3ed5ea38d0d57b19fb4bdf35de6c340a276e",
       "clips": [
         "Dispense flap"
       ],
@@ -1841,8 +1841,8 @@
       "label": "Default",
       "situation": "Tapered octagonal timber windmill with spinning four-blade lattice sails, stone base, and hinged mill door.",
       "recipeHash": "sha256:4f709ebcbcc412d89f6b22b2cbc490781a19815796dfe4cd2e376193536ca001",
-      "standardHash": "sha256:62e81810a034e738a18db955dbda1f9cf9f1791e97748964ccdeb94496b35854",
-      "hdHash": "sha256:80d2fa5a6cd3902774a75dc174db72972e482c048bc7bdd5210651e95165d46e",
+      "standardHash": "sha256:89e44d160c960a83ab23bc575feb7894effbacd4d1772a5f2bc4b264fee72fba",
+      "hdHash": "sha256:e6d4208a5b4638cdca9157ee56ec971f2067f2ff8543eca8a01f038c5f4abe33",
       "clips": [
         "Turn sails",
         "Open mill door"
@@ -1859,8 +1859,8 @@
       "label": "Default",
       "situation": "Traditional vermilion torii gate with upturned kasagi lintel, swaying bronze temple bell, and detachable stone lanterns.",
       "recipeHash": "sha256:e20714454410d3e63bda711bdab4c1bac9573ff53d85af7352b6908d4a73d01a",
-      "standardHash": "sha256:559c32ed4448f9339132b4273d4b43fa5baf83de865699943c973fc89745e9d6",
-      "hdHash": "sha256:29e4ceb35a3865dd3f0acf86264d805df0ac737bc25fdca511d486fe3bbfc9a5",
+      "standardHash": "sha256:03bea370995c093e5a18526e9fd52ef7127ef5658a9cd552dac8be50e6c0d645",
+      "hdHash": "sha256:48a7f34d70d8279ce2c59bfbcf627016871e9d94ded8271f33c0ab56752bba00",
       "clips": [
         "Ring shrine bell"
       ],
@@ -1877,8 +1877,8 @@
       "label": "Default",
       "situation": "Civic sandstone clock tower with open pendulum arcade, four-sided dial, rotating clock hand, and copper spire.",
       "recipeHash": "sha256:1ff5a5c943c85b48adabf4413f95847e29b46d60884c9b9cee14b2b1d7f13ecf",
-      "standardHash": "sha256:e53ea0c6307c12f463fa917aae833bfef19bc9eabb2138ef43e51ff00d5724d4",
-      "hdHash": "sha256:5a63f63272edfa15b07d7535c44d8fde6b454434190aabebd54adb8d43b1ea81",
+      "standardHash": "sha256:0c306317d226ae533501bee4e8d10d12df844acc47d763c1d85f3e838d6a79c1",
+      "hdHash": "sha256:d1db95d8626c9b8985b8ae3558f81429b2b37999a77a4e83a781c43ca4894c7d",
       "clips": [
         "Tick and chime",
         "Wind clock"
@@ -1913,8 +1913,8 @@
       "label": "Default",
       "situation": "Dual-thruster flight pack on a hangar stand with vectoring nozzles and a detachable center fuel cell.",
       "recipeHash": "sha256:4270288a7b0c0379db207193e74ee29750dcbada28e11bef4677a2dcb10b12cc",
-      "standardHash": "sha256:7485dbd337c982276af5c42aba52c91751208b954124e833046c6ba17b90227e",
-      "hdHash": "sha256:a3b50fa8c62bc27375e8af093db65b5266ae5318e257087d194b9e05af2e643c",
+      "standardHash": "sha256:c7eaf106e2246dbb4e8c348b83778a1628ac30c062ef7c611f1b7a8fb3fface4",
+      "hdHash": "sha256:eec672e574cd0e91d97ebdb8ce23be46341e60b7a859b9e14a9c68b1d9d2ab44",
       "clips": [
         "Vector thrust"
       ],
@@ -1932,8 +1932,8 @@
       "label": "Default",
       "situation": "Twin-wing open-cockpit vintage biplane with spinning nose propeller and hinged tail rudder.",
       "recipeHash": "sha256:09b92038f220ab129cfd9de2ac446a866a67cb571543e68df6952809351433d7",
-      "standardHash": "sha256:79ce2996d5d66a5f28940b1c8c29d50dcf9b66a22e798c1a035c997414dbcf9c",
-      "hdHash": "sha256:a9fbc437f31f3dfd3f63ff9c5e80837562940a29d6c1bb2aff081f8ac2ba2e01",
+      "standardHash": "sha256:180ffe416c150fa4a854212016bb27c3ef0be51cafdebd4e6be1c8e73212b327",
+      "hdHash": "sha256:9a47db8dc6b95696bb38c1770abb231ee0f917d7ca60ac5625726b831bac165d",
       "clips": [
         "Cruise",
         "Propeller spin"
@@ -1968,8 +1968,8 @@
       "label": "Default",
       "situation": "A ring of hexagonal basalt columns enclosing a surging molten magma core.",
       "recipeHash": "sha256:281c6bd02f4cdac25ff98346ad0402787da958c837b632ecb9ea86398a7acd59",
-      "standardHash": "sha256:ff5c04b9abb5b4b64591227e0d3bdbca314da699ce0b92d010816d16751860a6",
-      "hdHash": "sha256:7fbba2897e42c915aec3a7cfc108deab8dfd5fd8553ddc601f001cadd3bfee2b",
+      "standardHash": "sha256:f3151fa485224616bf013ca2560e37e9c238a805f3c99d2581685b066bb1f1e4",
+      "hdHash": "sha256:479f8075ff8b953941a2a6f87a47c49183b33011a31c79e24421f7dc2bbd7f5b",
       "clips": [
         "Magma surge"
       ],
@@ -1986,8 +1986,8 @@
       "label": "Default",
       "situation": "Counterbalanced warehouse forklift with an elevating fork carriage and rolling drive wheels.",
       "recipeHash": "sha256:d5ceea94424f4697898a213c3c4ff9babe773637d6f667f6b43d41063d8d0531",
-      "standardHash": "sha256:40d5400fe338599e70e9abc69f9063da265add5a70965c757ef4cf081c052367",
-      "hdHash": "sha256:f4b3edcb3de764436acdb551c2d6b85e1c9f16f77f6d50b2f0cebdc16ee8da80",
+      "standardHash": "sha256:87c1e3beea6d6ecc02b73df20100087408e97b586d9bb28bccb3a51c4e8de4cf",
+      "hdHash": "sha256:a0c1d14b204adea1a75e5d91405d417f9f34f42cb355be08dbc7b15216d5156a",
       "clips": [
         "Lift and roll",
         "Lift forks"
@@ -2022,8 +2022,8 @@
       "label": "Default",
       "situation": "Arcane stone observatory spire crowned with a levitating rotating crystal and hinged portal door.",
       "recipeHash": "sha256:8b04287d3046544aa0d4900528bbe247ca3b6e0377453b04f489a1f3258677aa",
-      "standardHash": "sha256:0bcf8e4a424dfc584fa5eaab8324f6f1f0f066fe9aba82de04e32ed8e3df1291",
-      "hdHash": "sha256:65ad04397646b158de9c805db49b8b6b787c1f0396938dfb93f493e802b0132f",
+      "standardHash": "sha256:ebbbd6e3964976f62c04807a93f58b89cdbfbaa993f4235dd0eb3e288ccdb6ad",
+      "hdHash": "sha256:b50f807dd1a29faa9c268131cd83e63aa06fd64b0e843a958a139b4f6fd0d490",
       "clips": [
         "Channel crystal",
         "Open tower door"
@@ -2035,5 +2035,622 @@
       "detachableParts": []
     }
   },
-  "repairs": []
+  "repairs": [
+    {
+      "key": "cargo-pod@default",
+      "date": "2026-11-27",
+      "reason": "Inset CaseLid top accent panel inside dark straps to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:9b0fd88dc5027fd01a8c33cc7774369297fdb8d958405ee866672af5aff240e3",
+      "toRecipeHash": "sha256:9b0fd88dc5027fd01a8c33cc7774369297fdb8d958405ee866672af5aff240e3",
+      "fromStandardHash": "sha256:1be4f15b95200c402db986615836b7d9d61176ac620b69596b175929bb738520",
+      "toStandardHash": "sha256:50f530c89effdbfcaa7939e8eae8210862b6081dec8127505464a6b9e7b046e5",
+      "fromHdHash": "sha256:db062dbd4baaae8db41b9078fd14680ec163a1898cc4e6d5a01c3fa965238c19",
+      "toHdHash": "sha256:809fa32d0165709a82c0e9aa0e02e37912cdf1cf07d0761689fd7caddc2394f0"
+    },
+    {
+      "key": "timber-windmill@default",
+      "date": "2026-11-27",
+      "reason": "Thicken sail accent border proud of sail cloth to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:4f709ebcbcc412d89f6b22b2cbc490781a19815796dfe4cd2e376193536ca001",
+      "toRecipeHash": "sha256:4f709ebcbcc412d89f6b22b2cbc490781a19815796dfe4cd2e376193536ca001",
+      "fromStandardHash": "sha256:62e81810a034e738a18db955dbda1f9cf9f1791e97748964ccdeb94496b35854",
+      "toStandardHash": "sha256:89e44d160c960a83ab23bc575feb7894effbacd4d1772a5f2bc4b264fee72fba",
+      "fromHdHash": "sha256:80d2fa5a6cd3902774a75dc174db72972e482c048bc7bdd5210651e95165d46e",
+      "toHdHash": "sha256:e6d4208a5b4638cdca9157ee56ec971f2067f2ff8543eca8a01f038c5f4abe33"
+    },
+    {
+      "key": "town-clock-tower@default",
+      "date": "2026-11-27",
+      "reason": "Extend pendulum rod upward into tower floor slab to eliminate 2cm floating gap",
+      "fromRecipeHash": "sha256:1ff5a5c943c85b48adabf4413f95847e29b46d60884c9b9cee14b2b1d7f13ecf",
+      "toRecipeHash": "sha256:1ff5a5c943c85b48adabf4413f95847e29b46d60884c9b9cee14b2b1d7f13ecf",
+      "fromStandardHash": "sha256:e53ea0c6307c12f463fa917aae833bfef19bc9eabb2138ef43e51ff00d5724d4",
+      "toStandardHash": "sha256:0c306317d226ae533501bee4e8d10d12df844acc47d763c1d85f3e838d6a79c1",
+      "fromHdHash": "sha256:5a63f63272edfa15b07d7535c44d8fde6b454434190aabebd54adb8d43b1ea81",
+      "toHdHash": "sha256:d1db95d8626c9b8985b8ae3558f81429b2b37999a77a4e83a781c43ca4894c7d"
+    },
+    {
+      "key": "torii-shrine@default",
+      "date": "2026-11-27",
+      "reason": "Shorten lintel beam inside end caps to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:e20714454410d3e63bda711bdab4c1bac9573ff53d85af7352b6908d4a73d01a",
+      "toRecipeHash": "sha256:e20714454410d3e63bda711bdab4c1bac9573ff53d85af7352b6908d4a73d01a",
+      "fromStandardHash": "sha256:559c32ed4448f9339132b4273d4b43fa5baf83de865699943c973fc89745e9d6",
+      "toStandardHash": "sha256:03bea370995c093e5a18526e9fd52ef7127ef5658a9cd552dac8be50e6c0d645",
+      "fromHdHash": "sha256:29e4ceb35a3865dd3f0acf86264d805df0ac737bc25fdca511d486fe3bbfc9a5",
+      "toHdHash": "sha256:48a7f34d70d8279ce2c59bfbcf627016871e9d94ded8271f33c0ab56752bba00"
+    },
+    {
+      "key": "canal-boathouse@default",
+      "date": "2026-11-27",
+      "reason": "Raise mooring crane collar cap above post top to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:a77fdd66344578bce10d14f960b13f059cb60eb1fe805b23da77699b803ba6a8",
+      "toRecipeHash": "sha256:a77fdd66344578bce10d14f960b13f059cb60eb1fe805b23da77699b803ba6a8",
+      "fromStandardHash": "sha256:88b9711223d0fb92ec1707ee2029760d493aafb968f0001e7ba4fcfcd2f3042a",
+      "toStandardHash": "sha256:282dffd51553c51a84c3b9bbc3f6ed321e61c250bb8978a21d33ff02fc3db5b9",
+      "fromHdHash": "sha256:26b7566d10f836f0c7f136fb367af54d3f2a9a4c78a27e0365dc0a54251f23f0",
+      "toHdHash": "sha256:7da1527ae8d321895a4b969ba49d763ecb0be14e466570c8431972bb58756161"
+    },
+    {
+      "key": "stone-watermill@default",
+      "date": "2026-11-27",
+      "reason": "Seat mill race water strip proud of dark flume lip and close underside cleanly",
+      "fromRecipeHash": "sha256:9fa8df3fdd89c8d36ca03bf946b5dbab7f96b744deb60ac09a820ef1358233aa",
+      "toRecipeHash": "sha256:9fa8df3fdd89c8d36ca03bf946b5dbab7f96b744deb60ac09a820ef1358233aa",
+      "fromStandardHash": "sha256:84759b1df741111ceb0a968125c0de9417ba1e0cf89a48f4e2b583ef8362a2d5",
+      "toStandardHash": "sha256:01ceae9660fe8c8c229995c133689bb81141686350cce52ac9556cc91729be6b",
+      "fromHdHash": "sha256:b544cf2195038bbe0a784b7344fa9549690676be66c58384272a54cf16e7e7ce",
+      "toHdHash": "sha256:f5ecf9fd79a7cf2d66dc20557ac82b251287819d915acd2669c07d9e408518db"
+    },
+    {
+      "key": "nordic-timber-cabin@default",
+      "date": "2026-11-27",
+      "reason": "Seat firewood stack logs directly on cabin deck to eliminate floating gap",
+      "fromRecipeHash": "sha256:c53a7e43cc02a9bf1b8512e90bf94b49bf01b63eb4d4c7730d421304f138491d",
+      "toRecipeHash": "sha256:c53a7e43cc02a9bf1b8512e90bf94b49bf01b63eb4d4c7730d421304f138491d",
+      "fromStandardHash": "sha256:1bc71edce2b9c635e2cce7095c7d3f0a2b30fb2e1028b7add64ce80751745fdb",
+      "toStandardHash": "sha256:96fed8fed3931481b4efed560190919886e8802bef750d0f52a4d9fc0c30190c",
+      "fromHdHash": "sha256:91523b8a72c360160028f7e7bd3b644fcbc2379beda8122055008a636dff233c",
+      "toHdHash": "sha256:c0b54c36ce07eccbca850f13164ed0f8ff7e3445811f4bfcb05f4e1181b9a8bc"
+    },
+    {
+      "key": "nordic-timber-cabin@snowbound",
+      "date": "2026-11-27",
+      "reason": "Parent firewood rack snow drift to FirewoodStack and overhang roof to eliminate Z-fighting and floating snow on detach",
+      "fromRecipeHash": "sha256:b9be40ab38eef3a8ac0cbb92fb885f970c78b6ef4f0634ec35fd7640ad610178",
+      "toRecipeHash": "sha256:b9be40ab38eef3a8ac0cbb92fb885f970c78b6ef4f0634ec35fd7640ad610178",
+      "fromStandardHash": "sha256:779ec66687a2e4672ddd830acac1e738c41bc8bf3cc3bc5366d6203b510bd436",
+      "toStandardHash": "sha256:f73aa65dfcaa21e5cae031addda7a804c2c60d4f2d0fb9167d25afb5a0f3b333",
+      "fromHdHash": "sha256:e52447c6bea7ac1b621aa8474a4201af26e6b16890ed9ae16cf8fcdefdd6f083",
+      "toHdHash": "sha256:da7077dca53762ef32739c10986646316ad94380a7f3c8e21c1476ee693fb3f2"
+    },
+    {
+      "key": "market-pavilion@default",
+      "date": "2026-11-27",
+      "reason": "Anchor hanging market sign bracket to corner post with zero floating gap",
+      "fromRecipeHash": "sha256:0ad10a0b8cb9f3f462373db78ec3bda1aca0c3da2268c83ce44c9181662be262",
+      "toRecipeHash": "sha256:0ad10a0b8cb9f3f462373db78ec3bda1aca0c3da2268c83ce44c9181662be262",
+      "fromStandardHash": "sha256:c8038dd56bf7672e34aea6bd313bce6b8d9bbc37214b28e3bf1ebcfd1548bb84",
+      "toStandardHash": "sha256:8b07b82df1b2ee1f6cd7fcb9c35200c1e3fec35adc495dd5a10c979a0193651a",
+      "fromHdHash": "sha256:f3a81806fc2451791437b657b574c89d90ca2b391616b93ad23eb760351a5ae2",
+      "toHdHash": "sha256:5fd62ca736018371dd595169de354880c69074c6a6651e80a58e345bfe45587d"
+    },
+    {
+      "key": "harbor-bell-tower@default",
+      "date": "2026-11-27",
+      "reason": "Anchor lantern and inset weathervane fin inside shaft to eliminate floating and Z-fighting",
+      "fromRecipeHash": "sha256:988c91773eeb482dc1a77058f027ab611d32c3d27d65c4eb45b72f6b5ef3ee16",
+      "toRecipeHash": "sha256:988c91773eeb482dc1a77058f027ab611d32c3d27d65c4eb45b72f6b5ef3ee16",
+      "fromStandardHash": "sha256:ab91874218d6072d08117bbea4af45355043d013dd8e5fe5bf363fb88e164a29",
+      "toStandardHash": "sha256:52beb7fb875536e898dbd93fff7d31072e5180d82642645be09cf5b8b14d5b82",
+      "fromHdHash": "sha256:78c9a375842b14fd72cf0bd522857b3d3ace5281d9bda868e72c8ecbf0f526d9",
+      "toHdHash": "sha256:b6aeb1dd637883cc1f76200479c8eac5b56c3ddf15923b5621fe6710ace2559b"
+    },
+    {
+      "key": "cyber-ramen-kiosk@default",
+      "date": "2026-11-27",
+      "reason": "Anchor cantilevered sign and seat counter stools on plinth to eliminate floating and bottom Z-fighting",
+      "fromRecipeHash": "sha256:c5a0c0f411c2f8362a1b0d7819ec2ad722681515abb6d7330c05621166aba713",
+      "toRecipeHash": "sha256:c5a0c0f411c2f8362a1b0d7819ec2ad722681515abb6d7330c05621166aba713",
+      "fromStandardHash": "sha256:9b361bc5ca2d9529c8f2ff17b7f8e6abeb76ee7f94a4699fccc7ed4f6ed7d78a",
+      "toStandardHash": "sha256:54f5d781df4edb2c253e98c6ad30263c700b519ca28d1370621efafd72930d02",
+      "fromHdHash": "sha256:ec7a1017b5e845c056a2bdba62435fe7333c39c424de5d5249b8a48667de4262",
+      "toHdHash": "sha256:fc094147c892f468068f7f0de1c67eaf13ce30b8ab74827ac0d4fae0e80a7f37"
+    },
+    {
+      "key": "orbital-airlock@default",
+      "date": "2026-11-27",
+      "reason": "Anchor airlock warning beacon and pressure gauges cleanly with zero floating gap",
+      "fromRecipeHash": "sha256:3808c03ecba931319bd4ba69dbb514e1f02ac7c4d60bceed8ef08e5a4c43a242",
+      "toRecipeHash": "sha256:3808c03ecba931319bd4ba69dbb514e1f02ac7c4d60bceed8ef08e5a4c43a242",
+      "fromStandardHash": "sha256:54942dbd965eb380cfe1b28ec9563d87aa3d643d4c9b9485c75a5b3bd2331a57",
+      "toStandardHash": "sha256:ae2e2116790635f842425cf6529f00151feb2893b246178b828fd4fbc4646d52",
+      "fromHdHash": "sha256:d77249c9ca01666c73e8fca932c5d75fe26426281324181ca83988d3144bc0e9",
+      "toHdHash": "sha256:a5290482688984ce72ad4fbabacec7ad984ef18dacf831d2ca9ec84049f22167"
+    },
+    {
+      "key": "wizard-spire@default",
+      "date": "2026-11-27",
+      "reason": "Offset front stone threshold above octagonal plinth bottom to eliminate bottom Z-fighting",
+      "fromRecipeHash": "sha256:8b04287d3046544aa0d4900528bbe247ca3b6e0377453b04f489a1f3258677aa",
+      "toRecipeHash": "sha256:8b04287d3046544aa0d4900528bbe247ca3b6e0377453b04f489a1f3258677aa",
+      "fromStandardHash": "sha256:0bcf8e4a424dfc584fa5eaab8324f6f1f0f066fe9aba82de04e32ed8e3df1291",
+      "toStandardHash": "sha256:ebbbd6e3964976f62c04807a93f58b89cdbfbaa993f4235dd0eb3e288ccdb6ad",
+      "fromHdHash": "sha256:65ad04397646b158de9c805db49b8b6b787c1f0396938dfb93f493e802b0132f",
+      "toHdHash": "sha256:b50f807dd1a29faa9c268131cd83e63aa06fd64b0e843a958a139b4f6fd0d490"
+    },
+    {
+      "key": "cargo-gantry-crane@default",
+      "date": "2026-11-27",
+      "reason": "Widen crane trolley over bridge girders to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
+      "toRecipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
+      "fromStandardHash": "sha256:3a0d2962ffa5d99bebb56525ad78dee17de3d2c1c8669192d27113d10b7a8e38",
+      "toStandardHash": "sha256:1e9946feab305cdae1eb939fa8d54fb01ad9f60e2cc17514ee9ae7e074e5c142",
+      "fromHdHash": "sha256:a0fabb6a93b408f254c1a8dc2a822cf3682028002eb7b43e951ff686839a16ac",
+      "toHdHash": "sha256:8308ec6427f294418821c3c35cdfa909e1f18af047fdbfaf7e8aebd1bfce62b8"
+    },
+    {
+      "key": "monorail-platform@default",
+      "date": "2026-11-27",
+      "reason": "Anchor monorail canopy and signal sign cleanly with zero floating gap",
+      "fromRecipeHash": "sha256:054fb74c58d740a840426c211566216dc8145cfb0d2dbae181746ce0a425a0ed",
+      "toRecipeHash": "sha256:054fb74c58d740a840426c211566216dc8145cfb0d2dbae181746ce0a425a0ed",
+      "fromStandardHash": "sha256:81b442c37e6c8700d05647f2020a2bf1d5b05c77b769dcfd62cfde6b676d3d39",
+      "toStandardHash": "sha256:8754c55f481237d442855606b5b6cc0831d2ad4a73088503c5d1de8517aa42c3",
+      "fromHdHash": "sha256:d04fc88d067e25a4cdabcd268396000015b690f8b184a5c9b2382e792880b460",
+      "toHdHash": "sha256:beab2484efc149eb17604364051de9a40fc75214ae6e74e8aa6b5124b481cd11"
+    },
+    {
+      "key": "neon-arcade-booth@default",
+      "date": "2026-11-27",
+      "reason": "Seat interior arcade cabinet and saloon door hinges cleanly with zero floating gaps",
+      "fromRecipeHash": "sha256:8819f1a202ab841cbe40a234c1b477d0b5499495f8f1e03b046611bba368cdf2",
+      "toRecipeHash": "sha256:8819f1a202ab841cbe40a234c1b477d0b5499495f8f1e03b046611bba368cdf2",
+      "fromStandardHash": "sha256:d32b0b3ed1ecb3225ab19fc7e83349c9ef246d17cc2ab2d1e765f4aaa08abe8b",
+      "toStandardHash": "sha256:f2fc084ef3135698fe722672563e6e68223c95d9a18d739f983c3a1596362806",
+      "fromHdHash": "sha256:8ace8bc98b9c2a425b2d73ac1b95ef0cee4be5281c447c85ce1ac32a50cf9e74",
+      "toHdHash": "sha256:426dc4fcfd35ee490f6f1318f067faedf1d5d1fade0a21593211c7ebd7ceff7a"
+    },
+    {
+      "key": "floating-sky-dock@default",
+      "date": "2026-11-27",
+      "reason": "Offset control tower glass band from tower front bevel to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:91a68e204f4faa76810958df47f8141ad33b20c8f71573b32ab826386a2627c3",
+      "toRecipeHash": "sha256:91a68e204f4faa76810958df47f8141ad33b20c8f71573b32ab826386a2627c3",
+      "fromStandardHash": "sha256:f768fe48717f12d386cb854fbe5e663e9fc5f36fb36d9ce008f735cc404eac03",
+      "toStandardHash": "sha256:736e999524530261782240befbf358f04d95aa292accf48a3c511442563b7c03",
+      "fromHdHash": "sha256:1b0f8f98922905ac929bc4dbcb850ca2f507c003286e6ad1043d80980ed12e7e",
+      "toHdHash": "sha256:c46b58ee73fc382548e466220cd43b088004f6c6dfb6ff056a98c544cc8c79e5"
+    },
+    {
+      "key": "medieval-knight@default",
+      "date": "2026-11-27",
+      "reason": "Clear knight breastplate and front tabard from under-suit planes to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:66f30fbe47c78c1bd341dcc5d3f359806f7e20451a20ad9d67991726ba3bf23e",
+      "toRecipeHash": "sha256:66f30fbe47c78c1bd341dcc5d3f359806f7e20451a20ad9d67991726ba3bf23e",
+      "fromStandardHash": "sha256:c0cd0778870dbac3e20b0af6e677269454787b0d0db3750472530e6960e977a7",
+      "toStandardHash": "sha256:bd167bee868bc21b74ac8b015a92ff726ec7b1227ab8e9e7ee1243143718e9b5",
+      "fromHdHash": "sha256:c6f41240ff1a9639750a2d82be1e7e64bad7582c1a7c4ff214595a975f8db0e1",
+      "toHdHash": "sha256:dab23a702833103eca92e2493dced2117b3758ae19e75cf897834ce32afcb4c0"
+    },
+    {
+      "key": "medieval-knight@obsidian-paladin",
+      "date": "2026-11-27",
+      "reason": "Inherits medieval-knight breastplate and tabard Z-fighting clearance repair",
+      "fromRecipeHash": "sha256:368e37fb6796a1a9fa5792be113c3dc788e2c8e5014d74723b4c98b1e566e6e0",
+      "toRecipeHash": "sha256:368e37fb6796a1a9fa5792be113c3dc788e2c8e5014d74723b4c98b1e566e6e0",
+      "fromStandardHash": "sha256:4a3f2b3aad748dd50ff3600f8e4de03148970ab9da309e355b8f29d8aaef42d6",
+      "toStandardHash": "sha256:0fd6fe3640b3afd1573e690b1fb33e6dcd282537cba897e7a3ea746e725c2b48",
+      "fromHdHash": "sha256:8a3c370cad3fdbb76a19796e120139af940767dd9997d5bb3d94621366be7a76",
+      "toHdHash": "sha256:6b394d9f1d0853d3c5a5509492ec0cf2d5541f7071d1ba2bde2705fa31db7eef"
+    },
+    {
+      "key": "arcane-mage@default",
+      "date": "2026-11-27",
+      "reason": "Offset BeltTome pages from cover face to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:43d5a555404059911b3ed43900df19901ef0a7b4bd87e93ed1beb2c2207115fc",
+      "toRecipeHash": "sha256:43d5a555404059911b3ed43900df19901ef0a7b4bd87e93ed1beb2c2207115fc",
+      "fromStandardHash": "sha256:b75baa8b968c42ffe298aa004add4de94fd3aa80053e97eb3fd5249a202180d6",
+      "toStandardHash": "sha256:f8b0d156feb31aa01e7a6d0e453e406c2ba391d2d8d51f89a9458da0ee4f5174",
+      "fromHdHash": "sha256:1fcdcfa3d3b7b4351652d19460d17a46d0ffa94d524a77cf09d01ddd2c1ee6d3",
+      "toHdHash": "sha256:11d0c4d8ea9ada3b092a9755e455413b881dce5f737ab81b6e14464133234320"
+    },
+    {
+      "key": "deep-sea-diver@default",
+      "date": "2026-11-27",
+      "reason": "Clear brass corselet from under-suit chest straps to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:6c7e2578e9b69aad8408e49c9995b5cf643c41a773dd76ada2f9c98978147972",
+      "toRecipeHash": "sha256:6c7e2578e9b69aad8408e49c9995b5cf643c41a773dd76ada2f9c98978147972",
+      "fromStandardHash": "sha256:df450263655226b8fd7d6b378c44e52ce8172b3c4b0b9755bfe9b4408c7a07c1",
+      "toStandardHash": "sha256:dbedc875b493b1e63b6503d4d323cd3dc8d84d42cf7ed59d2159defdcf12f883",
+      "fromHdHash": "sha256:4dc0027729c44283052e82e57e945db2c607a143084ffbc63f2decbf6ce6a178",
+      "toHdHash": "sha256:5ced1592fa7863c41651641fc8b0c8b97d02cab32d1bef7550e57aba54dbe3b8"
+    },
+    {
+      "key": "arctic-explorer@default",
+      "date": "2026-11-27",
+      "reason": "Clear parka hip skirt from under-suit pouches and belt bevels to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:98a0be584c525ce4ce670a44a98af95bc0651c51c828a93791e422bf40e63022",
+      "toRecipeHash": "sha256:98a0be584c525ce4ce670a44a98af95bc0651c51c828a93791e422bf40e63022",
+      "fromStandardHash": "sha256:c0c1a479a51bb6342aaaf19acdbd7bc2a71787a516057df824aac930caad7d77",
+      "toStandardHash": "sha256:e2cfc93f30fbee1365ce932cce8d38d06ac53a41ebcc064e3a69688c5ed59486",
+      "fromHdHash": "sha256:b8a43fdfd37aa840a5930d303b701832f5893b136c86094b6c5a7cc9dfeef9d4",
+      "toHdHash": "sha256:345595f4c37a6cb50755bcb7c345db4dcce9b60aab194f76b440a931e403bfed"
+    },
+    {
+      "key": "artisan-chef@default",
+      "date": "2026-11-27",
+      "reason": "Clear chef coat, waist belt, and forearm cuffs from under-suit planes to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:dbc7faa316b9cc6f26f5753e5bb38878bce4c23bd3cefbc4b50b019df2ac5d53",
+      "toRecipeHash": "sha256:dbc7faa316b9cc6f26f5753e5bb38878bce4c23bd3cefbc4b50b019df2ac5d53",
+      "fromStandardHash": "sha256:013274daa2511fc011c46ed09b34c441dbdc57cd663b284698de9b71ad106e95",
+      "toStandardHash": "sha256:3bde1e33025322d13f598e33d06eb4eaeb0fd858f6468ecf0fcc6726963380c5",
+      "fromHdHash": "sha256:65b30b471f259fecf670230b69df870c4d46e4a1f0d73930198f7af85d8a25c5",
+      "toHdHash": "sha256:33e8fafadc42f722779b5dbd9bf3762035453ce1b2407d4aeb0d55842b4c9123"
+    },
+    {
+      "key": "desert-nomad@default",
+      "date": "2026-11-27",
+      "reason": "Clear head scarf side tails and shoulder shawl from under-suit ears and chest bevels",
+      "fromRecipeHash": "sha256:c1d565a5b8c52635011b0c2aec404c47c82292cf7ff6a42c9de440ee9880d1c5",
+      "toRecipeHash": "sha256:c1d565a5b8c52635011b0c2aec404c47c82292cf7ff6a42c9de440ee9880d1c5",
+      "fromStandardHash": "sha256:3835636752bafbddf314ae0274312d0452991a688d3803bcea9c9631d967d616",
+      "toStandardHash": "sha256:836a10fb808a25a3e78d515e4777acf0de0201446045c35433f24f3d744c479e",
+      "fromHdHash": "sha256:8ac247d8e0543e4561957c772cb762c6d3a0800660a52a7a71f47c476b607fda",
+      "toHdHash": "sha256:d86b4fe6220af1243ea0b28ac972d722cdfb629c8d90eaa11cb0937378a02ad1"
+    },
+    {
+      "key": "space-medic@default",
+      "date": "2026-11-27",
+      "reason": "Clear halo visor and medical chest vest from under-suit planes to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:8c0e6b7a8694bb45f7e0cac047b444d275c1d9d79f9b420ea858be6771d6419a",
+      "toRecipeHash": "sha256:8c0e6b7a8694bb45f7e0cac047b444d275c1d9d79f9b420ea858be6771d6419a",
+      "fromStandardHash": "sha256:acf890cd5071280c7a039d83f9c757b961a29fcd316bfff6405e03bfda2f6c22",
+      "toStandardHash": "sha256:d9ec293bf5895c08870c78bb2424fb5e521d1d13225df43354b120f79b628c1b",
+      "fromHdHash": "sha256:958c969d0e2d05d6c29f239b04b0d9b43f6d7ff72cab06034f6da547de36794c",
+      "toHdHash": "sha256:b544e2dea11b327b5497d001d5e067738bcc8173cc5817eba38473582858714d"
+    },
+    {
+      "key": "samurai-warden@default",
+      "date": "2026-11-27",
+      "reason": "Clear lamellar cuirass from under-suit chest bevels to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:fcca046b4e1de1de8ffed8a4939bee3164428f4e6eb53335404d6a8d0c5a492f",
+      "toRecipeHash": "sha256:fcca046b4e1de1de8ffed8a4939bee3164428f4e6eb53335404d6a8d0c5a492f",
+      "fromStandardHash": "sha256:96883d0130de5979e9f18a497bef5c54544f9b994169c848cf1d37fbccd4a686",
+      "toStandardHash": "sha256:0ed9d6a6c309d7f95afa39935f1e99ae69ae61554ff8e2678d30fa65a7d13117",
+      "fromHdHash": "sha256:3363ae6202f36d3816678207ca896317235814607086188ed1609a26087e2b72",
+      "toHdHash": "sha256:4e390ec6367972644ca5f9146049fed4c5506b704d58b94046785be5faad4a51"
+    },
+    {
+      "key": "steampunk-inventor@default",
+      "date": "2026-11-27",
+      "reason": "Clear leather waistcoat from under-suit chest bevels to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:12e5a0aece6d776a720ca41d56a08df56d5cee17883e5d8d27d6d4650e5a6fd0",
+      "toRecipeHash": "sha256:12e5a0aece6d776a720ca41d56a08df56d5cee17883e5d8d27d6d4650e5a6fd0",
+      "fromStandardHash": "sha256:b1e1b862a0ea771fde1344e305e863306cbf52e6749cacef640170e56085038b",
+      "toStandardHash": "sha256:2dad0e492221a7e9d0d794d9b44187e87cd33308fc26120dcdfb760fee4b5423",
+      "fromHdHash": "sha256:446916b420c3de9a397ca6f3dbd0eb9fd2643d3763caa1044c4d4b0e761ec88c",
+      "toHdHash": "sha256:16091a3839651ae6f74a282f00dca58450812a5020ef14217247e99bd90e5bed"
+    },
+    {
+      "key": "forest-ranger@default",
+      "date": "2026-11-27",
+      "reason": "Center and widen archer bracer around forearm to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:7d75dd03c72a5c55e2e474246f8a798e2f06b37636a3f7e690509fc9b7770ad9",
+      "toRecipeHash": "sha256:7d75dd03c72a5c55e2e474246f8a798e2f06b37636a3f7e690509fc9b7770ad9",
+      "fromStandardHash": "sha256:2820ee7b26e37717fd24a21dd1ecb7fc9e45692d1e1870e9b773dfb7093b4a1d",
+      "toStandardHash": "sha256:bdaf1ec58f24ef117d6aad0398131fdec765276e8aa8151f37422b1523b8bd9a",
+      "fromHdHash": "sha256:540af678615105582d81cccc86e4a636dcd864b43d6a3d2547fe9af74d702d2d",
+      "toHdHash": "sha256:08a389c2713403a5a8ccfa42888227b329110eae2d1651d093aedd83963ee5f0"
+    },
+    {
+      "key": "royal-guard@default",
+      "date": "2026-11-27",
+      "reason": "Clear ceremonial tunic, belt, and skirt from under-suit planes to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:ea1a7660cf6854e16f379c36cd46914971534b2edadc52a8f37ea62374bfe2bc",
+      "toRecipeHash": "sha256:ea1a7660cf6854e16f379c36cd46914971534b2edadc52a8f37ea62374bfe2bc",
+      "fromStandardHash": "sha256:c29b7f8de041909c4275db774381bde2ec94ff657c065e342e429c7033886f69",
+      "toStandardHash": "sha256:64ab88e543425c24b7872aeea8486502651b8c1fa8f4461c595498204d065995",
+      "fromHdHash": "sha256:95b493549e52c28bd130570b285133ba79d2e8d2bedd738d03b0f9d89fa3cb1f",
+      "toHdHash": "sha256:4065f17bec2c553e906b1c1a6ef44daa9d9d84fd774fd7cb57928cb666c328dc"
+    },
+    {
+      "key": "pirate-captain@default",
+      "date": "2026-11-27",
+      "reason": "Clear captain coat chest from under-suit front and back planes to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:9db89501908d4264c142efb108d78e01a67f76d10b79b21130aeb119f490f293",
+      "toRecipeHash": "sha256:9db89501908d4264c142efb108d78e01a67f76d10b79b21130aeb119f490f293",
+      "fromStandardHash": "sha256:52925e02f20112a9a874ed20b5fb60d8b0c51875345d3e83d0e46afcbc841045",
+      "toStandardHash": "sha256:c0ecce4fb1dc29a4be700201ef656ddb8a98af52a65a1480e0bfbd718acd6864",
+      "fromHdHash": "sha256:6634fcaf4edf3ed53e4060a11ae4728e849980125e521e56f51734e4a46339a2",
+      "toHdHash": "sha256:261d8645a61fe97a7c21c886efaa1384cd64a86fdd4ee276b8ea466189c8f1fd"
+    },
+    {
+      "key": "vintage-biplane@default",
+      "date": "2026-11-27",
+      "reason": "Thicken painted propeller tip stripes proud of blades to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:09b92038f220ab129cfd9de2ac446a866a67cb571543e68df6952809351433d7",
+      "toRecipeHash": "sha256:09b92038f220ab129cfd9de2ac446a866a67cb571543e68df6952809351433d7",
+      "fromStandardHash": "sha256:79ce2996d5d66a5f28940b1c8c29d50dcf9b66a22e798c1a035c997414dbcf9c",
+      "toStandardHash": "sha256:180ffe416c150fa4a854212016bb27c3ef0be51cafdebd4e6be1c8e73212b327",
+      "fromHdHash": "sha256:a9fbc437f31f3dfd3f63ff9c5e80837562940a29d6c1bb2aff081f8ac2ba2e01",
+      "toHdHash": "sha256:9a47db8dc6b95696bb38c1770abb231ee0f917d7ca60ac5625726b831bac165d"
+    },
+    {
+      "key": "steam-locomotive@default",
+      "date": "2026-11-27",
+      "reason": "Widen side running boards away from drive wheel inner rim plane to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:1037be2e30aef570c8e3c16345161a1a929f7c97751ce299ff7793477e1af76b",
+      "toRecipeHash": "sha256:1037be2e30aef570c8e3c16345161a1a929f7c97751ce299ff7793477e1af76b",
+      "fromStandardHash": "sha256:ab69236b387cbc06353b93a9df5ea43e6e1c13643a43751f5910d74bb05b13f2",
+      "toStandardHash": "sha256:13ce82bc2b6bd39f5e245b66445f7ccb3e7bc3252fd0b2e1fe2f883f96255d75",
+      "fromHdHash": "sha256:ab1c7f67f1cdd761f1d53ede811b4924424a13edbb93f508d451bc60bcba5877",
+      "toHdHash": "sha256:72e02a62037100b5598d169cc3760c813ee58a569f9533eebd2999cce40931d5"
+    },
+    {
+      "key": "city-tramcar@default",
+      "date": "2026-11-27",
+      "reason": "Inset door recess inside sliding door leaves to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:ed19620bbdbdab1a939005f063be144091f6f8af6b90b6e79a8105365a7e0a67",
+      "toRecipeHash": "sha256:ed19620bbdbdab1a939005f063be144091f6f8af6b90b6e79a8105365a7e0a67",
+      "fromStandardHash": "sha256:a1766769834168254321576085b468376cec186ad72818764d9416782c7662dd",
+      "toStandardHash": "sha256:bb37a2c44aadc797199eccae24d0b51a0eac685cb4f7cba0572a40c8da98ff7b",
+      "fromHdHash": "sha256:51e8e7b3982d4fc586d14b0c49774367d55d7bed56608115ccba119ff8f9a0ad",
+      "toHdHash": "sha256:2b33787694cd983d75539c46589a579c0ad1b71e96a7b11d1e03fe236a705870"
+    },
+    {
+      "key": "coastal-sailboat@default",
+      "date": "2026-11-27",
+      "reason": "Inset cockpit recess from stern deck bevel and clear jib sail from forestay wire",
+      "fromRecipeHash": "sha256:10ff6e85a4f6eb10522c6c1eb957997d2e6fd1a0a8eff62663148ef9a68f6b87",
+      "toRecipeHash": "sha256:10ff6e85a4f6eb10522c6c1eb957997d2e6fd1a0a8eff62663148ef9a68f6b87",
+      "fromStandardHash": "sha256:16bc50ec2a6b21633ec81c60fd8918a761f95111da188a55d7051344c840ae9e",
+      "toStandardHash": "sha256:ec8b0dab22265d3007b2348fcb80eb669dcff18932691db5bbdd46d90ffd7ae7",
+      "fromHdHash": "sha256:2ff5a83d556bba82b9aa7308a10968a0a1429b64dfa1ec3ea511c23f8b9721a3",
+      "toHdHash": "sha256:2c19d7e1b03eaed53b34f60bdb365293c753834915bb073f6e4e893d2b1f08b2"
+    },
+    {
+      "key": "warehouse-forklift@default",
+      "date": "2026-11-27",
+      "reason": "Widen mast top crossbeam proud of rails and seat forklift assemblies cleanly",
+      "fromRecipeHash": "sha256:d5ceea94424f4697898a213c3c4ff9babe773637d6f667f6b43d41063d8d0531",
+      "toRecipeHash": "sha256:d5ceea94424f4697898a213c3c4ff9babe773637d6f667f6b43d41063d8d0531",
+      "fromStandardHash": "sha256:40d5400fe338599e70e9abc69f9063da265add5a70965c757ef4cf081c052367",
+      "toStandardHash": "sha256:87c1e3beea6d6ecc02b73df20100087408e97b586d9bb28bccb3a51c4e8de4cf",
+      "fromHdHash": "sha256:f4b3edcb3de764436acdb551c2d6b85e1c9f16f77f6d50b2f0cebdc16ee8da80",
+      "toHdHash": "sha256:a0c1d14b204adea1a75e5d91405d417f9f34f42cb355be08dbc7b15216d5156a"
+    },
+    {
+      "key": "desert-hover-skiff@default",
+      "date": "2026-11-27",
+      "reason": "Extend cargo crate straps proud of lid top and sides to eliminate coplanar Z-fighting",
+      "fromRecipeHash": "sha256:a0d26d1a2a9dd85bb9bc241ea7619249dc4658204f2a8d04fe4194fcbdd2b2d6",
+      "toRecipeHash": "sha256:a0d26d1a2a9dd85bb9bc241ea7619249dc4658204f2a8d04fe4194fcbdd2b2d6",
+      "fromStandardHash": "sha256:10bdd882197bb5a3a45e106ff183b9c80d4d1eaeaf873e0d989fa27841ee290e",
+      "toStandardHash": "sha256:eb5e8c89ba217d9a832107d49c76b672307828400a65daba08f24572b8f9f812",
+      "fromHdHash": "sha256:9a52a94501b0bbb7c929c8ee10356fd8867c9e02a8456aedf06f69235976bef5",
+      "toHdHash": "sha256:a88cf51838b74afc1d1e53ff0e33c5f0da077a595383763eabad58362754bb36"
+    },
+    {
+      "key": "deep-submersible@default",
+      "date": "2026-11-27",
+      "reason": "Add mounting struts anchoring the forward floodlight bar to the conning tower",
+      "fromRecipeHash": "sha256:9a242938b644c51f8937c4ff5ea88a1f62c24f78ed6276b0d46cb029cd8ce420",
+      "toRecipeHash": "sha256:9a242938b644c51f8937c4ff5ea88a1f62c24f78ed6276b0d46cb029cd8ce420",
+      "fromStandardHash": "sha256:bd819af8fd79b97847c78d4fd435bf9b3f519ec58e6aca0cd4038e053f8cb97e",
+      "toStandardHash": "sha256:50791ee7596864aee8dd988f4a70b7c613e8f1a1323951b82c6d1991a2d25a65",
+      "fromHdHash": "sha256:a1a0f0942e8763320fcb0f90349a72dd2ddbd8a979da11f85220114e0aaa7968",
+      "toHdHash": "sha256:1ed2fc63c8fc0993c85cbd5064036a2b6c18351a06082ca17405ca648b50bc31"
+    },
+    {
+      "key": "parcel-delivery-van@default",
+      "date": "2026-11-27",
+      "reason": "Anchor rear parcel boxes onto van cargo floor with zero floating gap",
+      "fromRecipeHash": "sha256:2e8f3be4aa1804a34f88aeae551893dbe4d88f0f49ad9498bf6a961d27a4aedd",
+      "toRecipeHash": "sha256:2e8f3be4aa1804a34f88aeae551893dbe4d88f0f49ad9498bf6a961d27a4aedd",
+      "fromStandardHash": "sha256:154c469f447eabf6065ddc8639dfdb22d3dc329c1e6a1de714601c40570715ea",
+      "toStandardHash": "sha256:c0b7d3d989375bc86cacfe1ebb561afa2e0d6fdcba130730481a9695dd04a238",
+      "fromHdHash": "sha256:cc38c89fbc29254f4698b2c53dd200a71248df84c26148933776446f2db524f2",
+      "toHdHash": "sha256:99c48bc4aef9b24cb70927f1484f12af029162c72402744393ee82be68d79239"
+    },
+    {
+      "key": "hot-air-balloon@default",
+      "date": "2026-11-27",
+      "reason": "Lower gondola dark floor plate below wicker base to eliminate bottom coplanar Z-fighting",
+      "fromRecipeHash": "sha256:e43b1e7ac8213b2ebe1fe1adbc88992ac227558230570be04a3e2e43aaa284b7",
+      "toRecipeHash": "sha256:e43b1e7ac8213b2ebe1fe1adbc88992ac227558230570be04a3e2e43aaa284b7",
+      "fromStandardHash": "sha256:59e424de7cf5d7ee288c558dda9e1e93e83d8cd7ff1f922d92e11a1b967b08d4",
+      "toStandardHash": "sha256:2c10741511b466cecced6647787d4810170548310054f9ae7d27a3d2dd406d89",
+      "fromHdHash": "sha256:4aee21f35df70ed81989a465abd4174011a0bf30864defa16fe97aa9d385c25a",
+      "toHdHash": "sha256:7c0a015ebd458db459e0d9a4c0b17883507a4d240077ea7146c37a001fbe9f8c"
+    },
+    {
+      "key": "arctic-snowcat@default",
+      "date": "2026-11-27",
+      "reason": "Anchor snowcat cab and roof rack cleanly with zero floating gap",
+      "fromRecipeHash": "sha256:44d78d92870d66bcf67eb3b2a82d4000dbf0817693d9a3b2d30374fe5eb4ceb1",
+      "toRecipeHash": "sha256:44d78d92870d66bcf67eb3b2a82d4000dbf0817693d9a3b2d30374fe5eb4ceb1",
+      "fromStandardHash": "sha256:19c77a38b01d0479a28a457515473a5d0fb0952b5b5009e7bc61102b177efe08",
+      "toStandardHash": "sha256:f36b7fb58713f09e985a6769325bb44c43440458003b61e35bb93a7fa5387995",
+      "fromHdHash": "sha256:b4e6faf08e155d4b7094573d7ae8b53d63d2c5fac1488dbb9989ff3e33b31323",
+      "toHdHash": "sha256:6e91d7ea6d0f8ab249d1766c2ce40ee63c9cd0780583996047117fdeac337c97"
+    },
+    {
+      "key": "lunar-lander@default",
+      "date": "2026-11-27",
+      "reason": "Anchor lander descent engine and comm dish mast cleanly with zero floating gap",
+      "fromRecipeHash": "sha256:fbbdea1a450c19cd8a5cce8e332e63e370281709b5bc55b02d48531cd63793cc",
+      "toRecipeHash": "sha256:fbbdea1a450c19cd8a5cce8e332e63e370281709b5bc55b02d48531cd63793cc",
+      "fromStandardHash": "sha256:ab9b550b7a0cd49b18bd1fa6c2578d78a4e9f9052468734ee4bc25ebd896b205",
+      "toStandardHash": "sha256:1b94aa527e3e782950ca3bdc6a0f986c968bb819b3546582f47f9381a485928f",
+      "fromHdHash": "sha256:b4358af1172b60c30a6d64582215b94ec1e67a8cac33c2f1dcb34ee43031ebe3",
+      "toHdHash": "sha256:56f14e6477a7d21b99ad07254fe8d0a5759534c6bed9edc453da636dafcc5a18"
+    },
+    {
+      "key": "racing-hoverbike@default",
+      "date": "2026-11-27",
+      "reason": "Anchor rear tail fins onto tail fairing and seat side fairings cleanly with zero floating parts",
+      "fromRecipeHash": "sha256:cdae8f234e3d959bac36e5cabfc3776eae150475d8ba25e43245a812eacd8285",
+      "toRecipeHash": "sha256:cdae8f234e3d959bac36e5cabfc3776eae150475d8ba25e43245a812eacd8285",
+      "fromStandardHash": "sha256:fcb50b1718572995d6387261e7695535275b2d77f3f9d5807a2fa526b344c852",
+      "toStandardHash": "sha256:40b74b529972826e355aff32ddf41e60c82ff8f36d66233beb0d645d1ba46b80",
+      "fromHdHash": "sha256:8e546fcae19a36808f09aaaf456e07873055adc2d6405738ba7e72a33704c037",
+      "toHdHash": "sha256:b8ba1245f21c789b09082e5fe3e29bee0a5a44c408a800e1a6b9c753c99724d1"
+    },
+    {
+      "key": "forest-fox@default",
+      "date": "2026-11-27",
+      "reason": "Separate upper leg and lower sock cylinder radii to eliminate conical Z-fighting on all four legs",
+      "fromRecipeHash": "sha256:f1be7d2c2ee8a9392e497f8e81b21af2dbb70386a56957c4012fe86c13e9ffb0",
+      "toRecipeHash": "sha256:f1be7d2c2ee8a9392e497f8e81b21af2dbb70386a56957c4012fe86c13e9ffb0",
+      "fromStandardHash": "sha256:ad5fb777f2f4fcd2dce4064243874a5d759274cb4b960c4da282f2b8a9b407f6",
+      "toStandardHash": "sha256:e9cdd090d81b6b20703295c2735c96d667a3b7ad5807ca631d139d77b44a66a3",
+      "fromHdHash": "sha256:aa6fd6a59f2f29de02f00cb0a7038f8d7bda644d087dab5698a0c06664b3fc2b",
+      "toHdHash": "sha256:0e0fcfd15ff4fb538125786d359a36c704355833c19d874613781bae3d24c4f3"
+    },
+    {
+      "key": "coral-jellyfish@default",
+      "date": "2026-11-27",
+      "reason": "Cap underside of coral jellyfish bell with solid watertight dome",
+      "fromRecipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
+      "toRecipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
+      "fromStandardHash": "sha256:0cbe93d83342bab9e4df6bb1b72c0713d1f9a2de3d8f6f5b14937c711c4f3519",
+      "toStandardHash": "sha256:1de8b55bfce273a71dc5b8d857e2d6ed8ed057fb6368e0a89fd7a819c4e38235",
+      "fromHdHash": "sha256:2ffd4e48e6bd7b35d08ecc525bd6eaa8447a6d75c7a042a02af832dedd2c3fcd",
+      "toHdHash": "sha256:a108e221fad4bf019ea79294bf012b148210ce856a9148b6ef6be52bf96f827a"
+    },
+    {
+      "key": "alpine-pine-grove@default",
+      "date": "2026-11-27",
+      "reason": "Raise CampBoulder above mound base to eliminate bottom coplanar Z-fighting",
+      "fromRecipeHash": "sha256:206a89c6078ce0f7a11a6570bdd8016d6330784557349e9de8585562ae44da37",
+      "toRecipeHash": "sha256:206a89c6078ce0f7a11a6570bdd8016d6330784557349e9de8585562ae44da37",
+      "fromStandardHash": "sha256:47052129d2f65515192dc0221a88f1644c89863448b1b43332c8b033998dc184",
+      "toStandardHash": "sha256:637abf61347923bacff34c7a8b25a9e5c0f2c6a49c7f2a53d0b1b9196cfe6424",
+      "fromHdHash": "sha256:8cbc5d4eb27d4092e6d0ac7c4944e6fcfec822094a6e08568ec8782a5393bf8c",
+      "toHdHash": "sha256:20f3e61fdd963bff7dde849655ce369ec7ce267de88ed0bfcca8bc53eeb47b40"
+    },
+    {
+      "key": "sakura-blossom-tree@default",
+      "date": "2026-11-27",
+      "reason": "Raise StoneLantern base above mound bottom to eliminate bottom coplanar Z-fighting",
+      "fromRecipeHash": "sha256:48c2ba87735d5af7cb62e6d43260de3fae2b6d4f1f197e56c108af63ac6783dd",
+      "toRecipeHash": "sha256:48c2ba87735d5af7cb62e6d43260de3fae2b6d4f1f197e56c108af63ac6783dd",
+      "fromStandardHash": "sha256:5560e3777bedf2d1bdb822326ab932eef7833504cc40d4d98c8394034b0207c8",
+      "toStandardHash": "sha256:0bb70c54777d5a8e0046c9f239800d971cded1b9d0ecc02f1e4be38b1184c85e",
+      "fromHdHash": "sha256:122ac8210fe449d678d04078b01868f5fd7f74b454ae2331769a89e66a872f07",
+      "toHdHash": "sha256:d7b83efba5566eda8d281242375d59a553fbc716444a07a9ca154970bbca87aa"
+    },
+    {
+      "key": "stone-arch-bridge@default",
+      "date": "2026-11-27",
+      "reason": "Offset cobble bank aprons above abutment base plane to eliminate bottom Z-fighting",
+      "fromRecipeHash": "sha256:f057c75887181298c21ef3da73dd6af2121bd79ca8e04e2bfd90aed0c8b78c19",
+      "toRecipeHash": "sha256:f057c75887181298c21ef3da73dd6af2121bd79ca8e04e2bfd90aed0c8b78c19",
+      "fromStandardHash": "sha256:1217faf5cb8e3607bcbbf379bc989fb484d79082544de2fc9bbb32a91872a030",
+      "toStandardHash": "sha256:21338912e409f781910e02f6162aa7be1b4859d0dc48a4385ab192135403cbe8",
+      "fromHdHash": "sha256:ccc8f85569031a11ae6985da12b9fe75812032c074cf27159587b256d3fe4109",
+      "toHdHash": "sha256:14d80048851ac4e298d05a689cb321cc6761b87685ccf2193af60e47616e2c82"
+    },
+    {
+      "key": "bamboo-water-shrine@default",
+      "date": "2026-11-27",
+      "reason": "Seat shrine parts solidly and offset bamboo rocker bore to eliminate floating and Z-fighting",
+      "fromRecipeHash": "sha256:e3fd51a12478a788ea9195db58ba663876d4b8bca8e01e39f9bdfe73e7ac2c5b",
+      "toRecipeHash": "sha256:e3fd51a12478a788ea9195db58ba663876d4b8bca8e01e39f9bdfe73e7ac2c5b",
+      "fromStandardHash": "sha256:8874cb13ac0f3b6b69fb093f690e88be6898b2acad9ec220c271cbb581f3464b",
+      "toStandardHash": "sha256:083628f23927752a9a74d4599cc1ea3eccd416f0385d805098e32877f53b567f",
+      "fromHdHash": "sha256:0e4c842cdfaca0d84b0af68af8b8efd0c15c284334a23691a54785bc298542c6",
+      "toHdHash": "sha256:1f02658f07c6658835903781ece6564aa9c88e93fd7090704a9baf3ad5e84a9f"
+    },
+    {
+      "key": "volcanic-basalt-vent@default",
+      "date": "2026-11-27",
+      "reason": "Raise basalt columns and spire plinth into mound and offset magma vein strips to eliminate Z-fighting",
+      "fromRecipeHash": "sha256:281c6bd02f4cdac25ff98346ad0402787da958c837b632ecb9ea86398a7acd59",
+      "toRecipeHash": "sha256:281c6bd02f4cdac25ff98346ad0402787da958c837b632ecb9ea86398a7acd59",
+      "fromStandardHash": "sha256:ff5c04b9abb5b4b64591227e0d3bdbca314da699ce0b92d010816d16751860a6",
+      "toStandardHash": "sha256:f3151fa485224616bf013ca2560e37e9c238a805f3c99d2581685b066bb1f1e4",
+      "fromHdHash": "sha256:7fbba2897e42c915aec3a7cfc108deab8dfd5fd8553ddc601f001cadd3bfee2b",
+      "toHdHash": "sha256:479f8075ff8b953941a2a6f87a47c49183b33011a31c79e24421f7dc2bbd7f5b"
+    },
+    {
+      "key": "street-vending-unit@default",
+      "date": "2026-11-27",
+      "reason": "Widen top marquee cap proud of cabinet side walls to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:f2b6217a374de344c18f3985df2995a549939edc02100c56a33d4e53ac3903b4",
+      "toRecipeHash": "sha256:f2b6217a374de344c18f3985df2995a549939edc02100c56a33d4e53ac3903b4",
+      "fromStandardHash": "sha256:91bb3e328372c5069d9e040e32f45535adf43820dec5dbb6e4c6d35727459012",
+      "toStandardHash": "sha256:979a516b5cdd6c7cee41a81a7dfc8f17804301804dea0d525a5ae7d651c4fe79",
+      "fromHdHash": "sha256:e23dcdff1716665a496890ae118d42296938f27e7646be1f2c741ebbd964ff3a",
+      "toHdHash": "sha256:c3855acacf66983b00a2bb1d4f0c3ed5ea38d0d57b19fb4bdf35de6c340a276e"
+    },
+    {
+      "key": "espresso-bar-cart@default",
+      "date": "2026-11-27",
+      "reason": "Anchor espresso cart cup rack and side shelf cleanly with zero floating parts",
+      "fromRecipeHash": "sha256:0d3384d488e998aefb33d529137ed9fd3d04671eb71578202294791795c94ee9",
+      "toRecipeHash": "sha256:0d3384d488e998aefb33d529137ed9fd3d04671eb71578202294791795c94ee9",
+      "fromStandardHash": "sha256:157756ee1a8d0a55e026430aee9bfe421c111403d5023baec9b35d5c1f91365b",
+      "toStandardHash": "sha256:92e3e43819032af578dfd06f8f18c729f5e658ecf8db5c3daec9e60a22a4a015",
+      "fromHdHash": "sha256:a85edf63257b8ffbe494dcc1b2dc76429341c1b3af446365fbc182c46bb57548",
+      "toHdHash": "sha256:c9edd78bbb9af531706a8f13ec64cd64936446c08ed199e4df74b7d792527e07"
+    },
+    {
+      "key": "retro-arcade-cabinet@default",
+      "date": "2026-11-27",
+      "reason": "Anchor joystick ball top and marquee panel cleanly with zero floating parts",
+      "fromRecipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
+      "toRecipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
+      "fromStandardHash": "sha256:665c9562279526ab411fdc9daeeaf509d09e93774e1ce01cee75890245963326",
+      "toStandardHash": "sha256:07b749407eca69449474c125e727bf0cf24fdfe9f6e5cbd6bb4ee0cf20ae4c25",
+      "fromHdHash": "sha256:229b5a758a4df1ce76e239fa9d94aa1291b57c0198405552d417d794ef728530",
+      "toHdHash": "sha256:c95d9e1678b239a70a1707667d1fcdbf4b0e3806874fea0a5ecc2b5bd1241ac2"
+    },
+    {
+      "key": "brass-spyglass@default",
+      "date": "2026-11-27",
+      "reason": "Offset objective lens from front barrel cap to eliminate exposed coplanar Z-fighting",
+      "fromRecipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
+      "toRecipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
+      "fromStandardHash": "sha256:c1debc9b93e215a6afa08bf50988d8e187e5c1ef6090b0b648bc4702527e7c99",
+      "toStandardHash": "sha256:6a0f6f8b4b034c09cb88c44496236c8bd7dcd0c523b1ab4d05505798121abc21",
+      "fromHdHash": "sha256:0b1c1a915a7f28c6b53a065c23bd218bb0ccce55de9b1ca206702698375b7b07",
+      "toHdHash": "sha256:11c2bd262799c5e7cf4840e1d91990b6316c1cc7e8542ed07f918def844e1333"
+    },
+    {
+      "key": "runic-lantern-staff@default",
+      "date": "2026-11-27",
+      "reason": "Anchor hanging rune cage and thicken leather grip wrap over tapered staff shaft",
+      "fromRecipeHash": "sha256:98971fe614796ebdd88d8828c21ba7b33c144a83cb337d3d23edcaa6d2fa37e1",
+      "toRecipeHash": "sha256:98971fe614796ebdd88d8828c21ba7b33c144a83cb337d3d23edcaa6d2fa37e1",
+      "fromStandardHash": "sha256:8efa813b5fb8afb33d8bb5bff32aa2d2e374c186755bb750d32a9a144581e22c",
+      "toStandardHash": "sha256:fcdd01725724fbd3bf4ad8c923a8bde72ec93e50a411b76b60d9a28d794782f9",
+      "fromHdHash": "sha256:7e8a1eab676019c192de15b8b6d5bfdf717994ddb7d5e49c6868f98485736f48",
+      "toHdHash": "sha256:a38a920b2814bf70eb7f5df22d8d932dd188ef48ac73a6a7430fc04fa0e4c5cd"
+    },
+    {
+      "key": "brass-pocket-compass@default",
+      "date": "2026-11-27",
+      "reason": "Anchor compass bezel and offset dial plate above casing top to eliminate floating and Z-fighting",
+      "fromRecipeHash": "sha256:821fb9158a02469457db0316c972fcbe175c453f5e9276e70696515f64cd92bd",
+      "toRecipeHash": "sha256:821fb9158a02469457db0316c972fcbe175c453f5e9276e70696515f64cd92bd",
+      "fromStandardHash": "sha256:602030abbae8a27c36edf6b5fee7da35f26c37756261b121ea523c93e32dc2fb",
+      "toStandardHash": "sha256:76e69bef5baf8007424a875af93aa49794e7fa0041997062316df900ea46d737",
+      "fromHdHash": "sha256:18142c44a833cc3273f441ee50ba4685f41c92f4bdeba4f0ce9e4013d79f2f4e",
+      "toHdHash": "sha256:95f9e2bde1a4b01237b2b175ca94f86de87427de500f00bb134632b1f1eee585"
+    },
+    {
+      "key": "twin-jetpack@default",
+      "date": "2026-11-27",
+      "reason": "Offset cyan thruster cores below nozzle mouths to eliminate bottom coplanar Z-fighting",
+      "fromRecipeHash": "sha256:4270288a7b0c0379db207193e74ee29750dcbada28e11bef4677a2dcb10b12cc",
+      "toRecipeHash": "sha256:4270288a7b0c0379db207193e74ee29750dcbada28e11bef4677a2dcb10b12cc",
+      "fromStandardHash": "sha256:7485dbd337c982276af5c42aba52c91751208b954124e833046c6ba17b90227e",
+      "toStandardHash": "sha256:c7eaf106e2246dbb4e8c348b83778a1628ac30c062ef7c611f1b7a8fb3fface4",
+      "fromHdHash": "sha256:a3b50fa8c62bc27375e8af093db65b5266ae5318e257087d194b9e05af2e643c",
+      "toHdHash": "sha256:eec672e574cd0e91d97ebdb8ce23be46341e60b7a859b9e14a9c68b1d9d2ab44"
+    }
+  ]
 }

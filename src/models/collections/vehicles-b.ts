@@ -86,7 +86,10 @@ function buildDeepSubmersible(root: T.Group, p: Finish, detail: boolean) {
   tube(sub, [0, 0.76, -0.58], 0.22, 0.48, 0.96, p.primary, 16).rotation.x = Math.PI / 2;
   tube(sub, [0, 1.34, 0.14], 0.24, 0.28, 0.24, p.accent, 14);
   strut(sub, [-0.42, 1.38, 0.56], [0.42, 1.38, 0.56], 0.028, p.edge, 8);
-  for (const s of [-1, 1]) light(sub, [s * 0.32, 1.38, 0.62], [0.16, 0.12, 0.12], p);
+  for (const s of [-1, 1]) {
+    strut(sub, [s * 0.2, 1.36, 0.22], [s * 0.28, 1.38, 0.56], 0.026, p.edge, 8);
+    light(sub, [s * 0.32, 1.38, 0.62], [0.16, 0.12, 0.12], p);
+  }
   ring(sub, [0, 0.76, -1.16], 0.30, 0.055, 0.28, p.dark).rotation.x = Math.PI / 2;
   const prop = group(sub, 'SternProp', [0, 0.76, -1.16]);
   tube(prop, [0, 0, 0], 0.08, 0.07, 0.26, p.alloy, 12).rotation.x = Math.PI / 2;
@@ -145,15 +148,17 @@ function buildParcelDeliveryVan(root: T.Group, p: Finish, detail: boolean) {
   box(van, [-0.24, 0.80, -0.78], [0.46, 0.44, 0.52], p.accent);
   box(van, [0.26, 0.76, -0.84], [0.44, 0.36, 0.46], p.stencil);
   box(van, [-0.18, 1.16, -0.82], [0.38, 0.28, 0.40], p.accent);
+  box(van, [0, 1.74, -1.50], [1.26, 0.09, 0.10], p.primary);
   for (const [side, name] of [[1, 'RearDoorL'], [-1, 'RearDoorR']] as const) {
     const door = group(van, name, [side * 0.60, 1.14, -1.52]);
-    shell(door, [-side * 0.295, 0, 0], [0.58, 1.20, 0.07], p.primary, 0.22);
+    shell(door, [-side * 0.298, 0, 0], [0.594, 1.20, 0.07], p.primary, 0.22);
     box(door, [-side * 0.30, 0.28, -0.04], [0.38, 0.34, 0.02], p.optic);
     box(door, [-side * 0.52, -0.06, -0.045], [0.04, 0.14, 0.03], p.dark);
   }
   if (detail) {
     box(van, [0, 0.68, 1.565], [0.56, 0.20, 0.03], p.inset);
     for (const s of [-1, 1]) {
+      strut(van, [s * 0.61, 1.28, 1.08], [s * 0.74, 1.28, 1.10], 0.018, p.dark, 8);
       box(van, [s * 0.74, 1.30, 1.10], [0.10, 0.18, 0.05], p.dark);
       box(van, [s * 0.68, 1.24, -0.44], [0.025, 0.06, 1.98], p.stencil);
       if (p.hd) fastener(van, [s * 0.60, 1.60, -1.54], p, 0.024).rotation.x = Math.PI / 2;
@@ -190,7 +195,7 @@ function buildHotAirBalloon(root: T.Group, p: Finish, detail: boolean) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) strut(gondola, [sx * 0.20, 0, sz * 0.20], [sx * 0.34, -0.50, sz * 0.34], 0.018, p.edge, 8);
   shell(gondola, [0, -0.82, 0], [0.76, 0.58, 0.76], p.accent, 0.32);
   shell(gondola, [0, -0.52, 0], [0.80, 0.10, 0.80], p.dark, 0.38);
-  shell(gondola, [0, -1.07, 0], [0.74, 0.08, 0.74], p.dark, 0.34);
+  shell(gondola, [0, -1.085, 0], [0.74, 0.08, 0.74], p.dark, 0.34);
   const sandbags = group(gondola, 'Sandbags', [0, -0.74, 0]);
   for (const [x, z] of [[0.42, 0.18], [0.42, -0.18], [-0.42, 0.18], [-0.42, -0.18]] as const) {
     dome(sandbags, [x, 0, z], [0.075, 0.11, 0.075], p.stencil, p.hd);
@@ -258,31 +263,32 @@ function buildArcticSnowcat(root: T.Group, p: Finish, detail: boolean) {
   for (const s of [-1, 1]) {
     shell(cat, [s * 0.64, 0.24, -0.04], [0.42, 0.48, 2.28], p.tire, 0.56);
     shell(cat, [s * 0.64, 0.26, -0.04], [0.34, 0.30, 1.94], p.dark, 0.48);
-    for (const z of [-0.88, -0.44, 0, 0.44, 0.88]) tube(cat, [s * 0.66, 0.24, z], 0.16, 0.16, 0.38, p.edge, 12).rotation.z = Math.PI / 2;
+    for (const z of [-0.88, -0.44, 0, 0.44, 0.88]) tube(cat, [s * 0.66, 0.24, z], 0.16, 0.16, 0.41, p.edge, 12).rotation.z = Math.PI / 2;
   }
   shell(cat, [0, 0.62, -0.02], [1.34, 0.30, 2.38], p.dark, 0.32);
   shell(cat, [0, 1.14, 0.56], [1.36, 0.84, 1.18], p.primary, 0.34);
   shell(cat, [0, 1.18, -0.58], [1.34, 0.90, 1.18], p.primary, 0.28);
   shell(cat, [0, 1.62, -0.04], [1.32, 0.12, 2.24], p.accent, 0.38);
-  box(cat, [0, 1.24, 1.16], [1.08, 0.42, 0.05], p.optic).rotation.x = 0.18;
+  box(cat, [0, 1.24, 1.135], [1.08, 0.40, 0.07], p.optic);
   for (const s of [-1, 1]) {
     box(cat, [s * 0.685, 1.24, 0.60], [0.03, 0.36, 0.66], p.optic);
     box(cat, [s * 0.675, 1.24, -0.58], [0.03, 0.34, 0.72], p.optic);
     light(cat, [s * 0.44, 0.86, 1.18], [0.22, 0.12, 0.06], p);
-    strut(cat, [s * 0.42, 0.46, 1.06], [s * 0.42, 0.36, 1.38], 0.045, p.alloy, 10);
+    strut(cat, [s * 0.42, 0.46, 1.06], [s * 0.42, 0.36, 1.48], 0.045, p.alloy, 10);
   }
-  const beacon = group(cat, 'RoofBeacon', [0, 1.70, 0.68]);
+  const beacon = group(cat, 'RoofBeacon', [0, 1.67, 0.68]);
   tube(beacon, [0, 0.04, 0], 0.11, 0.13, 0.08, p.dark, 12);
   dome(beacon, [0, 0.14, 0], [0.095, 0.11, 0.095], p.accent, p.hd);
   box(beacon, [0, 0.14, 0.08], [0.06, 0.12, 0.05], p.stencil);
-  const rack = group(cat, 'RoofRack', [0, 1.70, -0.56]);
+  const rack = group(cat, 'RoofRack', [0, 1.67, -0.56]);
+  box(rack, [0, 0.02, 0], [1.04, 0.04, 0.92], p.dark);
   for (const s of [-1, 1]) {
     strut(rack, [s * 0.52, 0.10, -0.46], [s * 0.52, 0.10, 0.46], 0.024, p.dark, 8);
     for (const z of [-0.42, 0.42]) strut(rack, [s * 0.52, 0, z], [s * 0.52, 0.10, z], 0.022, p.dark, 8);
   }
   for (const z of [-0.46, 0.46]) strut(rack, [-0.52, 0.10, z], [0.52, 0.10, z], 0.024, p.dark, 8);
   shell(rack, [-0.20, 0.14, -0.06], [0.46, 0.22, 0.62], p.edge, 0.28);
-  shell(rack, [0.26, 0.14, 0.02], [0.34, 0.24, 0.48], p.accent, 0.28);
+  shell(rack, [0.26, 0.15, 0.02], [0.34, 0.24, 0.48], p.accent, 0.28);
   const plow = group(cat, 'SnowPlow', [0, 0.36, 1.38]);
   shell(plow, [0, 0.04, 0.14], [1.78, 0.54, 0.14], p.accent, 0.24);
   shell(plow, [0, -0.22, 0.22], [1.80, 0.08, 0.14], p.edge, 0.2);
@@ -322,6 +328,8 @@ function buildLunarLander(root: T.Group, p: Finish, detail: boolean) {
   for (const y of [0.10, 0.24, 0.38, 0.50]) box(ramp, [0, y, 0.075], [0.40, 0.032, 0.03], p.dark);
   tube(ln, [0.24, 2.12, -0.16], 0.045, 0.055, 0.22, p.edge, 10);
   const dish = group(ln, 'CommDish', [0.24, 2.26, -0.16]);
+  strut(dish, [0, -0.05, 0], [0, 0.14, 0.06], 0.032, p.edge, 10);
+  dome(dish, [0, 0.14, 0.06], [0.05, 0.05, 0.05], p.dark, p.hd);
   const cup = group(dish, '', [0, 0.14, 0.06]);
   cup.rotation.x = 0.95;
   const dishGeo = new T.LatheGeometry([0, 1, 2, 3, 4, 5].map(i => new T.Vector2(0.02 + i * 0.07, 0.015 * i * i)), p.hd ? 40 : 14);
@@ -332,6 +340,7 @@ function buildLunarLander(root: T.Group, p: Finish, detail: boolean) {
   if (detail) {
     for (const s of [-1, 1]) {
       for (const f of [-1, 1]) {
+        strut(ln, [s * 0.50, 1.72, f * 0.44], [s * 0.66, 1.72, f * 0.44], 0.026, p.alloy, 8);
         const rcs = group(ln, '', [s * 0.66, 1.72, f * 0.44]);
         shell(rcs, [0, 0, 0], [0.12, 0.14, 0.12], p.dark, 0.32);
         tube(rcs, [0, 0.10, 0], 0.03, 0.018, 0.08, p.alloy, 8);
@@ -371,13 +380,14 @@ function buildRacingHoverbike(root: T.Group, p: Finish, detail: boolean) {
     light(bike, [s * 0.28, 0.56, 1.32], [0.14, 0.08, 0.06], p);
   }
   const bars = group(bike, 'Handlebars', [0, 0.78, 0.44]);
+  tube(bars, [0, -0.07, 0], 0.05, 0.06, 0.18, p.dark, 10);
   shell(bars, [0, 0.08, 0.10], [0.34, 0.18, 0.26], p.accent, 0.48);
   box(bars, [0, 0.16, 0.18], [0.28, 0.14, 0.04], p.optic).rotation.x = -0.58;
   strut(bars, [-0.42, 0.04, -0.06], [0.42, 0.04, -0.06], 0.026, p.alloy, 10);
   for (const s of [-1, 1]) tube(bars, [s * 0.40, 0.04, -0.06], 0.036, 0.036, 0.18, p.tire, 10).rotation.z = Math.PI / 2;
   if (detail) {
     for (const s of [-1, 1]) {
-      shell(bike, [s * 0.34, 0.78, -1.04], [0.06, 0.24, 0.36], p.primary, 0.42);
+      shell(bike, [s * 0.21, 0.78, -1.04], [0.06, 0.24, 0.36], p.primary, 0.42);
       box(bike, [s * 0.38, 0.54, 0.74], [0.025, 0.06, 0.92], p.stencil);
       if (p.hd) fastener(bike, [s * 0.44, 0.64, -0.14], p, 0.024);
     }

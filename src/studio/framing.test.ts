@@ -13,6 +13,7 @@ import {
   readProjectionPreference,
   saveProjectionPreference,
 } from './projection';
+import { VIEW_DIRECTIONS, parseView } from './viewport';
 
 function pilotModel(scale = 1) {
   const row = catalog.find((entry) => entry.id === 'field-pilot');
@@ -190,5 +191,26 @@ describe('camera projection and cross-port localhost persistence', () => {
     const matchedDist = perspectiveDistanceForOrtho(halfH, 1.4);
     const roundTripZoom = orthoZoomForPerspective(halfH, matchedDist, 1);
     expect(roundTripZoom).toBeCloseTo(1.4, 6);
+  });
+
+  it('supports all six cardinal inspection views plus 3/4 and legacy Side alias', () => {
+    for (const view of ['Perspective', 'Front', 'Back', 'Left', 'Right', 'Top', 'Bottom', 'Side'] as const) {
+      expect(parseView(view)).toBe(view);
+      expect(parseView(view.toLowerCase())).toBe(view);
+      const dir = new T.Vector3(...VIEW_DIRECTIONS[view]);
+      expect(dir.length()).toBeGreaterThan(0);
+    }
+    expect(parseView('unknown')).toBeNull();
+    expect(VIEW_DIRECTIONS.Front[2]).toBeGreaterThan(0);
+    expect(VIEW_DIRECTIONS.Back[2]).toBeLessThan(0);
+    expect(VIEW_DIRECTIONS.Left[0]).toBeLessThan(0);
+    expect(VIEW_DIRECTIONS.Right[0]).toBeGreaterThan(0);
+    expect(VIEW_DIRECTIONS.Top[1]).toBeGreaterThan(0);
+    expect(VIEW_DIRECTIONS.Bottom[1]).toBeLessThan(0);
+    expect(VIEW_DIRECTIONS.Side).toEqual(VIEW_DIRECTIONS.Right);
+    const bottomDir = new T.Vector3(...VIEW_DIRECTIONS.Bottom).normalize();
+    const bottomPolar = Math.acos(bottomDir.y);
+    expect(bottomPolar).toBeGreaterThan(Math.PI * 0.99);
+    expect(bottomPolar).toBeLessThan(Math.PI - 0.002);
   });
 });

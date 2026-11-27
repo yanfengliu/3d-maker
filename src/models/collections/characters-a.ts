@@ -129,11 +129,11 @@ function buildMedievalKnight(root: T.Group, p: Finish, detail: boolean) {
   addRivets(j.head, [[-0.22, 0.22, 0.17], [0.22, 0.22, 0.17]], p, detail, 0.016, Math.PI / 2);
   // Breastplate, gorget, heraldic tabard
   ring(j.chest, [0, 0.185, 0.01], 0.22, 0.055, 0.06, p.accent);
-  shell(j.chest, [0, 0.01, 0.025], [0.65, 0.36, 0.41], p.alloy, 0.46);
-  shell(j.chest, [0, -0.04, 0.24], [0.36, 0.38, 0.045], p.primary, 0.32);
-  const crest = box(j.chest, [0, 0.02, 0.268], [0.13, 0.13, 0.024], p.accent);
+  shell(j.chest, [0, 0.01, 0.02], [0.68, 0.39, 0.45], p.alloy, 0.46);
+  shell(j.chest, [0, -0.04, 0.252], [0.36, 0.38, 0.045], p.primary, 0.32);
+  const crest = box(j.chest, [0, 0.02, 0.28], [0.13, 0.13, 0.024], p.accent);
   crest.rotation.z = Math.PI / 4;
-  shell(j.hips, [0, -0.08, 0.185], [0.29, 0.36, 0.036], p.primary, 0.28);
+  shell(j.hips, [0, -0.08, 0.195], [0.29, 0.36, 0.036], p.primary, 0.28);
   shell(j.hips, [0, -0.08, -0.185], [0.3, 0.34, 0.036], p.primary, 0.28);
   addPauldrons(j, p, detail, 'plate');
   // Detachable Kite Shield on LeftForeArm
@@ -179,7 +179,7 @@ function buildArcaneMage(root: T.Group, p: Finish, detail: boolean) {
   const tome = group(j.hips, 'BeltTome', [-0.31, -0.02, 0.06]);
   tome.rotation.z = 0.16;
   box(tome, [0, 0, 0], [0.085, 0.24, 0.19], p.primary);
-  box(tome, [0.008, 0, 0.005], [0.06, 0.21, 0.165], p.stencil);
+  box(tome, [0, 0, 0.014], [0.064, 0.21, 0.185], p.stencil);
   box(tome, [-0.046, 0, 0], [0.015, 0.245, 0.195], p.primary);
   box(tome, [-0.056, 0, 0], [0.012, 0.065, 0.065], p.accent).rotation.x = Math.PI / 4;
   addRivets(tome, [[-0.052, 0.09, 0.07], [-0.052, -0.09, 0.07], [-0.052, 0.09, -0.07], [-0.052, -0.09, -0.07]], p, detail, 0.013, 0, Math.PI / 2);
@@ -240,8 +240,8 @@ function buildDeepSeaDiver(root: T.Group, p: Finish, detail: boolean) {
   }
   tube(j.head, [0, 0.42, 0], 0.055, 0.065, 0.05, p.edge, 12);
   // Bolted brass breastplate corselet
-  shell(j.chest, [0, 0.155, 0.01], [0.64, 0.14, 0.43], p.accent, 0.52);
-  addRivets(j.chest, [[-0.22, 0.17, 0.215], [0, 0.16, 0.225], [0.22, 0.17, 0.215], [-0.22, 0.17, -0.195], [0.22, 0.17, -0.195]], p, detail, 0.018, Math.PI / 2);
+  shell(j.chest, [0, 0.155, 0.01], [0.68, 0.15, 0.47], p.accent, 0.44);
+  addRivets(j.chest, [[-0.22, 0.17, 0.235], [0, 0.16, 0.248], [0.22, 0.17, 0.235], [-0.22, 0.17, -0.215], [0.22, 0.17, -0.215]], p, detail, 0.018, Math.PI / 2);
   // Heavy weighted belt
   for (const x of [-0.24, -0.11, 0.11, 0.24]) shell(j.hips, [x, 0.06, 0.18], [0.105, 0.125, 0.075], p.dark, 0.3);
   for (const x of [-0.18, 0, 0.18]) shell(j.hips, [x, 0.06, -0.175], [0.12, 0.125, 0.075], p.dark, 0.3);
@@ -281,8 +281,8 @@ function buildArcticExplorer(root: T.Group, p: Finish, detail: boolean) {
   if (detail) {
     for (const y of [-0.1, 0.02, 0.12]) box(j.chest, [0, y, 0.264], [0.11, 0.024, 0.018], p.accent);
   }
-  shell(j.hips, [0, -0.03, 0.01], [0.58, 0.28, 0.39], p.primary, 0.46);
-  shell(j.hips, [0, -0.16, 0.01], [0.59, 0.055, 0.4], p.accent, 0.46);
+  shell(j.hips, [0, -0.015, 0.01], [0.62, 0.31, 0.44], p.primary, 0.36);
+  shell(j.hips, [0, -0.16, 0.01], [0.63, 0.055, 0.45], p.accent, 0.36);
   // Detachable ExpeditionPack with rolled mat & ice axe
   const pack = group(j.chest, 'ExpeditionPack', [0, -0.02, -0.43]);
   shell(pack, [0, -0.02, -0.03], [0.44, 0.48, 0.24], p.primary, 0.42);
@@ -312,25 +312,25 @@ function buildArtisanChef(root: T.Group, p: Finish, detail: boolean) {
     }
   }
   // Double-breasted chef coat + bistro neckerchief
-  shell(j.chest, [0, 0, 0.02], [0.65, 0.38, 0.42], p.primary, 0.45);
+  shell(j.chest, [0, 0, 0.02], [0.67, 0.39, 0.45], p.primary, 0.45);
   const scarf = torus(j.chest, [0, 0.185, 0.01], 0.19, 0.044, p.accent, p);
   scarf.rotation.x = Math.PI / 2;
-  box(j.chest, [-0.035, 0.1, 0.235], [0.055, 0.13, 0.028], p.accent).rotation.z = 0.24;
-  box(j.chest, [0.035, 0.1, 0.235], [0.055, 0.13, 0.028], p.accent).rotation.z = -0.24;
+  box(j.chest, [-0.035, 0.1, 0.255], [0.055, 0.13, 0.028], p.accent).rotation.z = 0.24;
+  box(j.chest, [0.035, 0.1, 0.255], [0.055, 0.13, 0.028], p.accent).rotation.z = -0.24;
   if (detail) {
     for (const x of [-0.08, 0.08]) {
-      for (const y of [-0.1, -0.02, 0.06]) tube(j.chest, [x, y, 0.234], 0.018, 0.018, 0.016, p.dark, 8).rotation.x = Math.PI / 2;
+      for (const y of [-0.1, -0.02, 0.06]) tube(j.chest, [x, y, 0.254], 0.018, 0.018, 0.016, p.dark, 8).rotation.x = Math.PI / 2;
     }
-    strut(j.chest, [0.16, 0.04, 0.24], [0.18, 0.15, 0.245], 0.01, p.alloy, 8);
+    strut(j.chest, [0.16, 0.04, 0.26], [0.18, 0.15, 0.265], 0.01, p.alloy, 8);
   }
   // Waist apron & folded cuffs
-  shell(j.hips, [0, 0.07, 0.01], [0.56, 0.085, 0.37], p.accent, 0.35);
+  shell(j.hips, [0, 0.07, 0.01], [0.58, 0.125, 0.43], p.accent, 0.35);
   shell(j.hips, [0, -0.14, 0.195], [0.46, 0.42, 0.04], p.primary, 0.25);
   shell(j.hips, [0, -0.14, 0.22], [0.24, 0.14, 0.024], p.accent, 0.25);
-  box(j.hips, [0, 0.04, -0.2], [0.14, 0.08, 0.05], p.accent);
+  box(j.hips, [0, 0.04, -0.22], [0.14, 0.08, 0.05], p.accent);
   for (const fore of [j.leftForeArm, j.rightForeArm]) {
     tube(fore, [0, -0.21, 0.01], 0.11, 0.118, 0.095, p.primary, 12);
-    tube(fore, [0, -0.255, 0.01], 0.113, 0.113, 0.024, p.accent, 12);
+    tube(fore, [0, -0.264, 0.01], 0.114, 0.114, 0.028, p.accent, 12);
   }
 }
 
@@ -344,11 +344,11 @@ function buildDesertNomad(root: T.Group, p: Finish, detail: boolean) {
   }
   box(j.head, [0, 0.235, 0.265], [0.075, 0.065, 0.024], p.accent);
   for (const s of [-1, 1]) {
-    shell(j.head, [s * 0.25, -0.03, -0.05], [0.075, 0.32, 0.22], p.primary, 0.35);
+    shell(j.head, [s * 0.265, -0.03, -0.05], [0.075, 0.32, 0.22], p.primary, 0.35);
   }
   shell(j.head, [0, -0.04, -0.23], [0.44, 0.34, 0.07], p.accent, 0.38);
   // Asymmetric shoulder drape shawl
-  shell(j.chest, [0.06, 0.08, 0.02], [0.68, 0.22, 0.44], p.accent, 0.5);
+  shell(j.chest, [0.02, 0.08, 0.02], [0.72, 0.23, 0.46], p.accent, 0.34);
   hose(j.chest, [[0.24, 0.16, 0.19], [0.02, 0.0, 0.26], [-0.22, -0.17, 0.2]], 0.038, p.accent, p);
   sphere(j.chest, [0.2, 0.13, 0.235], [0.05, 0.05, 0.028], p.alloy, p);
   shell(j.chest, [0, -0.15, -0.25], [0.54, 0.48, 0.07], p.primary, 0.38);

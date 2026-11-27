@@ -100,7 +100,7 @@ function buildPineGrove(root: T.Group, p: Finish, detail: boolean) {
       cone(grove, p, [x, (0.72 + k * 0.44) * sc + 0.1, z], (0.64 - k * 0.16) * sc, 0.76 * sc, p.primary, [0, k, 0], 7)
     }
   }
-  const boulder = group(grove, 'CampBoulder', [0.76, 0, 0.48])
+  const boulder = group(grove, 'CampBoulder', [0.76, 0.04, 0.48])
   rock(boulder, p, [0, 0, 0], [0.46, 0.38, 0.42], granite, 2.4)
   rock(boulder, p, [-0.34, 0, 0.18], [0.22, 0.18, 0.2], granite, 4.1)
   orb(boulder, p, [0.05, 0.42, -0.04], [0.28, 0.08, 0.24], moss, 8)
@@ -134,7 +134,7 @@ function buildSakura(root: T.Group, p: Finish, detail: boolean) {
     [[-0.42, 0.88, 0.18], [0.46, 0.34, 0.44], false],
   ]
   for (const [at, sc, pale] of puffs) orb(canopy, p, at, sc, pale ? blush : p.primary, 9)
-  const lantern = group(scene, 'StoneLantern', [0.88, 0, 0.54])
+  const lantern = group(scene, 'StoneLantern', [0.88, 0.04, 0.54])
   cyl(lantern, p, [0, 0.08, 0], 0.2, 0.24, 0.16, stone, [0, 0, 0], 6)
   cyl(lantern, p, [0, 0.36, 0], 0.085, 0.1, 0.44, stone, [0, 0, 0], 6)
   cyl(lantern, p, [0, 0.62, 0], 0.22, 0.14, 0.1, stone, [0, 0, 0], 6)
@@ -242,7 +242,7 @@ function buildBridge(root: T.Group, p: Finish, detail: boolean) {
   const bridge = group(root, 'StoneBridge')
   for (const s of [-1, 1]) {
     shell(bridge, [s * 1.44, 0.34, 0], [0.76, 0.68, 1.48], p.primary, 0.16)
-    shell(bridge, [s * 1.68, 0.12, 0], [0.36, 0.24, 1.38], stoneDark, 0.14)
+    shell(bridge, [s * 1.68, 0.135, 0], [0.36, 0.23, 1.38], stoneDark, 0.14)
     for (const z of [-0.62, 0.62]) {
       shell(bridge, [s * 1.18, 0.96, z], [0.24, 0.66, 0.24], p.primary, 0.2)
       shell(bridge, [s * 1.18, 1.32, z], [0.3, 0.1, 0.3], p.accent, 0.24)
@@ -300,11 +300,11 @@ function buildBambooShrine(root: T.Group, p: Finish, detail: boolean) {
   shell(shrine, [-0.05, 1.92, -0.44], [1.48, 0.12, 0.52], p.accent, 0.24)
   for (const s of [-1, 1]) cyl(shrine, p, [s * 0.28, 0.56, 0.12], 0.048, 0.054, 0.88, p.accent)
   cyl(shrine, p, [0, 0.96, 0.12], 0.025, 0.025, 0.64, p.dark, [0, 0, Math.PI / 2])
-  cyl(shrine, p, [0, 1.38, -0.14], 0.048, 0.054, 0.66, p.primary, [Math.PI * 0.42, 0, 0])
+  cyl(shrine, p, [0, 1.38, -0.22], 0.048, 0.054, 0.82, p.primary, [Math.PI * 0.42, 0, 0])
   const rocker = group(shrine, 'BambooRocker', [0, 0.96, 0.12])
   cyl(rocker, p, [0, 0, 0.02], 0.068, 0.072, 0.84, p.primary, [Math.PI * 0.44, 0, 0])
   ring(rocker, [0, 0, 0], 0.084, 0.018, 0.06, p.accent).rotation.x = Math.PI / 2
-  cyl(rocker, p, [0, 0.06, 0.42], 0.05, 0.05, 0.04, p.inset, [Math.PI * 0.44, 0, 0])
+  cyl(rocker, p, [0, 0.082, 0.44], 0.05, 0.05, 0.024, p.inset, [Math.PI * 0.44, 0, 0])
   const mossStone = group(shrine, 'MossStone', [0.84, 0, 0.46])
   rock(mossStone, p, [0, 0, 0], [0.36, 0.28, 0.34], stone, 2.8)
   orb(mossStone, p, [0.02, 0.31, -0.02], [0.24, 0.09, 0.22], moss, 8)
@@ -326,9 +326,9 @@ function buildVolcano(root: T.Group, p: Finish, detail: boolean) {
     const a = (i * Math.PI * 2) / 10
     const rad = i % 2 === 0 ? 0.68 : 0.88
     const h = i % 2 === 0 ? 1.24 + (i % 3) * 0.16 : 0.78 + (i % 3) * 0.14
-    cyl(vent, p, [Math.sin(a) * rad, h * 0.5, Math.cos(a) * rad], 0.24, 0.27, h, p.primary, [0, a, 0], 6)
+    cyl(vent, p, [Math.sin(a) * rad, h * 0.5 + 0.04, Math.cos(a) * rad], 0.24, 0.27, h, p.primary, [0, a, 0], 6)
     if (detail && i % 2 === 0) {
-      box(vent, [Math.sin(a + 0.3) * 0.68, 0.56, Math.cos(a + 0.3) * 0.68], [0.06, 0.42, 0.08], p.accent).rotation.y = a
+      box(vent, [Math.sin(a + 0.3) * 0.72, 0.56, Math.cos(a + 0.3) * 0.72], [0.07, 0.42, 0.11], p.accent).rotation.y = a
     }
   }
   const magma = group(vent, 'MagmaCore', [0, 0, 0])
@@ -337,7 +337,7 @@ function buildVolcano(root: T.Group, p: Finish, detail: boolean) {
   orb(magma, p, [0.16, 1.24, 0.1], [0.2, 0.16, 0.2], magmaGlow, 9)
   orb(magma, p, [-0.18, 1.2, -0.12], [0.15, 0.13, 0.15], magmaGlow, 8)
   if (detail) orb(magma, p, [0, 1.44, 0.04], [0.12, 0.14, 0.12], magmaGlow, 8)
-  const spire = group(vent, 'ObsidianSpire', [0.96, 0, 0.52])
+  const spire = group(vent, 'ObsidianSpire', [0.96, 0.04, 0.52])
   cone(spire, p, [0, 0.94, 0], 0.28, 1.76, obsidian, [0.08, 0.4, -0.14], 6)
   cone(spire, p, [0.22, 0.56, 0.14], 0.16, 1.0, obsidian, [0.2, 0.1, -0.28], 6)
   cyl(spire, p, [0, 0.08, 0], 0.26, 0.3, 0.16, p.accent, [0, 0, 0], 6)

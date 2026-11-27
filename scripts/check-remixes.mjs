@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { waitFrames } from './browser.mjs';
 import { inventoryFixture, showSaved } from './check-inventory.mjs';
 
 async function openCard(page, name) {
@@ -44,31 +45,25 @@ async function download(page) {
   return { bytes, doc };
 }
 
-async function settleRenderer(page) {
+async function settleRenderer(page, timeoutMs = 10_000) {
   await page.evaluate(
-    () =>
-      new Promise(resolve => {
+    (ms) =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`settleRenderer timed out after ${ms}ms`)), ms);
         let left = 14;
         const tick = () => {
-          if (--left <= 0) setTimeout(resolve, 220);
-          else requestAnimationFrame(tick);
+          if (--left <= 0) {
+            setTimeout(() => {
+              clearTimeout(timer);
+              resolve();
+            }, 220);
+          } else {
+            requestAnimationFrame(tick);
+          }
         };
         requestAnimationFrame(tick);
       }),
-  );
-}
-
-async function waitFrames(page, count = 3) {
-  await page.evaluate(
-    n =>
-      new Promise(resolve => {
-        const tick = left => {
-          if (left <= 0) resolve();
-          else requestAnimationFrame(() => tick(left - 1));
-        };
-        tick(n);
-      }),
-    count,
+    timeoutMs,
   );
 }
 

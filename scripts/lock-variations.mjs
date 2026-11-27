@@ -7,35 +7,36 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const lockPath = resolve(rootDir, 'src/models/variations.lock.json');
 
 function parseArgs(argv) {
-  let repairKey = null;
-  let reason = null;
+  const repairs = new Map();
+  let pendingKey = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--repair') {
-      repairKey = argv[++i] ?? '';
+      if (pendingKey !== null) throw new Error(`Missing --reason for --repair ${pendingKey}.`);
+      pendingKey = argv[++i] ?? '';
+      if (!pendingKey) throw new Error('--repair requires <template@variation>.');
     } else if (arg === '--reason') {
-      reason = argv[++i] ?? '';
+      const text = (argv[++i] ?? '').trim();
+      if (pendingKey === null) throw new Error('--reason must follow --repair <template@variation>.');
+      if (text.length < 12) throw new Error(`--reason for ${pendingKey} must explain the bug fix in at least 12 characters.`);
+      repairs.set(pendingKey, text);
+      pendingKey = null;
     } else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: npm run variations:lock [-- --repair <template@variation> --reason "<bug fix reason>"]');
+      console.log('Usage: npm run variations:lock [-- --repair <template@variation> --reason "<bug fix reason>"]...');
       process.exit(0);
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
-  if ((repairKey !== null) !== (reason !== null)) {
-    throw new Error('--repair and --reason must be supplied together.');
-  }
-  if (reason !== null && reason.trim().length < 12) {
-    throw new Error('--reason must explain the bug fix in at least 12 characters.');
-  }
-  return { repairKey, reason: reason?.trim() ?? null };
+  if (pendingKey !== null) throw new Error(`Missing --reason for --repair ${pendingKey}.`);
+  return { repairs };
 }
 
 function sameHashes(a, b) {
   return a.recipeHash === b.recipeHash && a.standardHash === b.standardHash && a.hdHash === b.hdHash;
 }
 
-const { repairKey, reason } = parseArgs(process.argv.slice(2));
+const { repairs } = parseArgs(process.argv.slice(2));
 const server = await createServer({
   root: rootDir,
   server: { middlewareMode: true },
@@ -67,14 +68,16 @@ try {
       errors.push(`Refusing to update lockfile: previously locked variation "${key}" is missing from code.`);
       continue;
     }
-    if (!sameHashes(prev, live) && key !== repairKey) {
+    if (!sameHashes(prev, live) && !repairs.has(key)) {
       errors.push(
         `Refusing to overwrite "${key}": fingerprint changed. Add a new variation in src/models/variations.ts instead, or pass --repair ${key} --reason "<bug fix>" ONLY for a genuine broken-geometry bug fix.`,
       );
     }
   }
-  if (repairKey && !existing.entries[repairKey]) {
-    errors.push(`Cannot --repair "${repairKey}": it is not an existing locked variation.`);
+  for (const key of repairs.keys()) {
+    if (!existing.entries[key]) {
+      errors.push(`Cannot --repair "${key}": it is not an existing locked variation.`);
+    }
   }
   if (errors.length) {
     for (const msg of errors) console.error('ERROR:', msg);
@@ -83,19 +86,19 @@ try {
     const nextEntries = { ...existing.entries };
     const nextRepairs = [...existing.repairs];
     let added = 0;
-    let repaired = false;
+    const repairedKeys = [];
 
     for (const [key, live] of liveMap) {
       const prev = existing.entries[key];
       if (!prev) {
         nextEntries[key] = live;
         added++;
-      } else if (key === repairKey && !sameHashes(prev, live)) {
+      } else if (repairs.has(key) && !sameHashes(prev, live)) {
         nextEntries[key] = live;
         nextRepairs.push({
           key,
           date: new Date().toISOString().slice(0, 10),
-          reason,
+          reason: repairs.get(key),
           fromRecipeHash: prev.recipeHash,
           toRecipeHash: live.recipeHash,
           fromStandardHash: prev.standardHash,
@@ -103,7 +106,7 @@ try {
           fromHdHash: prev.hdHash,
           toHdHash: live.hdHash,
         });
-        repaired = true;
+        repairedKeys.push(key);
       } else {
         // Keep metadata labels/situations in sync only when hashes are unchanged.
         nextEntries[key] = { ...prev, label: live.label, situation: live.situation };
@@ -119,7 +122,7 @@ try {
     const payload = { version: 1, entries: sortedEntries, repairs: nextRepairs };
     writeFileSync(lockPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
     console.log(
-      `Locked ${String(Object.keys(sortedEntries).length)} model variations (${String(added)} added${repaired ? `, repaired ${repairKey}` : ''}).`,
+      `Locked ${String(Object.keys(sortedEntries).length)} model variations (${String(added)} added${repairedKeys.length ? `, repaired ${String(repairedKeys.length)}: ${repairedKeys.join(', ')}` : ''}).`,
     );
   }
 } finally {

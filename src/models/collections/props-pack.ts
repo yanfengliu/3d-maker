@@ -155,7 +155,7 @@ function streetVendingUnit(root: T.Group, p: Finish, detail: boolean) {
   box(u, [0, 0.44, 0.29], [1.22, 0.68, 0.28], p.primary);
   box(u, [0.43, 1.36, 0.29], [0.36, 1.18, 0.28], p.primary);
   box(u, [-0.56, 1.36, 0.29], [0.1, 1.18, 0.28], p.primary);
-  shell(u, [0, 2.04, 0.02], [1.24, 0.22, 0.88], p.accent, 0.14);
+  shell(u, [0, 2.05, 0.02], [1.28, 0.22, 0.88], p.accent, 0.14);
   box(u, [0, 2.04, 0.465], [0.98, 0.14, 0.025], p.stencil);
   box(u, [-0.13, 1.355, 0.175], [0.76, 1.15, 0.03], p.inset);
   for (const y of [0.92, 1.24, 1.56]) box(u, [-0.13, y, 0.3], [0.74, 0.028, 0.22], p.alloy);
@@ -237,7 +237,7 @@ function espressoBarCart(root: T.Group, p: Finish, detail: boolean) {
   strut(lever, [0, 0, 0], [0, 0.3, 0.14], 0.02, p.accent, 10);
   orb(lever, [0, 0.32, 0.16], 0.048, p.dark, p.hd);
   for (const x of [0.28, 0.44]) tube(cart, [x, 1.02, 0.14], 0.052, 0.042, 0.11, p.stencil, 12);
-  tube(cart, [0.34, 1.12, -0.14], 0.11, 0.08, 0.24, p.optic, 14);
+  tube(cart, [0.34, 1.08, -0.14], 0.11, 0.08, 0.24, p.optic, 14);
   for (let i = 0; i < 6; i++) {
     const mat = i % 2 === 0 ? p.primary : p.stencil;
     for (const s of [-1, 1]) box(cart, [-0.55 + i * 0.22, 1.9, s * 0.22], [0.22, 0.055, 0.56], mat).rotation.x = s * 0.24;
@@ -316,11 +316,12 @@ function retroArcadeCabinet(root: T.Group, p: Finish, detail: boolean) {
   }
   if (detail) {
     for (const sx of [-0.5, 0.5]) {
-      box(cab, [sx, 1.04, 0.44], [0.032, 1.88, 0.035], p.accent);
-      box(cab, [sx * 1.01, 1.38, -0.06], [0.018, 0.24, 0.56], p.accent).rotation.x = -0.35;
+      box(cab, [sx, 0.56, 0.43], [0.032, 0.86, 0.035], p.accent);
+      box(cab, [sx, 1.46, 0.26], [0.032, 0.88, 0.035], p.accent);
+      box(cab, [sx * 0.99, 1.38, -0.06], [0.022, 0.24, 0.56], p.accent).rotation.x = -0.35;
     }
-    for (const x of [-0.28, -0.14, 0, 0.14, 0.28]) box(cab, [x, 1.82, 0.34], [0.08, 0.022, 0.02], p.inset);
-    if (p.hd) for (const x of [-0.36, 0.36]) fastener(cab, [x, 1.84, 0.46], p, 0.024).rotation.x = HPI;
+    for (const x of [-0.28, -0.14, 0, 0.14, 0.28]) box(cab, [x, 1.86, 0.34], [0.08, 0.022, 0.02], p.inset);
+    if (p.hd) for (const x of [-0.36, 0.36]) fastener(cab, [x, 1.86, 0.46], p, 0.024).rotation.x = HPI;
   }
   root.animations = [
     new T.AnimationClip('Play joystick', 2, [rotationTrack('Joystick', 'x', [0, 0.4, 1, 1.5, 2], [0, 0.42, -0.42, 0.34, 0])]),

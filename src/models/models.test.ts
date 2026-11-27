@@ -18,6 +18,13 @@ function meshes(root: T.Object3D) {
 const allModelVariants = listVariations()
 
 describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }) => {
+  let cachedNormal: T.Group | undefined
+  let cachedSimple: T.Group | undefined
+  let cachedHd: T.Group | undefined
+  const getNormal = () => (cachedNormal ??= buildModel(recipe))
+  const getSimple = () => (cachedSimple ??= buildModel({ ...recipe, scale: 1.25, proportion: 1.4, detail: false }))
+  const getHd = () => (recipe.quality === 'hd' ? getNormal() : (cachedHd ??= buildModel({ ...recipe, quality: 'hd' })))
+
   it('builds finite geometry that uses both requested paint colors', () => {
     const scene = buildModel({ ...recipe, primary: '#ed5a19', accent: '#b6e623' })
     const colors = meshes(scene).flatMap(mesh => [mesh.material].flat().map(material => material.color.getHexString()))
@@ -28,8 +35,8 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
     expect(bounds.min.y).toBeGreaterThan(-0.025)
   })
   it('supports live dimensions and simplified geometry', () => {
-    const normal = buildModel(recipe)
-    const changed = buildModel({ ...recipe, scale: 1.25, proportion: 1.4, detail: false })
+    const normal = getNormal()
+    const changed = getSimple()
     expect(changed.scale.toArray()).toEqual([1.75, 1.25, 1.25])
     function vertices(model: T.Group) {
       return meshes(model).reduce((count, mesh) => count + mesh.geometry.getAttribute('position').count, 0)
@@ -45,7 +52,7 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
     const legacy = { ...recipe }
     delete legacy.quality
     const standard = buildModel({ ...recipe, quality: 'standard' })
-    const hd = buildModel({ ...recipe, quality: 'hd' })
+    const hd = getHd()
     const triangles = (model: T.Group) => meshes(model).reduce((sum, mesh) => {
       const count = mesh.geometry.index?.count ?? mesh.geometry.getAttribute('position').count
       return sum + count / 3
@@ -59,7 +66,7 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
     }
   })
   it('plays every clip through the three.js mixer, targeting stable exportable properties', () => {
-    const scene = buildModel(recipe)
+    const scene = getNormal()
     expect(scene.animations.length).toBeGreaterThan(0)
     for (const clip of scene.animations) {
       const mixer = new T.AnimationMixer(scene)
@@ -77,11 +84,12 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
       scene.updateMatrixWorld(true)
       expect(tracks.some(({ node, original }) => !node.matrix.equals(original))).toBe(true)
       mixer.stopAllAction()
+      scene.updateMatrixWorld(true)
     }
   })
   it('exposes valid capabilities whose rigged and detachable nodes exist at both detail levels', () => {
-    const detailed = buildModel(recipe)
-    const simple = buildModel({ ...recipe, detail: false })
+    const detailed = getNormal()
+    const simple = getSimple()
     const caps = inspectAsset(detailed)
     const def = extraAssets.find(asset => asset.id === recipe.template)
     const variationDef = findVariation(recipe.template, recipe.variation)
@@ -104,7 +112,7 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
   })
   if (category === 'Character') {
     it('deforms weighted suit vertices when the upper arm moves', () => {
-      const scene = buildModel(recipe)
+      const scene = getNormal()
       expect(characterRig(scene)).not.toBeNull()
       const skin = scene.getObjectByName('Suit')
       if (!(skin instanceof T.SkinnedMesh)) throw new Error('Missing skinned suit')
@@ -120,9 +128,15 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
       const rest = skin.getVertexPosition(vertex, new T.Vector3())
       const bone = skin.skeleton.bones[armIndex]
       if (!bone) throw new Error('Missing upper arm')
-      bone.rotation.z = 0.6
-      scene.updateMatrixWorld(true)
-      expect(rest.distanceTo(skin.getVertexPosition(vertex, new T.Vector3()))).toBeGreaterThan(0.01)
+      const prevZ = bone.rotation.z
+      try {
+        bone.rotation.z = 0.6
+        scene.updateMatrixWorld(true)
+        expect(rest.distanceTo(skin.getVertexPosition(vertex, new T.Vector3()))).toBeGreaterThan(0.01)
+      } finally {
+        bone.rotation.z = prevZ
+        scene.updateMatrixWorld(true)
+      }
     })
   }
 })
