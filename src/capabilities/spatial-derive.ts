@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { axisTuple, propagateMimicValues } from './rig-math';
 import type {
   ClearanceZoneSpec,
   ColliderLayer,
@@ -24,18 +25,21 @@ function roundVec3(x: number, y: number, z: number): [number, number, number] {
   return [r3(x), r3(y), r3(z)];
 }
 
-function isSpinnerPart(part: RiggedPartSpec): boolean {
-  return part.type === 'rotate' && Math.abs(part.range[1] - part.range[0]) >= 350;
+function isSpinnerPart(part: RiggedPartSpec, allParts?: readonly RiggedPartSpec[]): boolean {
+  if (allParts && [...propagateMimicValues(allParts, part.name, 1).keys()].some(name => allParts.find(p => p.name === name)?.type === 'slide')) {
+    return false;
+  }
+  return Boolean(part.continuous) || (part.type === 'rotate' && Math.abs(part.range[1] - part.range[0]) >= 350);
 }
 
-function colliderLayerForPart(part: RiggedPartSpec): ColliderLayer {
-  if (isSpinnerPart(part)) return 'none';
+function colliderLayerForPart(part: RiggedPartSpec, allParts?: readonly RiggedPartSpec[]): ColliderLayer {
+  if (isSpinnerPart(part, allParts)) return 'none';
   if (/(door|gate|hatch|shutter|ramp|bridge|lid|drawer|flap|visor)/i.test(part.name)) return 'doorway';
   return 'solid';
 }
 
 function axisVector(axis: RiggedPartSpec['axis']): T.Vector3 {
-  return axis === 'x' ? new T.Vector3(1, 0, 0) : axis === 'y' ? new T.Vector3(0, 1, 0) : new T.Vector3(0, 0, 1);
+  return new T.Vector3(...axisTuple(axis));
 }
 
 function isDescendantOfAny(obj: T.Object3D, ancestors: ReadonlySet<T.Object3D>): boolean {
@@ -240,7 +244,7 @@ export function deriveSpatialMetadata(
   const activeDetachable: { part: DetachablePartSpec; node: T.Object3D }[] = [];
 
   for (const part of riggedParts) {
-    if (isSpinnerPart(part)) continue;
+    if (isSpinnerPart(part, riggedParts)) continue;
     const node = root.getObjectByName(part.name);
     if (!node) continue;
     dynamicNodes.add(node);
@@ -293,14 +297,26 @@ export function deriveSpatialMetadata(
       size: roundVec3(safeSize[0], safeSize[1], safeSize[2]),
       node: part.name,
       restPose: computeRestPose(node, localCenter, invRoot),
-      layer: colliderLayerForPart(part),
+      layer: colliderLayerForPart(part, riggedParts),
       ...(part.describe ? { describe: part.describe } : {}),
     });
 
-    // Sweep the node-local bounding box across 13 evenly spaced poses to enclose its exact travel volume.
+    // Skip deriving an independent clearance zone for a mimic follower (swept with its leader below).
+    if (part.mimic) continue;
+
+    // Sweep the node-local bounding box across 13 evenly spaced poses (driving any mimic followers in lockstep).
     const restPos = node.position.clone();
     const restQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
+    const followerNames = [...propagateMimicValues(riggedParts, part.name, 1).keys()];
+    const followerStates = followerNames
+      .map(fname => {
+        const fSpec = riggedParts.find(p => p.name === fname);
+        const fNode = root.getObjectByName(fname);
+        if (!fSpec || !fNode) return null;
+        return { spec: fSpec, node: fNode, restPos: fNode.position.clone(), restQuat: fNode.quaternion.clone(), axis: axisVector(fSpec.axis) };
+      })
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
     const corners = boxCorners(localBox);
     const sweepBox = new T.Box3();
     const rel = new T.Matrix4();
@@ -317,7 +333,17 @@ export function deriveSpatialMetadata(
         } else {
           node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         }
-        node.updateMatrixWorld(true);
+        if (followerStates.length) {
+          const coupled = propagateMimicValues(riggedParts, part.name, value);
+          for (const fs of followerStates) {
+            const fVal = coupled.get(fs.spec.name) ?? 0;
+            fs.node.position.copy(fs.restPos);
+            fs.node.quaternion.copy(fs.restQuat);
+            if (fs.spec.type === 'slide') fs.node.position.addScaledVector(fs.axis, fVal);
+            else fs.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(fs.axis, T.MathUtils.degToRad(fVal)));
+          }
+        }
+        root.updateMatrixWorld(true);
         rel.multiplyMatrices(invRoot, node.matrixWorld);
         for (const corner of corners) {
           pt.copy(corner).applyMatrix4(rel);
@@ -327,7 +353,11 @@ export function deriveSpatialMetadata(
     } finally {
       node.position.copy(restPos);
       node.quaternion.copy(restQuat);
-      node.updateMatrixWorld(true);
+      for (const fs of followerStates) {
+        fs.node.position.copy(fs.restPos);
+        fs.node.quaternion.copy(fs.restQuat);
+      }
+      root.updateMatrixWorld(true);
     }
     if (!sweepBox.isEmpty()) {
       sweepBox.expandByScalar(0.01); // Account for discrete arc-chord sagitta

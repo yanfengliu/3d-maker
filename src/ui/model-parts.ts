@@ -46,19 +46,24 @@ function toggleLabel(part: RiggedPartSpec, value: number): string {
 }
 
 function rigRowsMarkup(parts: readonly RiggedPartSpec[], getValue: (name: string) => number): string {
+  const labelsByName = new Map(parts.map(p => [p.name, p.label]));
   return parts.map(part => {
     const min = Math.min(part.range[0], part.range[1]);
     const max = Math.max(part.range[0], part.range[1]);
-    const step = part.type === 'slide' ? Math.max(0.01, (max - min) / 100) : 1;
+    const step = part.type === 'slide' ? Math.max(0.005, (max - min) / 100) : 1;
     const value = getValue(part.name);
     const id = escapeHtml(part.name);
     const desc = part.describe ? `<p class="rig-desc">${escapeHtml(part.describe)}</p>` : '';
+    const linkedLeader = part.mimic ? (labelsByName.get(part.mimic.part) ?? part.mimic.part) : '';
+    const controls = part.mimic
+      ? `<span class="rig-linked" title="Driven by ${escapeHtml(linkedLeader)}">Follows ${escapeHtml(linkedLeader)}</span>`
+      : `<button type="button" class="rig-btn" data-part-toggle="${id}">${toggleLabel(part, value)}</button>
+      <button type="button" class="rig-btn" data-part-play="${id}" aria-pressed="false" title="Animate ${escapeHtml(part.label)}">Test</button>`;
     return `<div class="rig-part" data-rig-part="${id}">
       <div class="rig-part-head"><strong>${escapeHtml(part.label)}</strong>
       <div class="rig-part-actions"><output data-part-out="${id}">${formatPartValue(part, value)}</output>
-      <button type="button" class="rig-btn" data-part-toggle="${id}">${toggleLabel(part, value)}</button>
-      <button type="button" class="rig-btn" data-part-play="${id}" aria-pressed="false" title="Animate ${escapeHtml(part.label)}">Test</button></div></div>
-      <input type="range" class="slider" data-part-slider="${id}" aria-label="${escapeHtml(part.label)}" min="${String(min)}" max="${String(max)}" step="${String(step)}" value="${String(value)}"/>
+      ${controls}</div></div>
+      <input type="range" class="slider" data-part-slider="${id}" aria-label="${escapeHtml(part.label)}" min="${String(min)}" max="${String(max)}" step="${String(step)}" value="${String(value)}"${part.mimic ? ' disabled' : ''}/>
       ${desc}</div>`;
   }).join('');
 }
@@ -112,7 +117,7 @@ function wireRigControls(container: HTMLElement, parts: readonly RiggedPartSpec[
       const phase = ((now - start) / 2400) % 1;
       const wave = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
       actions.setValue(name, far * wave);
-      refreshRow(name);
+      refreshAll();
       actions.onAnimateFrame();
       activeAnimFrame = requestAnimationFrame(tick);
     };

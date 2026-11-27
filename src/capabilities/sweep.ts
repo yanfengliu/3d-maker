@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, traverseOwnSubtree } from './compose-tree';
+import { axisTuple, propagateMimicValues } from './rig-math';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -48,7 +49,7 @@ export interface RiggedSweepReport {
 }
 
 function axisVector(axis: RiggedPartSpec['axis']): T.Vector3 {
-  return axis === 'x' ? new T.Vector3(1, 0, 0) : axis === 'y' ? new T.Vector3(0, 1, 0) : new T.Vector3(0, 0, 1);
+  return new T.Vector3(...axisTuple(axis));
 }
 
 function measureLocalNodeBox(node: T.Object3D): { at: Vec3Tuple; halfExtents: Vec3Tuple } | null {
@@ -109,6 +110,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
   let checkedParts = 0;
 
   for (const part of caps.riggedParts) {
+    if (part.mimic) continue;
     const localName = prefix && part.name.startsWith(prefix) ? part.name.slice(prefix.length) : part.name;
     if (hiddenSet.has(part.name) || hiddenSet.has(localName)) continue;
     const node = findOwnNodeByName(root, part.name, prefix);
@@ -130,6 +132,34 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         }
       }
     }
+    const followerNames = [...propagateMimicValues(caps.riggedParts, part.name, 1).keys()];
+    const followers = followerNames
+      .map(fname => {
+        const fSpec = caps.riggedParts.find(p => p.name === fname);
+        const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
+        if (!fSpec || !fNode) return null;
+        const fOrigPos = fNode.position.clone();
+        const fOrigQuat = fNode.quaternion.clone();
+        const fAxis = axisVector(fSpec.axis);
+        const fReg = getRiggedRestPose(fNode);
+        const fRestPos = fReg ? fReg.pos.clone() : fOrigPos.clone();
+        const fRestQuat = fReg ? fReg.quat.clone() : fOrigQuat.clone();
+        const fLocal = prefix && fSpec.name.startsWith(prefix) ? fSpec.name.slice(prefix.length) : fSpec.name;
+        if (!fReg) {
+          const fCur = poseMap[fSpec.name] ?? poseMap[fLocal] ?? 0;
+          if (Math.abs(fCur) > 1e-9) {
+            if (fSpec.type === 'slide') fRestPos.addScaledVector(fAxis, -fCur);
+            else fRestQuat.multiply(new T.Quaternion().setFromAxisAngle(fAxis, -T.MathUtils.degToRad(fCur))).normalize();
+          }
+        }
+        const fCols = colliderByNode.get(fSpec.name) ?? colliderByNode.get(fLocal);
+        const fFallback = fCols?.length ? null : measureLocalNodeBox(fNode);
+        return {
+          spec: fSpec, node: fNode, origPos: fOrigPos, origQuat: fOrigQuat,
+          restPos: fRestPos, restQuat: fRestQuat, axis: fAxis, cols: fCols, fallback: fFallback,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
     const authoredColliders = colliderByNode.get(part.name) ?? colliderByNode.get(localName);
     const fallbackBox = authoredColliders?.length ? null : measureLocalNodeBox(node);
     const partClearanceSpecs = clearanceByPart.get(part.name) ?? clearanceByPart.get(localName) ?? [];
@@ -157,7 +187,19 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         } else {
           node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         }
-        node.updateMatrixWorld(true);
+        if (followers.length) {
+          const coupled = propagateMimicValues(caps.riggedParts, part.name, value);
+          for (const f of followers) {
+            const fVal = coupled.get(f.spec.name) ?? 0;
+            f.node.position.copy(f.restPos);
+            f.node.quaternion.copy(f.restQuat);
+            if (f.spec.type === 'slide') f.node.position.addScaledVector(f.axis, fVal);
+            else f.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(f.axis, T.MathUtils.degToRad(fVal)));
+          }
+          root.updateMatrixWorld(true);
+        } else {
+          node.updateMatrixWorld(true);
+        }
 
         const e = node.matrixWorld.elements;
         if (!e.every(Number.isFinite)) {
@@ -187,6 +229,22 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
             layer: 'solid',
             part: part.name,
           }));
+        }
+        for (const f of followers) {
+          if (f.cols?.length) {
+            for (const col of f.cols) {
+              partBoxes.push(buildOrientedBox(f.node.matrixWorld, col.at, colliderHalfExtents(col), {
+                id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
+                kind: 'collider', layer: col.layer ?? 'solid', part: f.spec.name,
+                ...(col.rotation ? { rotation: col.rotation } : {}),
+              }));
+            }
+          } else if (f.fallback) {
+            partBoxes.push(buildOrientedBox(f.node.matrixWorld, f.fallback.at, f.fallback.halfExtents, {
+              id: `sweep:${f.spec.name}`, name: f.spec.name, ownerId: root.name || 'Asset',
+              kind: 'collider', layer: 'solid', part: f.spec.name,
+            }));
+          }
         }
 
         for (const box of partBoxes) {
@@ -231,7 +289,11 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     } finally {
       node.position.copy(origPos);
       node.quaternion.copy(origQuat);
-      node.updateMatrixWorld(true);
+      for (const f of followers) {
+        f.node.position.copy(f.origPos);
+        f.node.quaternion.copy(f.origQuat);
+      }
+      root.updateMatrixWorld(true);
     }
   }
 

@@ -2,6 +2,7 @@ import type { Object3D } from 'three';
 import { parseCompositeChildren, type CompositeChildSpec } from './compose-schema';
 import { parseIkSpec, type AssetIkSpec } from './ik-schema';
 import { parseModelParamSpecs, type ModelParamSpec } from './param-schema';
+import { parseRiggedPartsList, type RiggedPartSpec } from './rig-math';
 import {
   parseClearanceZones,
   parseColliders,
@@ -14,6 +15,7 @@ import {
 export type * from './compose-schema';
 export type * from './ik-schema';
 export type * from './param-schema';
+export type { Axis, AxisVector, RiggedMimicSpec, RiggedPartSpec } from './rig-math';
 export type * from './spatial-schema';
 export {
   COMPOSITE_CHILD_ID_PATTERN,
@@ -21,20 +23,10 @@ export {
   MAX_SCOPED_NAME_LEN,
   parseCompositeChildren,
 } from './compose-schema';
+export { axisTuple, parseAxisSpec, propagateMimicValues, sanitizeMimicLinks } from './rig-math';
 export { parseIkSpec } from './ik-schema';
 export { parseModelParamSpecs, parseRecipeParams, resolveModelParams } from './param-schema';
 export { parseClearanceZones, parseColliders, parseSurfaces } from './spatial-schema';
-
-export type Axis = 'x' | 'y' | 'z';
-
-export interface RiggedPartSpec {
-  name: string;
-  label: string;
-  type: 'rotate' | 'slide';
-  axis: Axis;
-  range: [number, number];
-  describe?: string;
-}
 
 export interface DetachablePartSpec {
   name: string;
@@ -133,7 +125,6 @@ export interface AssetCapabilities {
 }
 
 const hexPattern = /^#[\da-f]{6}$/i;
-const axes = new Set<Axis>(['x', 'y', 'z']);
 const maxParts = 64;
 const maxZones = 64;
 const maxNightZones = 32;
@@ -205,25 +196,7 @@ export function parseDecalSlots(value: unknown): DecalSlotSpec[] {
 }
 
 function parseRiggedParts(value: unknown): RiggedPartSpec[] {
-  if (!Array.isArray(value)) return [];
-  const parts: RiggedPartSpec[] = [];
-  const seen = new Set<string>();
-  for (const row of value) {
-    if (parts.length >= maxParts) break;
-    if (!isRecord(row)) continue;
-    const name = trimText(row.name, maxNameLen);
-    if (!name || seen.has(name)) continue;
-    const axis = row.axis;
-    if (typeof axis !== 'string' || !axes.has(axis as Axis)) continue;
-    const range = tuple2(row.range);
-    if (!range || range[0] === range[1]) continue;
-    seen.add(name);
-    const type = row.type === 'slide' ? 'slide' : 'rotate';
-    const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
-    const describe = trimText(row.describe, maxDescLen);
-    parts.push({ name, label, type, axis: axis as Axis, range, ...(describe ? { describe } : {}) });
-  }
-  return parts;
+  return parseRiggedPartsList(value, humanizeLabel, { maxParts, maxNameLen, maxDescLen });
 }
 
 function parseDetachableParts(value: unknown): DetachablePartSpec[] {

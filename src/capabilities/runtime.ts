@@ -7,13 +7,14 @@ import {
   unregisterLiveController,
 } from './compose-tree';
 import { buildDecalMesh, buildNightOverlays, type DecalOverlay } from './overlays';
+import { axisTuple, propagateMimicValues } from './rig-math';
+import { readSand3dCapabilities } from './sand3d';
 import {
   readCapabilities,
   readEmbeddedDecals,
   writeCapabilities,
   type AssetCapabilities,
   type AssetRuntimeState,
-  type Axis,
   type RiggedPartSpec,
 } from './schema';
 
@@ -58,8 +59,8 @@ export function markSynthesizedClip(clip: T.AnimationClip): T.AnimationClip {
   return clip;
 }
 
-function axisVector(axis: Axis): T.Vector3 {
-  return axis === 'x' ? new T.Vector3(1, 0, 0) : axis === 'y' ? new T.Vector3(0, 1, 0) : new T.Vector3(0, 0, 1);
+function axisVector(axis: RiggedPartSpec['axis']): T.Vector3 {
+  return new T.Vector3(...axisTuple(axis));
 }
 
 export function farRangeEnd(range: [number, number]): number {
@@ -125,6 +126,13 @@ export function inspectAsset(root: T.Object3D, animations?: readonly T.Animation
     }
     return out;
   }
+  const sand3d = readSand3dCapabilities(root, { animations: sourceClips });
+  if (sand3d) {
+    return {
+      ...sand3d,
+      ...(clips?.length ? { clips } : {}),
+    };
+  }
   const decals = readEmbeddedDecals(root);
   const dimensions = measureDimensions(root);
   const studioName = typeof root.userData.studioName === 'string' ? root.userData.studioName : '';
@@ -140,7 +148,37 @@ export function inspectAsset(root: T.Object3D, animations?: readonly T.Animation
   };
 }
 
-/** Synthesize standard glTF-compatible AnimationClips for every rigged part (relative to quaternion rest pose). */
+function buildPartTrack(
+  part: RiggedPartSpec,
+  node: T.Object3D,
+  trackNode: string,
+  current: number,
+  times: readonly number[],
+  poseValues: readonly number[],
+): T.KeyframeTrack {
+  const axisVec = axisVector(part.axis);
+  if (part.type === 'slide') {
+    const rest = node.position.clone().addScaledVector(axisVec, -current);
+    const vals: number[] = [];
+    const pos = new T.Vector3();
+    for (const v of poseValues) {
+      pos.copy(rest).addScaledVector(axisVec, v);
+      vals.push(pos.x, pos.y, pos.z);
+    }
+    return new T.VectorKeyframeTrack(trackNode + '.position', [...times], vals);
+  }
+  const restQuat = node.quaternion.clone()
+    .multiply(new T.Quaternion().setFromAxisAngle(axisVec, -T.MathUtils.degToRad(current)))
+    .normalize();
+  const vals: number[] = [];
+  for (const deg of poseValues) {
+    const q = restQuat.clone().multiply(new T.Quaternion().setFromAxisAngle(axisVec, T.MathUtils.degToRad(deg))).normalize();
+    vals.push(q.x, q.y, q.z, q.w);
+  }
+  return new T.QuaternionKeyframeTrack(trackNode + '.quaternion', [...times], vals);
+}
+
+/** Synthesize standard glTF-compatible AnimationClips for every rigged part (including coupled `mimic` followers). */
 export function synthesizeRigClips(
   root: T.Object3D,
   capabilities?: AssetCapabilities,
@@ -150,53 +188,57 @@ export function synthesizeRigClips(
   const caps = capabilities ?? inspectAsset(root);
   const prefix = nodePrefix ?? '';
   const clips: T.AnimationClip[] = [];
+  const resolveTrackNode = (node: T.Object3D, partName: string) => {
+    const candidateName = node.name || (prefix ? `${prefix}${partName}` : partName);
+    return exportRoot && exportRoot.getObjectByName(candidateName) !== node ? node.uuid : candidateName;
+  };
   for (const part of caps.riggedParts) {
+    if (part.mimic) continue;
     const node = findOwnNodeByName(root, part.name, prefix);
     if (!node) continue;
-    const candidateName = node.name || (prefix ? `${prefix}${part.name}` : part.name);
-    // When unscoped duplicate node names exist in an export graph, bind by UUID so GLTFExporter targets this exact sibling.
-    const trackNode = exportRoot && exportRoot.getObjectByName(candidateName) !== node
-      ? node.uuid
-      : candidateName;
     const current = caps.state?.pose?.[part.name] ?? 0;
     const far = farRangeEnd(part.range);
-    if (part.type === 'slide') {
-      const rest = node.position.clone();
-      rest[part.axis] -= current;
-      const moved = rest.clone();
-      moved[part.axis] += far;
-      const track = new T.VectorKeyframeTrack(
-        trackNode + '.position',
-        [0, 0.9, 1.5, 2.4],
-        [rest.x, rest.y, rest.z, moved.x, moved.y, moved.z, moved.x, moved.y, moved.z, rest.x, rest.y, rest.z],
-      );
-      clips.push(markSynthesizedClip(new T.AnimationClip('Operate ' + part.label.toLowerCase(), 2.4, [track])));
-      continue;
-    }
-    const axisVec = axisVector(part.axis);
-    const restQuat = node.quaternion.clone()
-      .multiply(new T.Quaternion().setFromAxisAngle(axisVec, -T.MathUtils.degToRad(current)))
-      .normalize();
     const times: number[] = [];
-    const values: number[] = [];
-    const pushAngle = (t: number, deg: number) => {
-      const q = restQuat.clone().multiply(new T.Quaternion().setFromAxisAngle(axisVec, T.MathUtils.degToRad(deg))).normalize();
-      times.push(t);
-      values.push(q.x, q.y, q.z, q.w);
-    };
-    if (Math.abs(far) >= 359) {
-      // Full-rotation rotor/wheel/dish: sample 8 steps per turn so SLERP rotates smoothly instead of taking a 0-deg shortcut.
-      const steps = Math.max(8, Math.ceil(Math.abs(far) / 45));
-      for (let i = 0; i <= steps; i++) pushAngle((i / steps) * 2.4, (far * i) / steps);
+    const poseValues: number[] = [];
+    if (part.type === 'slide') {
+      times.push(0, 0.9, 1.5, 2.4);
+      poseValues.push(0, far, far, 0);
+    } else if (Math.abs(far) >= 359 || part.continuous) {
+      const target = part.continuous && Math.abs(far) < 359 ? 360 : far;
+      const steps = Math.max(8, Math.ceil(Math.abs(target) / 45));
+      for (let i = 0; i <= steps; i++) {
+        times.push((i / steps) * 2.4);
+        poseValues.push((target * i) / steps);
+      }
     } else {
       const steps = Math.max(1, Math.ceil(Math.abs(far) / 45));
-      for (let i = 0; i <= steps; i++) pushAngle((i / steps) * 0.9, (far * i) / steps);
-      pushAngle(1.5, far);
-      for (let i = 1; i <= steps; i++) pushAngle(1.5 + (i / steps) * 0.9, far * (1 - i / steps));
+      for (let i = 0; i <= steps; i++) {
+        times.push((i / steps) * 0.9);
+        poseValues.push((far * i) / steps);
+      }
+      times.push(1.5);
+      poseValues.push(far);
+      for (let i = 1; i <= steps; i++) {
+        times.push(1.5 + (i / steps) * 0.9);
+        poseValues.push(far * (1 - i / steps));
+      }
     }
-    const track = new T.QuaternionKeyframeTrack(trackNode + '.quaternion', times, values);
-    const verb = /door|gate|lid|hatch|window|drawer/i.test(part.name + ' ' + (part.describe ?? '')) ? 'Open ' : 'Move ';
-    clips.push(markSynthesizedClip(new T.AnimationClip(verb + part.label.toLowerCase(), 2.4, [track])));
+    const tracks: T.KeyframeTrack[] = [
+      buildPartTrack(part, node, resolveTrackNode(node, part.name), current, times, poseValues),
+    ];
+    const followerRatios = propagateMimicValues(caps.riggedParts, part.name, 1);
+    for (const [fName, ratio] of followerRatios) {
+      const fSpec = caps.riggedParts.find(p => p.name === fName);
+      const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
+      if (!fSpec || !fNode) continue;
+      const fCur = caps.state?.pose?.[fSpec.name] ?? current * ratio;
+      const fVals = poseValues.map(v => (fSpec.continuous ? v * ratio : clampToRange(fSpec.range, v * ratio)));
+      tracks.push(buildPartTrack(fSpec, fNode, resolveTrackNode(fNode, fSpec.name), fCur, times, fVals));
+    }
+    const verb = part.type === 'slide'
+      ? 'Operate '
+      : /door|gate|lid|hatch|window|drawer/i.test(part.name + ' ' + (part.describe ?? '')) ? 'Open ' : 'Move ';
+    clips.push(markSynthesizedClip(new T.AnimationClip(verb + part.label.toLowerCase(), 2.4, tracks)));
   }
   return clips;
 }
@@ -222,13 +264,15 @@ export function createAssetController(
     const node = findNode(spec.name);
     if (!node) continue;
     // Recover true quaternion/position rest transform by backing out state.pose so posed GLBs never double-rotate past 90 deg.
-    const initialVal = clampToRange(spec.range, capabilities.state?.pose?.[spec.name] ?? 0);
+    const rawInit = capabilities.state?.pose?.[spec.name] ?? 0;
+    const initialVal = spec.continuous ? rawInit : clampToRange(spec.range, rawInit);
     const restPosition = node.position.clone();
     const restQuaternion = node.quaternion.clone();
+    const axisVec = axisVector(spec.axis);
     if (spec.type === 'slide') {
-      restPosition[spec.axis] -= initialVal;
+      restPosition.addScaledVector(axisVec, -initialVal);
     } else {
-      restQuaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVector(spec.axis), -T.MathUtils.degToRad(initialVal))).normalize();
+      restQuaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVec, -T.MathUtils.degToRad(initialVal))).normalize();
     }
     registerRiggedRestPose(node, restPosition, restQuaternion);
     bindings.set(spec.name, { spec, node, restQuaternion, restPosition, value: initialVal });
@@ -247,12 +291,12 @@ export function createAssetController(
 
   function applyPoseToNode(binding: PartBinding, target: T.Object3D) {
     const { spec, restPosition, restQuaternion, value } = binding;
+    const axisVec = axisVector(spec.axis);
     if (spec.type === 'slide') {
-      target.position.copy(restPosition);
-      target.position[spec.axis] = restPosition[spec.axis] + value;
+      target.position.copy(restPosition).addScaledVector(axisVec, value);
     } else {
       target.quaternion.copy(restQuaternion)
-        .multiply(new T.Quaternion().setFromAxisAngle(axisVector(spec.axis), T.MathUtils.degToRad(value)))
+        .multiply(new T.Quaternion().setFromAxisAngle(axisVec, T.MathUtils.degToRad(value)))
         .normalize();
     }
     target.updateMatrixWorld(true);
@@ -289,7 +333,10 @@ export function createAssetController(
   function getState(): AssetRuntimeState {
     const pose: Record<string, number> = {};
     for (const [name, binding] of bindings) {
-      if (Math.abs(binding.value) > 1e-6) pose[name] = Math.round(binding.value * 1000) / 1000;
+      if (Math.abs(binding.value) > 1e-6) {
+        const scale = binding.spec.type === 'slide' ? 10000 : 1000;
+        pose[name] = Math.round(binding.value * scale) / scale;
+      }
     }
     const hidden = [...hiddenParts].sort();
     const cleanedText = Object.fromEntries(
@@ -320,6 +367,15 @@ export function createAssetController(
     return structuredClone(capabilities);
   }
 
+  function applyCoupledFollowers(leaderName: string, leaderValue: number) {
+    for (const [fName, fVal] of propagateMimicValues(capabilities.riggedParts, leaderName, leaderValue)) {
+      const fBinding = bindings.get(fName);
+      if (!fBinding) continue;
+      fBinding.value = fBinding.spec.continuous ? fVal : clampToRange(fBinding.spec.range, fVal);
+      applyPoseToNode(fBinding, fBinding.node);
+    }
+  }
+
   const controller: AssetController = {
     get capabilities() {
       return capabilities;
@@ -332,8 +388,9 @@ export function createAssetController(
       const binding = bindings.get(name);
       if (!binding) throw new Error('This model has no rigged part named ' + name + '.');
       if (!Number.isFinite(value)) throw new Error('Part pose value must be a finite number.');
-      binding.value = clampToRange(binding.spec.range, value);
+      binding.value = binding.spec.continuous ? value : clampToRange(binding.spec.range, value);
       applyPoseToNode(binding, binding.node);
+      applyCoupledFollowers(name, binding.value);
       syncManifest();
       return binding.value;
     },
@@ -358,8 +415,10 @@ export function createAssetController(
     },
     resetParts() {
       for (const binding of bindings.values()) {
-        binding.value = clampToRange(binding.spec.range, 0);
+        if (binding.spec.mimic && bindings.has(binding.spec.mimic.part)) continue;
+        binding.value = binding.spec.continuous ? 0 : clampToRange(binding.spec.range, 0);
         applyPoseToNode(binding, binding.node);
+        applyCoupledFollowers(binding.spec.name, binding.value);
       }
       syncManifest();
     },

@@ -6,6 +6,8 @@ export { catalog, getModelParamSpecs, listVariations, parseRecipe, resolveVariat
 export type { CatalogEntry, ModelVariationEntry, Recipe, TemplateId, VariationSummary } from './data/recipe';
 export { createAssetController, inspectAsset, synthesizeRigClips } from './capabilities/runtime';
 export type { AssetController } from './capabilities/runtime';
+export { hasSand3dJoints, readSand3dCapabilities } from './capabilities/sand3d';
+export { axisTuple } from './capabilities/rig-math';
 export { computeCompositeBodies, validateComposite } from './capabilities/compose';
 export type {
   ComposeAssetOptions,
@@ -40,6 +42,8 @@ export type {
   AssetIkSpec,
   AssetPhysicsSpec,
   AssetRuntimeState,
+  Axis,
+  AxisVector,
   ChoiceParamOption,
   ChoiceParamSpec,
   ClearanceZoneKind,
@@ -65,6 +69,7 @@ export type {
   NightZoneSpec,
   PhysicsCoupling,
   RangeParamSpec,
+  RiggedMimicSpec,
   RiggedPartSpec,
   SpatialRestPose,
   SurfaceSpec,

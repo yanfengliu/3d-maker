@@ -245,9 +245,22 @@ export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void 
 
   asset.controller.resetParts();
   const clampedPose: Record<string, number> = {};
-  for (const [name, value] of Object.entries(edits.pose ?? {})) {
-    const applied = asset.controller.setPart(name, value);
-    if (Math.abs(applied) > 1e-6) clampedPose[name] = Math.round(applied * 1000) / 1000;
+  const poseEntries = Object.entries(edits.pose ?? {});
+  const mimicByName = new Map(asset.capabilities.riggedParts.map(p => [p.name, p.mimic]));
+  const poseKeys = new Set(poseEntries.map(([k]) => k));
+  // Apply independent leaders before mimic followers so coupled joints stay deterministically driven by their leader.
+  const orderedPose = [
+    ...poseEntries.filter(([name]) => !mimicByName.get(name)),
+    ...poseEntries.filter(([name]) => Boolean(mimicByName.get(name))),
+  ];
+  for (const [name, value] of orderedPose) {
+    const mimic = mimicByName.get(name);
+    if (mimic && poseKeys.has(mimic.part)) continue;
+    asset.controller.setPart(name, value);
+  }
+  for (const part of asset.capabilities.riggedParts) {
+    const liveVal = asset.controller.getPart(part.name);
+    if (Math.abs(liveVal) > 1e-6) clampedPose[part.name] = Math.round(liveVal * 1000) / 1000;
   }
   if (Object.keys(clampedPose).length) edits.pose = clampedPose;
   else delete edits.pose;
@@ -360,11 +373,16 @@ async function openBinary(
   group.animations = gltf.animations;
   const name = label.trim().slice(0, 80) || 'Imported asset';
   const embedded = readCapabilities(group);
-  const capabilities = providedCapabilities ? providedCapabilities(group) : (embedded ? intersectWithNodes(group, embedded) : {
-    ...inspectAsset(group),
-    name,
-    source: source.kind === 'local' ? { kind: 'local' as const, id: source.filename } : { kind: 'polyfork' as const, id: source.assetId },
-  });
+  const capabilities = providedCapabilities ? providedCapabilities(group) : (embedded ? intersectWithNodes(group, embedded) : (() => {
+    const inspected = inspectAsset(group);
+    return {
+      ...inspected,
+      name,
+      source: source.kind === 'local'
+        ? { kind: 'local' as const, id: source.filename, ...(inspected.source?.kit ? { kit: inspected.source.kit } : {}) }
+        : { kind: 'polyfork' as const, id: source.assetId },
+    };
+  })());
   capabilities.name = name;
   const palette = buildPalette(gltf.scene, gltf.parser.associations, capabilities.colorZones);
   const controller = createAssetController(group, capabilities);
