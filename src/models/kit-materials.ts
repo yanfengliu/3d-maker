@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import type { VertexColorShader } from './merge-static';
 import { box, mesh, type Point } from './parts';
 
 export interface KitColorway {
@@ -144,4 +145,68 @@ export function timberBrace(
   part.receiveShadow = true;
   parent.add(part);
   return part;
+}
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  if (Math.abs(edge1 - edge0) < 1e-6) return x >= edge1 ? 1 : 0;
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/** Blend `topColor` (moss, snow, or dust) onto upward-facing surfaces (`normal[1] > threshold`) in vertex colors. */
+export function upwardBlendShader(
+  topColor: string | number | T.Color,
+  threshold = 0.55,
+  softness = 0.25,
+  strength = 0.85,
+): VertexColorShader {
+  const top = topColor instanceof T.Color ? topColor.clone() : new T.Color(topColor);
+  const out = new T.Color();
+  const s = Math.max(0, Math.min(1, strength));
+  return (_x, _y, _z, normal, base) => {
+    const t = smoothstep(threshold, threshold + Math.max(0.01, softness), normal[1]) * s;
+    return out.copy(base).lerp(top, t);
+  };
+}
+
+/** Smoothly tint vertices between `lowColor` at `minY` and `highColor` at `maxY` (damp stone plinths, foliage crowns). */
+export function heightBandShader(
+  lowColor: string | number | T.Color,
+  highColor: string | number | T.Color,
+  minY: number,
+  maxY: number,
+  mixAmount = 0.65,
+): VertexColorShader {
+  const low = lowColor instanceof T.Color ? lowColor.clone() : new T.Color(lowColor);
+  const high = highColor instanceof T.Color ? highColor.clone() : new T.Color(highColor);
+  const band = new T.Color();
+  const out = new T.Color();
+  const m = Math.max(0, Math.min(1, mixAmount));
+  return (_x, y, _z, _normal, base) => {
+    const t = smoothstep(minY, maxY, y);
+    band.copy(low).lerp(high, t);
+    return out.copy(base).lerp(band, m);
+  };
+}
+
+/** Periodic ring/grain bands along `axis` (bamboo culm nodes, timber striations, coursed masonry) with zero textures. */
+export function grainShader(
+  ringColor: string | number | T.Color,
+  period = 0.16,
+  bandWidth = 0.18,
+  axis: 'x' | 'y' | 'z' = 'y',
+  strength = 0.55,
+): VertexColorShader {
+  const ring = ringColor instanceof T.Color ? ringColor.clone() : new T.Color(ringColor);
+  const out = new T.Color();
+  const safePeriod = Math.max(1e-3, period);
+  const halfBand = Math.max(0.02, Math.min(0.49, bandWidth * 0.5));
+  const s = Math.max(0, Math.min(1, strength));
+  return (x, y, z, _normal, base) => {
+    const coord = axis === 'x' ? x : axis === 'z' ? z : y;
+    const phase = ((coord / safePeriod) % 1 + 1) % 1;
+    const dist = Math.min(phase, 1 - phase);
+    const t = (1 - smoothstep(halfBand * 0.4, halfBand, dist)) * s;
+    return out.copy(base).lerp(ring, t);
+  };
 }

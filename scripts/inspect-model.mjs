@@ -230,21 +230,106 @@ async function analyzeGlbInPage(metricsPage, glbBytes) {
 
     const round = (v) => Number(v.toFixed(4));
     const totalArea = Object.values(faceArea).reduce((s, v) => s + v, 0) || 1;
+
+    // Build a hierarchical machine-readable trace (world bboxes, triangle/vertex/open-edge counts, materials, joints).
+    const indexCount = (idx, pos) => (idx ? Math.floor(idx.count / 3) : Math.floor(pos.count / 3));
+    const countOpenEdges = (geom) => {
+      const pos = geom.getAttribute('position');
+      if (!pos || pos.count < 3) return 0;
+      const idx = geom.getIndex();
+      const triCount = indexCount(idx, pos);
+      const qKey = (i) => `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+      const edgeCounts = new Map();
+      const bump = (k1, k2) => {
+        if (k1 === k2) return;
+        const ek = k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
+        edgeCounts.set(ek, (edgeCounts.get(ek) ?? 0) + 1);
+      };
+      for (let t = 0; t < triCount; t++) {
+        const i0 = idx ? idx.getX(t * 3) : t * 3;
+        const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+        const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+        const k0 = qKey(i0), k1 = qKey(i1), k2 = qKey(i2);
+        bump(k0, k1); bump(k1, k2); bump(k2, k0);
+      }
+      let open = 0;
+      for (const c of edgeCounts.values()) if (c === 1) open++;
+      return open;
+    };
+    const buildTraceNode = (node) => {
+      const children = node.children.map(buildTraceNode);
+      const box = new T.Box3();
+      for (const ch of children) {
+        if (ch.bbox) {
+          box.expandByPoint(new T.Vector3(...ch.bbox[0]));
+          box.expandByPoint(new T.Vector3(...ch.bbox[1]));
+        }
+      }
+      let triCount = 0;
+      let vertCount = 0;
+      let openEdges = null;
+      let material = null;
+      if (node instanceof T.Mesh) {
+        const geom = node.geometry;
+        const pos = geom.getAttribute('position');
+        if (pos && pos.count) {
+          vertCount = pos.count;
+          triCount = indexCount(geom.getIndex(), pos);
+          openEdges = countOpenEdges(geom);
+          const skinned = node instanceof T.SkinnedMesh;
+          if (skinned) node.skeleton.update();
+          for (let i = 0; i < pos.count; i++) {
+            a.fromBufferAttribute(pos, i);
+            if (skinned) node.applyBoneTransform(i, a);
+            a.applyMatrix4(node.matrixWorld);
+            if (Number.isFinite(a.x) && Number.isFinite(a.y) && Number.isFinite(a.z)) box.expandByPoint(a);
+          }
+        }
+        const m = Array.isArray(node.material) ? node.material[0] : node.material;
+        material = m?.name || m?.type || null;
+      }
+      return {
+        name: node.name || node.type,
+        type: node.type,
+        bbox: box.isEmpty() ? null : [box.min.toArray().map(round), box.max.toArray().map(round)],
+        ...(vertCount ? { vertices: vertCount, triangles: triCount, openEdges } : {}),
+        ...(material ? { material } : {}),
+        ...(node.userData.s3d_joint ? { s3dJoint: node.userData.s3d_joint } : {}),
+        ...(children.length ? { children } : {}),
+      };
+    };
+    const ffCaps = root.userData.formFoundry ?? root.children[0]?.userData?.formFoundry ?? null;
+    const trace = {
+      root: buildTraceNode(root),
+      ...(ffCaps ? {
+        capabilities: {
+          name: ffCaps.name,
+          riggedParts: ffCaps.riggedParts ?? [],
+          detachableParts: ffCaps.detachableParts ?? [],
+          surfaces: ffCaps.surfaces ?? [],
+          dimensions: ffCaps.dimensions ?? null,
+        },
+      } : {}),
+    };
+
     return {
-      meshes,
-      vertices,
-      triangles,
-      doubleSidedMeshes,
-      nonFinite,
-      animations: gltf.animations.length,
-      minY: overall.isEmpty() ? null : round(overall.min.y),
-      size: size.toArray().map(round),
-      connectedComponents: sortedGroups.length,
-      floatingComponents,
-      faceArea: Object.fromEntries(Object.entries(faceArea).map(([k, v]) => [k, round(v)])),
-      bottomToTopRatio: faceArea.top > 1e-6 ? Number((faceArea.bottom / faceArea.top).toFixed(3)) : null,
-      backToFrontRatio: faceArea.front > 1e-6 ? Number((faceArea.back / faceArea.front).toFixed(3)) : null,
-      totalDirectionalArea: round(totalArea),
+      metrics: {
+        meshes,
+        vertices,
+        triangles,
+        doubleSidedMeshes,
+        nonFinite,
+        animations: gltf.animations.length,
+        minY: overall.isEmpty() ? null : round(overall.min.y),
+        size: size.toArray().map(round),
+        connectedComponents: sortedGroups.length,
+        floatingComponents,
+        faceArea: Object.fromEntries(Object.entries(faceArea).map(([k, v]) => [k, round(v)])),
+        bottomToTopRatio: faceArea.top > 1e-6 ? Number((faceArea.bottom / faceArea.top).toFixed(3)) : null,
+        backToFrontRatio: faceArea.front > 1e-6 ? Number((faceArea.back / faceArea.front).toFixed(3)) : null,
+        totalDirectionalArea: round(totalArea),
+      },
+      trace,
     };
   }, b64);
 }
@@ -371,7 +456,8 @@ try {
         views[view] = { file: fileName, ...(await measureViewportCoverage(page)) };
       }
 
-      const geometry = await analyzeGlbInPage(metricsPage, glbBytes);
+      const analyzed = await analyzeGlbInPage(metricsPage, glbBytes);
+      const geometry = analyzed.metrics;
       const flags = [];
       if (geometry.nonFinite > 0) flags.push(`nonFinite=${geometry.nonFinite}`);
       if (geometry.minY !== null && Math.abs(geometry.minY) > 0.05) flags.push(`minY=${geometry.minY}`);
@@ -394,6 +480,7 @@ try {
         flags,
       };
       await writeFile(join(outDir, 'metrics.json'), JSON.stringify(record, null, 2) + '\n');
+      await writeFile(join(outDir, 'trace.json'), JSON.stringify(analyzed.trace, null, 2) + '\n');
       summary.push(record);
       const sz = geometry.size.map((n) => n.toFixed(2)).join('x');
       console.log(

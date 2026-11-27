@@ -19,14 +19,27 @@ Before writing Three.js geometry, lock the visual and physical spec on paper and
 
 Build the model in a dedicated module (for example `src/models/kits/<kit-model>.ts`) and register it append-only in `src/models/variations.ts` (for variations) or a pack under `src/models/collections/` (for new catalog templates).
 
-1. **Declare semantic structural knobs (`ModelParamSpec[]`)** in `paramSpecs` (variation) or `params` (template) using `src/capabilities/param-schema.ts` (`range`, `toggle`, `choice` — e.g. `bays`, `roofPitch`, `awning`, `colorway`, `tone`). Read defaults via `resolveModelParams` so studio Properties UI, `Recipe.params`, and `capabilities.params` stay automatically synced.
-2. **Honor live studio colors + HD progression**: bind custom `recipe.primary` / `recipe.accent` when edited away from defaults, tag tint-zone materials with `mat.userData.tintZone = 'primary' | 'accent'` so `mergeStaticParts` preserves exact `material.color`, and ensure `quality: 'hd'` adds genuine silhouette craft (chamfered hero pieces, finer courses, smooth extruded valances/mouldings) while exceeding `2×` standard triangles (`src/models/models.test.ts`) without exploding past ~12k triangles.
-3. **Model for 360-degree craft and zero defects**:
+1. **Structure every multi-part model as Plan → Details → Parts (table of contents first)**:
+   - Write the top-level builder as a short table of contents (`baseFrame(...)`, then `addRoof(...)`, `addTrim(...)`, `addDetails(...)`) so deleting any `add*` detail call removes only that detail and leaves the structural silhouette intact.
+   - Name each key dimension once and pass it down — target ~15 numeric literals per part builder (hard ceiling 40) so structural sliders (`Recipe.params`) scale every joint and trim piece coherently instead of drifting apart.
+2. **Use frame-anchored placement & one-frame-per-joint (`src/models/kit-frames.ts`, re-exported from `kit-grammar.ts`)**:
+   - Read mounting surfaces and edges directly from built parts via `bboxFrame(part, '+Y')`, `bboxFrame(post, '+X+Z')`, or `localFrame({ x, y, z })`, and place children with `placeOnFrame(child, frame, { anchor: 'bottom' })` instead of repeating hand-computed offsets.
+   - Distribute repeated elements with `gridFrames`, `ringFrames`, `jitterFrames`, and `varyValues`.
+   - Declare interactive hinges and slides using `createHingeOnFrame(parent, 'DoorPivot', hingeFrame, { axis: 'y', range: [0, 95] })` so the pivot `THREE.Group` and `RiggedPartSpec` share one frame and can never drift out of alignment.
+3. **Declare semantic structural knobs (`ModelParamSpec[]`)** in `paramSpecs` (variation) or `params` (template) using `src/capabilities/param-schema.ts` (`range`, `toggle`, `choice` — e.g. `bays`, `roofPitch`, `awning`, `colorway`, `tone`). Read defaults via `resolveModelParams` so studio Properties UI, `Recipe.params`, and `capabilities.params` stay automatically synced.
+4. **Honor live studio colors + HD progression**: bind custom `recipe.primary` / `recipe.accent` when edited away from defaults, tag tint-zone materials with `mat.userData.tintZone = 'primary' | 'accent'` so `mergeStaticParts` preserves exact `material.color`, and ensure `quality: 'hd'` adds genuine silhouette craft (chamfered hero pieces, finer courses, smooth extruded valances/mouldings) while exceeding `2×` standard triangles (`src/models/models.test.ts`) without exploding past ~12k triangles.
+5. **Model for 360-degree craft and zero defects**:
    - Close every shell (`side: T.FrontSide`, sealed bottoms, closed gables).
    - Never overlap coplanar faces of distinct materials — inset recessed panels/floors by at least `0.01 m` or sit parts cleanly atop rails/ledges.
    - Use single extruded chevrons for gable bargeboards (never cross two un-mitered rotated boxes at the apex) and seat tilted props with solid wedge cleats flush on their supporting surface.
    - Group each rigged hinge/slide (`riggedParts`) and detachable accessory (`detachableParts`) under its own named `THREE.Group` at its real pivot origin with closed geometry behind detachable parts.
-4. **Compress static draw calls + add vertex-color tonal richness**: call `mergeStaticParts(root, { preserveNames, tone, seed })` from `src/models/merge-static.ts` to collapse dozens or hundreds of static planks, shingles, and kerb stones into 1–5 vertex-colored meshes (and optionally merge inside detachable/rigged subtrees too) with deterministic per-element lightness/saturation variation driven by `tone` and zero image textures.
+6. **Compress static draw calls + bake procedural vertex-color shaders**: call `mergeStaticParts(root, { preserveNames, tone, seed, colorFn })` from `src/models/merge-static.ts` to collapse dozens or hundreds of static planks, shingles, and kerb stones into 1–5 vertex-colored meshes with zero image textures. Attach optional per-mesh or per-material `userData.colorFn` (or root `colorFn`, including `upwardBlendShader`, `heightBandShader`, and `grainShader` from `kit-materials.ts`) to bake wood grain, bamboo nodes, dual-sided foliage, moss/snow on upward faces, and plinth weathering directly into `COLOR_0` at zero extra draw calls.
+
+## Dual Authoring Lanes for Browser Games (Three.js TS vs. Offline Sand3D → GLB)
+
+Choose the lane that fits the asset:
+- **In-browser Three.js TypeScript lane (this skill):** Use for skinned humanoid characters + 85 CC0 motions + IK, lightweight runtime-parametric templates whose proportions change live in the browser (`Recipe.params`), and assets needing live night-glow / decal / colorway overlays.
+- **Offline Sand3D Python → GLB lane:** Use when authoring CAD-heavy articulated appliances/mechanisms (real booleans, `seat()` cavities, fillets, shells, gears, threads) or lush organic foliage/rocks/overgrowth (`branches`, `tufts`, `phyllotaxis`, `waves`, `field`). For 60 FPS browser games, explicitly budget resolution with `s3d.facets(8..12)` (never CAD `auto`) and export with `s3d.export(asset, "out.glb", colors="vertex")`. Form Foundry's native `s3d_joint` importer (`readSand3dCapabilities` / `inspectAsset`) automatically turns every exported revolute, continuous, prismatic, arbitrary-axis, and `mimic` coupled joint into live Form Foundry controls, synthesized clips, OBB sweeps, and `composeAsset()` compatibility. Keep any external CC BY 4.0 Sand3D dataset files outside Git with proper attribution.
 
 ## Stage 3: Deterministic Truth Harness and Spatial/IK Verification
 
@@ -42,7 +55,7 @@ npm run inspect:model -- <template-id> [--variation <variation-id>]
 Verify every deterministic contract passes cleanly:
 - **Craft invariants (`craft-invariants.test.ts`)**: zero non-finite vertices, zero `DoubleSide`, zero glossy matte finishes, `-0.025 <= minY <= 0.08`, `bottomToTopRatio >= 0.55`, `backToFrontRatio >= 0.55`, `leftRightBalance >= 0.45`, zero unintended floating parts, zero exposed coplanar Z-fighting, and intact craft when every detachable part is hidden.
 - **Spatial & IK metadata (`spatial.test.ts`, `capabilities.ts`)**: `attachOriginalCapabilities` automatically derives `colliders`, `clearanceZones`, `surfaces`, and measured `ik` (bipedal `legs` stride/segments or articulated `arm` reach). Confirm `checkRiggedSweep` reports zero issues across every knob extreme and add a targeted Vitest case testing knob extremes (min/default/max) in `src/models/`.
-- **6-angle capture**: `inspect:model` writes `front.png`, `back.png`, `left.png`, `right.png`, `top.png`, `bottom.png`, `perspective.png`, and `metrics.json` to `output/inspect/<slug>/`.
+- **6-angle capture + hierarchical trace**: `inspect:model` writes `front.png`, `back.png`, `left.png`, `right.png`, `top.png`, `bottom.png`, `perspective.png`, `metrics.json`, and `trace.json` (per-node world bounding boxes, triangle/open-edge counts, materials, and declared joints/surfaces) to `output/inspect/<slug>/`.
 
 ## Stage 4: Fresh-Session Adversarial Visual Judge
 

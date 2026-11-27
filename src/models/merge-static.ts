@@ -1,5 +1,18 @@
 import * as T from 'three';
 
+/**
+ * Pure procedural vertex-color shader evaluated per vertex at merge/bake time.
+ * Receives `(x, y, z)` position, outward unit normal `[nx, ny, nz]`, and the element's base `T.Color`
+ * and returns either a `T.Color`, a CSS hex string (`"#rrggbb"`, sRGB), or a linear `[r, g, b]` triple in `[0, 1]`.
+ */
+export type VertexColorShader = (
+  x: number,
+  y: number,
+  z: number,
+  normal: readonly [number, number, number],
+  base: T.Color,
+) => T.Color | string | readonly [number, number, number];
+
 export interface MergeStaticOptions {
   /** Node names whose subtrees must stay separate (rigged hinges, detachable parts, skins). */
   preserveNames?: ReadonlySet<string>;
@@ -9,6 +22,8 @@ export interface MergeStaticOptions {
   seed?: number;
   /** Name prefix assigned to merged static meshes. Default 'Static'. */
   namePrefix?: string;
+  /** Optional root-space procedural vertex-color shader baked across non-tintZone merged meshes. */
+  colorFn?: VertexColorShader;
 }
 
 export interface MergeStaticReport {
@@ -66,26 +81,59 @@ function jitterColor(base: T.Color, tone: number, seed: number, index: number): 
   return out;
 }
 
-/** Paint deterministic vertex colors onto a cloned non-indexed geometry using optional tonal jitter. */
+function evalShaderColor(
+  shader: VertexColorShader,
+  x: number,
+  y: number,
+  z: number,
+  normal: readonly [number, number, number],
+  base: T.Color,
+  target: T.Color,
+): T.Color {
+  const res = shader(x, y, z, normal, base);
+  if (res instanceof T.Color) return target.copy(res);
+  if (typeof res === 'string') return target.set(res);
+  const r = Number.isFinite(res[0]) ? Math.max(0, Math.min(1, res[0])) : base.r;
+  const g = Number.isFinite(res[1]) ? Math.max(0, Math.min(1, res[1])) : base.g;
+  const b = Number.isFinite(res[2]) ? Math.max(0, Math.min(1, res[2])) : base.b;
+  return target.setRGB(r, g, b);
+}
+
+/** Paint deterministic vertex colors onto a cloned non-indexed geometry using tonal jitter and optional procedural `colorFn`. */
 export function applyVertexColorTone(
   source: T.BufferGeometry,
   baseColor: T.Color | string | number,
   tone = 0.35,
   seed = 1337,
   index = 0,
+  colorFn?: VertexColorShader,
 ): T.BufferGeometry {
   const geo = source.index ? source.toNonIndexed() : source.clone();
   const pos = geo.getAttribute('position') as T.BufferAttribute | undefined;
   if (!pos || pos.count === 0) return geo;
-  const existingNormal = geo.getAttribute('normal') as T.BufferAttribute | undefined;
-  if (!existingNormal) geo.computeVertexNormals();
+  let norm = geo.getAttribute('normal') as T.BufferAttribute | undefined;
+  if (!norm) {
+    geo.computeVertexNormals();
+    norm = geo.getAttribute('normal') as T.BufferAttribute | undefined;
+  }
   const base = baseColor instanceof T.Color ? baseColor : new T.Color(baseColor);
   const tinted = jitterColor(base, tone, seed, index);
   const colors = new Float32Array(pos.count * 3);
+  const out = new T.Color();
   for (let i = 0; i < pos.count; i++) {
-    colors[i * 3] = tinted.r;
-    colors[i * 3 + 1] = tinted.g;
-    colors[i * 3 + 2] = tinted.b;
+    if (colorFn) {
+      const nx = norm ? norm.getX(i) : 0;
+      const ny = norm ? norm.getY(i) : 1;
+      const nz = norm ? norm.getZ(i) : 0;
+      evalShaderColor(colorFn, pos.getX(i), pos.getY(i), pos.getZ(i), [nx, ny, nz], tinted, out);
+      colors[i * 3] = out.r;
+      colors[i * 3 + 1] = out.g;
+      colors[i * 3 + 2] = out.b;
+    } else {
+      colors[i * 3] = tinted.r;
+      colors[i * 3 + 1] = tinted.g;
+      colors[i * 3 + 2] = tinted.b;
+    }
   }
   geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
   return geo;
@@ -225,6 +273,10 @@ export function mergeStaticParts(root: T.Object3D, options: MergeStaticOptions =
   const n = new T.Vector3();
   const baseColor = new T.Color();
   const vertColor = new T.Color();
+  const rootColorFn = options.colorFn;
+  const vLocal = new T.Vector3();
+  const nLocal = new T.Vector3();
+  const shadedColor = new T.Color();
   const labelCounts = new Map<string, number>();
 
   for (const bucket of buckets.values()) {
@@ -235,6 +287,7 @@ export function mergeStaticParts(root: T.Object3D, options: MergeStaticOptions =
       flip: boolean;
       tint: T.Color;
       hasVertColor: boolean;
+      localShader?: VertexColorShader;
       triCount: number;
       sourceMesh: T.Mesh;
     }[] = [];
@@ -262,6 +315,11 @@ export function mergeStaticParts(root: T.Object3D, options: MergeStaticOptions =
         tint = jitterColor(baseColor, bucket.key === 'matte' ? tone : tone * 0.45, seed, item.order);
       }
       const hasVertColor = Boolean(geo.getAttribute('color'));
+      const meshFn = typeof item.mesh.userData.colorFn === 'function'
+        ? (item.mesh.userData.colorFn as VertexColorShader)
+        : typeof item.material.userData.colorFn === 'function'
+          ? (item.material.userData.colorFn as VertexColorShader)
+          : undefined;
 
       prepared.push({
         geo,
@@ -269,6 +327,7 @@ export function mergeStaticParts(root: T.Object3D, options: MergeStaticOptions =
         flip,
         tint,
         hasVertColor,
+        ...(meshFn && bucket.tintHex === undefined ? { localShader: meshFn } : {}),
         triCount,
         sourceMesh: item.mesh,
       });
@@ -298,17 +357,21 @@ export function mergeStaticParts(root: T.Object3D, options: MergeStaticOptions =
 
         for (let k = 0; k < 3; k++) {
           const vi = triIdx[k] ?? 0;
-          v.fromBufferAttribute(posAttr, vi).applyMatrix4(part.relMatrix);
+          vLocal.fromBufferAttribute(posAttr, vi);
+          v.copy(vLocal).applyMatrix4(part.relMatrix);
           positions[cursor] = v.x;
           positions[cursor + 1] = v.y;
           positions[cursor + 2] = v.z;
 
           if (normAttr) {
-            n.fromBufferAttribute(normAttr, vi).applyMatrix3(normalMat).normalize();
+            nLocal.fromBufferAttribute(normAttr, vi).normalize();
+            n.copy(nLocal).applyMatrix3(normalMat).normalize();
             normals[cursor] = n.x;
             normals[cursor + 1] = n.y;
             normals[cursor + 2] = n.z;
           } else {
+            nLocal.set(0, 1, 0);
+            n.set(0, 1, 0);
             normals[cursor] = 0;
             normals[cursor + 1] = 1;
             normals[cursor + 2] = 0;
@@ -316,14 +379,20 @@ export function mergeStaticParts(root: T.Object3D, options: MergeStaticOptions =
 
           if (colAttr) {
             vertColor.fromBufferAttribute(colAttr, vi).multiply(part.tint);
-            colors[cursor] = vertColor.r;
-            colors[cursor + 1] = vertColor.g;
-            colors[cursor + 2] = vertColor.b;
           } else {
-            colors[cursor] = part.tint.r;
-            colors[cursor + 1] = part.tint.g;
-            colors[cursor + 2] = part.tint.b;
+            vertColor.copy(part.tint);
           }
+          if (part.localShader) {
+            evalShaderColor(part.localShader, vLocal.x, vLocal.y, vLocal.z, [nLocal.x, nLocal.y, nLocal.z], vertColor, shadedColor);
+            vertColor.copy(shadedColor);
+          }
+          if (rootColorFn && bucket.tintHex === undefined) {
+            evalShaderColor(rootColorFn, v.x, v.y, v.z, [n.x, n.y, n.z], vertColor, shadedColor);
+            vertColor.copy(shadedColor);
+          }
+          colors[cursor] = vertColor.r;
+          colors[cursor + 1] = vertColor.g;
+          colors[cursor + 2] = vertColor.b;
           cursor += 3;
         }
       }

@@ -3,13 +3,28 @@ import { kitBox, timberBrace } from './kit-materials';
 import { box, mesh, strut, type Point } from './parts';
 
 export type { KitColorway, KitMaterials } from './kit-materials';
+export type { DirectionSpec, FrameHingeOptions, PlaceOnFrameOptions } from './kit-frames';
+export {
+  KitFrame,
+  bboxFrame,
+  createHingeOnFrame,
+  gridFrames,
+  jitterFrames,
+  localFrame,
+  placeOnFrame,
+  ringFrames,
+  varyValues,
+} from './kit-frames';
 export {
   HARBOR_TIMBER_COLORWAYS,
+  grainShader,
   hardwareMaterial,
+  heightBandShader,
   kitBox,
   kitMaterials,
   matteMaterial,
   timberBrace,
+  upwardBlendShader,
 } from './kit-materials';
 
 /** Grounded two-tier stepped masonry plinth flush at y = 0 with solid lapped corners and zero underside slits. */
