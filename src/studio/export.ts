@@ -3,10 +3,36 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import type { CompositeChildSpec } from '../capabilities/compose-schema';
 import { findOwnNodeByName, getLiveController, type ExportPoseProvider } from '../capabilities/compose-tree';
 import { inspectAsset, isSynthesizedClip, synthesizeRigClips, type AssetController } from '../capabilities/runtime';
-import { writeCapabilities } from '../capabilities/schema';
+import { readCapabilities, writeCapabilities } from '../capabilities/schema';
 
 export interface ExportOptions {
   includePartClips?: boolean;
+}
+
+function isIdentityTransform(obj: Object3D): boolean {
+  return (
+    obj.position.lengthSq() < 1e-10
+    && Math.abs(obj.quaternion.w - 1) < 1e-6
+    && Math.abs(obj.scale.x - 1) < 1e-6
+    && Math.abs(obj.scale.y - 1) < 1e-6
+    && Math.abs(obj.scale.z - 1) < 1e-6
+  );
+}
+
+function unwrapSceneWrapper(source: Object3D): Object3D {
+  let cur: Object3D = source;
+  while (
+    !('formFoundry' in cur.userData)
+    && cur.children.length === 1
+    && cur.children[0]
+    && isIdentityTransform(cur)
+    && !cur.children[0].userData.compositeSlot
+    && !cur.children[0].userData.compositeChild
+    && readCapabilities(cur.children[0])
+  ) {
+    cur = cur.children[0];
+  }
+  return cur;
 }
 
 /** Capture the rig at rest, preserving detachable subtrees, active part poses, capability manifest, and optional part clips. */
@@ -15,7 +41,8 @@ export function cloneForExport(
   options?: ExportOptions,
   controller?: AssetController | ExportPoseProvider | null,
 ) {
-  const root = clone(source);
+  const exportSource = unwrapSceneWrapper(source);
+  const root = clone(exportSource);
   const materials = new Map<Material, Material>();
   const paintedGeometry = new Map<BufferGeometry, BufferGeometry>();
   const overlays: Object3D[] = [];
@@ -54,15 +81,18 @@ export function cloneForExport(
       if (child) copyNode(node, child);
     });
   }
-  copyNode(source, root);
+  copyNode(exportSource, root);
   for (const overlay of overlays) overlay.removeFromParent();
-  root.animations = source.animations.map((clip) => clip.clone());
+  const sourceAnims = source.animations.length ? source.animations : exportSource.animations;
+  root.animations = sourceAnims.map((clip) => clip.clone());
 
-  const activeController = controller === undefined ? getLiveController(source) : controller;
+  const activeController = controller === undefined
+    ? (getLiveController(source) ?? getLiveController(exportSource))
+    : controller;
   if (!root.animations.length && activeController && 'getAnimations' in activeController) {
     root.animations = activeController.getAnimations().map(clip => clip.clone());
   }
-  const capabilities = activeController ? activeController.syncManifest() : inspectAsset(source, root.animations);
+  const capabilities = activeController ? activeController.syncManifest() : inspectAsset(exportSource, root.animations);
   // Re-apply authoritative rigged part poses onto the clone so animation mixer resets never bake stale transforms.
   activeController?.applyPoseToClone(root);
 

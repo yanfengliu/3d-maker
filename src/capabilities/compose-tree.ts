@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { CompositeChildSpec, CompositeMountSpec } from './compose-schema';
-import type { AssetCapabilities, AssetPhysicsSpec, SurfaceSpec } from './schema';
+import type { AssetCapabilities, AssetPhysicsSpec, AssetRuntimeState, SurfaceSpec } from './schema';
 
 export interface CompositeRigidBodySpec {
   rootId: string;
@@ -34,9 +34,9 @@ export function getRiggedRestPose(node: T.Object3D): NodeRestPose | undefined {
 function resolveCanonicalTargets(root: T.Object3D): T.Object3D[] {
   const targets: T.Object3D[] = [root];
   let cur: T.Object3D = root;
-  for (let depth = 0; depth < 2; depth++) {
-    const only = cur.children.length === 1 ? cur.children[0] : undefined;
-    if (!only || only.userData.compositeSlot || only.userData.compositeChild) break;
+  while (cur.children.length === 1 && cur.children[0]) {
+    const only = cur.children[0];
+    if (only.userData.compositeSlot || only.userData.compositeChild) break;
     targets.push(only);
     cur = only;
   }
@@ -61,11 +61,11 @@ export function getLiveController(root: T.Object3D): ExportPoseProvider | undefi
     if (hit) return hit;
   }
   let up = root.parent;
-  for (let depth = 0; depth < 2 && up; depth++) {
+  while (up) {
     if (up.children.length === 1) {
       const hit = liveControllers.get(up);
       if (hit) return hit;
-    }
+    } else break;
     up = up.parent;
   }
   return undefined;
@@ -175,7 +175,15 @@ export function mountLocalMatrix(mount: CompositeMountSpec, hostSurface?: Surfac
   const q = new T.Quaternion().setFromEuler(new T.Euler(rot[0], rot[1], rot[2], 'XYZ'));
   const sc = mount.scale ?? 1;
   const s = typeof sc === 'number' ? new T.Vector3(sc, sc, sc) : new T.Vector3(sc[0], sc[1], sc[2]);
-  return new T.Matrix4().compose(pos, q, s);
+  const local = new T.Matrix4().compose(pos, q, s);
+  if (!hostSurface && mount.attachRestPose) {
+    const aPos = new T.Vector3(...mount.attachRestPose.at);
+    const aRot = mount.attachRestPose.rotation ?? [0, 0, 0];
+    const aQ = new T.Quaternion().setFromEuler(new T.Euler(aRot[0], aRot[1], aRot[2], 'XYZ'));
+    const attachM = new T.Matrix4().compose(aPos, aQ, new T.Vector3(1, 1, 1));
+    return attachM.multiply(local);
+  }
+  return local;
 }
 
 /**
@@ -279,15 +287,13 @@ export function computeCompositeBodies(
     }
   }
 
-  return [
-    ...[...bodies.values()].map(entry => ({
-      rootId: entry.root.id,
-      memberIds: entry.memberIds,
-      body: entry.root.capabilities.physics?.body ?? 'static',
-      ...(entry.hasMass ? { massKg: r3(entry.mass) } : {}),
-    })),
-    ...extraNestedBodies,
-  ];
+  const primaryResult = [...bodies.values()].map((entry, idx) => ({
+    rootId: entry.root.id,
+    memberIds: entry.memberIds,
+    body: idx === 0 && capabilities.physics?.locked ? capabilities.physics.body : (entry.root.capabilities.physics?.body ?? 'static'),
+    ...(entry.hasMass ? { massKg: r3(entry.mass) } : {}),
+  }));
+  return [...primaryResult, ...extraNestedBodies];
 }
 
 /**
@@ -311,6 +317,7 @@ export function computeCompositePhysics(
   return {
     body: overrideBody ?? primary?.body ?? 'static',
     ...(primary?.massKg !== undefined ? { massKg: primary.massKg } : {}),
+    ...(overrideBody ? { locked: true } : {}),
   };
 }
 
@@ -347,16 +354,53 @@ export function disposeUnusedResources(removed: T.Object3D, keepRoot: T.Object3D
   }
 }
 
-export function collectNodeNamesExcluding(root: T.Object3D, excludeSubtree: T.Object3D): Set<string> {
+export function collectNodeNamesExcluding(
+  root: T.Object3D,
+  excludeSubtree: T.Object3D,
+  keepSubtrees?: ReadonlySet<T.Object3D>,
+): Set<string> {
   const names = new Set<string>();
-  const stack: T.Object3D[] = [root];
+  const stack: { node: T.Object3D; skipped: boolean }[] = [{ node: root, skipped: false }];
   while (stack.length) {
-    const node = stack.pop();
-    if (!node || node === excludeSubtree) continue;
-    if (node.name) names.add(node.name);
-    for (const child of node.children) stack.push(child);
+    const item = stack.pop();
+    if (!item) continue;
+    const { node } = item;
+    let skipped = item.skipped;
+    if (node === excludeSubtree) skipped = true;
+    else if (keepSubtrees?.has(node)) skipped = false;
+    if (!skipped && node.name) names.add(node.name);
+    for (const child of node.children) stack.push({ node: child, skipped });
   }
   return names;
+}
+
+export function restoreCompatibleChildState(
+  controller: {
+    setPart(name: string, value: number): number;
+    setVisible(name: string, visible: boolean): void;
+    setNight(on: boolean): void;
+    setDecalsVisible(on: boolean, labels?: Record<string, string>): void;
+  },
+  rebuilt: T.Object3D,
+  prefix: string | undefined,
+  freshCaps: AssetCapabilities,
+  prevState: AssetRuntimeState,
+  prevDecalsVisible: boolean,
+): void {
+  for (const [part, val] of Object.entries(prevState.pose ?? {})) {
+    if (freshCaps.riggedParts.some(p => p.name === part) && findOwnNodeByName(rebuilt, part, prefix)) {
+      controller.setPart(part, val);
+    }
+  }
+  for (const part of prevState.hiddenParts ?? []) {
+    if (freshCaps.detachableParts.some(p => p.name === part) && findOwnNodeByName(rebuilt, part, prefix)) {
+      controller.setVisible(part, false);
+    }
+  }
+  if (prevState.night && freshCaps.nightZones.length) controller.setNight(true);
+  if (prevState.decalText && freshCaps.decals.length) {
+    controller.setDecalsVisible(prevDecalsVisible, prevState.decalText);
+  }
 }
 
 export function splitFirstSegment(scopedPath: string): [string, string] {

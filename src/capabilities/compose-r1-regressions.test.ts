@@ -220,9 +220,24 @@ describe('Round 1 review regression suite (F0-F16 deep edge cases)', () => {
     })).toThrow('MissingSlot');
     expect(propSlot?.parent).toBe(origParent);
 
-    // 3. Valid nested rebuild preserves explicit physicsBody='static', updates outer clips ('Old' -> 'New'), AND keeps outerSib's sharedGeo/Mat!
-    const updatedCaps = ctrl.setChildParams('room/leaf', {}, () => makeLeaf('New'));
+    // 3. Valid nested rebuild with BRAND NEW geometry/material (not sharedGeo/sharedMat!) preserves explicit physicsBody='static',
+    // updates outer clips ('Old' -> 'New'), AND keeps outerSib's sharedGeo/Mat alive (F11, F12)!
+    const makeFreshLeaf = (clipName: string) => {
+      const g = new T.Group(); g.name = 'Leaf';
+      const m = new T.Mesh(new T.BoxGeometry(0.3, 0.3, 0.3), new T.MeshStandardMaterial({ color: '#444' }));
+      m.name = 'Part';
+      g.add(m);
+      g.animations = [new T.AnimationClip(clipName, 1, [new T.VectorKeyframeTrack('Part.position', [0, 1], [0, 0, 0, 0, 1, 0])])];
+      writeCapabilities(g, {
+        version: 1, name: 'Leaf', riggedParts: [], detachableParts: [], nightZones: [], decals: [],
+        physics: { body: 'dynamic', massKg: 10 },
+        surfaces: [{ name: 'Top', label: 'Top', at: [0, 0.3, 0], normal: [0, 1, 0], size: [1, 1], clearanceY: 2 }],
+      });
+      return g;
+    };
+    const updatedCaps = ctrl.setChildParams('room/leaf', {}, () => makeFreshLeaf('New'));
     expect(updatedCaps.physics?.body).toBe('static');
+    expect(computeCompositeBodies(updatedCaps)[0]?.body).toBe('static');
     expect(updatedCaps.clips?.map(c => c.name)).toContain('room: leaf: New');
     expect(updatedCaps.clips?.some(c => c.name.includes('Old'))).toBe(false);
     expect(spyGeo).not.toHaveBeenCalled();
@@ -398,22 +413,23 @@ describe('Round 1 review regression suite (F0-F16 deep edge cases)', () => {
     const headlessVols = resolveAssetVolumes({ id: 'carrier', capabilities: outerCaps });
     expect(headlessVols.length).toBe(3);
 
-    // 5. Weak shear (~8e-5) on a 500m beam catches interior probe (F14).
+    // 5. Weak shear (~8e-5 < old 1e-4 threshold!) on a 500m beam catches edge probe strictly inside true sheared beam (F14).
     const beamFrame = makeBox('BeamFrame', [0.1, 0.1, 0.1]);
     const beam = makeBox('Beam', [500, 1, 1]);
     const probe = makeBox('Probe', [0.05, 0.05, 0.05]);
     const weakShear = composeAsset({
       name: 'Weak Shear Beam',
       parts: [
-        { id: 'frame', object: beamFrame, mount: { scale: [1, 1, 1.00016], at: [0, 5, 0] } },
+        { id: 'frame', object: beamFrame, mount: { scale: [1, 1, 1.00008], at: [0, 5, 0] } },
         { id: 'beam', object: beam, mount: { parent: 'frame', rotation: [0, Math.PI / 4, 0], at: [0, -5, 0], coupling: 'surface' } },
-        { id: 'probe', object: probe, mount: { at: [176, 0.5, -176], coupling: 'surface' } },
+        // Probe placed near the +z local edge at x_local = +240m where 8e-5 shear shifts the beam edge by ~19mm.
+        { id: 'probe', object: probe, mount: { at: [240 * Math.SQRT1_2 + 0.46 * Math.SQRT1_2, 0.5, -240 * Math.SQRT1_2 * 1.00008 + 0.46 * Math.SQRT1_2 * 1.00008], coupling: 'surface' } },
       ],
     });
     expect(validateScenePlacement([
       { id: 'beam', object: weakShear.getObjectByName('Slot_beam')?.children[0] as T.Object3D, capabilities: inspectAsset(weakShear).children?.[1]?.capabilities as AssetCapabilities },
       { id: 'probe', object: weakShear.getObjectByName('Slot_probe')?.children[0] as T.Object3D, capabilities: inspectAsset(weakShear).children?.[2]?.capabilities as AssetCapabilities },
-    ]).valid).toBe(false);
+    ], { tolerance: 0.01 }).valid).toBe(false);
 
     // 6. Deep multi-level 60-char IDs exceeding MAX_SCOPED_NAME_LEN throw cleanly at write time (F15).
     const id60 = 'x'.repeat(60);

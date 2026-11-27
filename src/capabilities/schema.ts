@@ -83,6 +83,8 @@ export interface AssetPhysicsSpec {
   body: 'static' | 'dynamic';
   massKg?: number;
   material?: string;
+  /** True when the composite author explicitly pinned `physicsBody`, preventing child rebuilds from flipping it. */
+  locked?: boolean;
 }
 
 export interface AssetRuntimeState {
@@ -392,6 +394,7 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
       body: value.physics.body,
       ...(typeof value.physics.massKg === 'number' && Number.isFinite(value.physics.massKg) ? { massKg: value.physics.massKg } : {}),
       ...(typeof value.physics.material === 'string' ? { material: value.physics.material } : {}),
+      ...(value.physics.locked === true ? { locked: true } : {}),
     };
   }
   const ik = parseIkSpec(value.ik);
@@ -432,10 +435,16 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
   return result;
 }
 
-/** Locate embedded Form Foundry capabilities on an object hierarchy (works after GLTFLoader import). */
+/** Locate embedded Form Foundry capabilities on an object hierarchy (works across arbitrary GLTFLoader wrapper depth). */
 export function readCapabilities(root: Object3D): AssetCapabilities | null {
-  const direct = parseCapabilities(root.userData.formFoundry);
-  if (direct) return direct;
+  let cur: Object3D = root;
+  for (;;) {
+    const direct = parseCapabilities(cur.userData.formFoundry);
+    if (direct) return direct;
+    const only = cur.children.length === 1 ? cur.children[0] : undefined;
+    if (!only || only.userData.compositeSlot) break;
+    cur = only;
+  }
   for (const child of root.children) {
     const nested = parseCapabilities(child.userData.formFoundry);
     if (nested) return nested;
@@ -465,15 +474,17 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
 
 /** Write a clean JSON snapshot of capabilities onto the canonical manifest host node without duplicating extras. */
 export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
-  // Follow single-child GLTFLoader scene wrappers (up to depth 2) to update the canonical manifest host in place.
+  // Follow any single-child non-composite wrapper chain to locate an existing canonical manifest host at any depth.
   let host: Object3D = root;
-  for (let depth = 0; depth < 2; depth++) {
-    if ('formFoundry' in host.userData) break;
-    const only = host.children.length === 1 ? host.children[0] : undefined;
+  let probe: Object3D = root;
+  for (;;) {
+    if ('formFoundry' in probe.userData) {
+      host = probe;
+      break;
+    }
+    const only = probe.children.length === 1 ? probe.children[0] : undefined;
     if (!only || only.userData.compositeSlot || only.userData.compositeChild) break;
-    if ('formFoundry' in only.userData || (only.children.length === 1 && only.children[0] && 'formFoundry' in only.children[0].userData && !only.children[0].userData.compositeSlot && !only.children[0].userData.compositeChild)) {
-      host = only;
-    } else break;
+    probe = only;
   }
   root.traverse(node => {
     if (node !== host && 'formFoundry' in node.userData) delete node.userData.formFoundry;

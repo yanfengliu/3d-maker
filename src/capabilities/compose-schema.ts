@@ -14,6 +14,11 @@ export interface CompositeMountSpec {
   parent?: string;
   /** Optional node name inside the parent hierarchy (e.g. a crane boom or truck bed) to follow dynamically. */
   attachNode?: string;
+  /** Optional parent-local rest transform of `attachNode` so headless JSON placement checks resolve accurate world frames. */
+  attachRestPose?: {
+    at: [number, number, number];
+    rotation?: [number, number, number];
+  };
   /** Optional SurfaceSpec name on the host to seat this child flush onto. */
   surface?: string;
   /** Local [x, y, z] position in meters (or offset from surface center when `surface` is set). */
@@ -95,6 +100,14 @@ function parseMount(value: unknown): CompositeMountSpec | undefined {
   if (!couplings.has(rawCoupling as PhysicsCoupling)) return undefined;
   const parent = trimText(value.parent, 60);
   const attachNode = trimText(value.attachNode, maxLabelLen);
+  let attachRestPose: { at: [number, number, number]; rotation?: [number, number, number] } | undefined;
+  if (isRecord(value.attachRestPose)) {
+    const poseAt = tuple3(value.attachRestPose.at);
+    if (poseAt) {
+      const poseRot = tuple3(value.attachRestPose.rotation);
+      attachRestPose = { at: poseAt, ...(poseRot ? { rotation: poseRot } : {}) };
+    }
+  }
   const surface = trimText(value.surface, maxLabelLen);
   const at = tuple3(value.at);
   const rotation = tuple3(value.rotation);
@@ -109,6 +122,7 @@ function parseMount(value: unknown): CompositeMountSpec | undefined {
   return {
     ...(parent ? { parent } : {}),
     ...(attachNode ? { attachNode } : {}),
+    ...(attachRestPose ? { attachRestPose } : {}),
     ...(surface ? { surface } : {}),
     ...(at ? { at } : {}),
     ...(rotation ? { rotation } : {}),

@@ -301,7 +301,17 @@ export function obbContainedIn(inner: OrientedBox, outer: OrientedBox, tolerance
 
 function isHiddenName(hiddenSet: ReadonlySet<string>, name: string, prefix = ''): boolean {
   if (hiddenSet.has(name)) return true;
-  if (prefix && name.startsWith(prefix) && hiddenSet.has(name.slice(prefix.length))) return true;
+  return Boolean(prefix && name.startsWith(prefix) && hiddenSet.has(name.slice(prefix.length)));
+}
+
+function hasHiddenAncestor(node: T.Object3D, stopAt: T.Object3D, hiddenSet: ReadonlySet<string>, prefix: string): boolean {
+  if (!hiddenSet.size) return false;
+  let cur: T.Object3D | null = node;
+  while (cur && cur !== stopAt) {
+    if (cur.name && isHiddenName(hiddenSet, cur.name, prefix)) return true;
+    if (typeof cur.userData.localName === 'string' && hiddenSet.has(cur.userData.localName)) return true;
+    cur = cur.parent;
+  }
   return false;
 }
 
@@ -361,35 +371,21 @@ function appendResolvedVolumes(
         if (isHiddenName(hiddenSet, spec.node, nodePrefix)) continue;
         if (object) {
           const node = findOwnNodeByName(object, spec.node, nodePrefix);
-          if (!node || !isVisibleInTree(node)) continue;
+          if (!node || !isVisibleInTree(node) || hasHiddenAncestor(node, object, hiddenSet, nodePrefix)) continue;
           volumes.push(buildOrientedBox(node.matrixWorld, spec.at, colliderHalfExtents(spec), {
-            id: `${ownerId}:collider:${volName}`,
-            name: volName,
-            ownerId,
-            kind: 'collider',
-            layer,
-            part: spec.node,
+            id: `${ownerId}:collider:${volName}`, name: volName, ownerId, kind: 'collider', layer, part: spec.node,
             ...(spec.rotation ? { rotation: spec.rotation } : {}),
           }));
         } else {
           if (!spec.restPose) continue;
           volumes.push(buildOrientedBox(rootWorld, spec.restPose.at, colliderHalfExtents(spec), {
-            id: `${ownerId}:collider:${volName}`,
-            name: volName,
-            ownerId,
-            kind: 'collider',
-            layer,
-            part: spec.node,
+            id: `${ownerId}:collider:${volName}`, name: volName, ownerId, kind: 'collider', layer, part: spec.node,
             ...(spec.restPose.rotation ? { rotation: spec.restPose.rotation } : {}),
           }));
         }
       } else {
         volumes.push(buildOrientedBox(rootWorld, spec.at, colliderHalfExtents(spec), {
-          id: `${ownerId}:collider:${volName}`,
-          name: volName,
-          ownerId,
-          kind: 'collider',
-          layer,
+          id: `${ownerId}:collider:${volName}`, name: volName, ownerId, kind: 'collider', layer,
           ...(spec.rotation ? { rotation: spec.rotation } : {}),
         }));
       }
@@ -402,7 +398,7 @@ function appendResolvedVolumes(
       if (zone.part && isHiddenName(hiddenSet, zone.part, nodePrefix)) continue;
       if (zone.part && object) {
         const node = findOwnNodeByName(object, zone.part, nodePrefix);
-        if (node && !isVisibleInTree(node)) continue;
+        if (node && (!isVisibleInTree(node) || hasHiddenAncestor(node, object, hiddenSet, nodePrefix))) continue;
       }
       volumes.push(buildOrientedBox(
         rootWorld,
