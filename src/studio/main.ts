@@ -30,7 +30,10 @@ if (params.get('shot') === '1' && params.get('noui') === '1') document.body.clas
 const stage = new Viewport(el('viewport'));
 let recipe: Recipe | null = null;
 let imported: ImportedAsset | null = null;
-let savedId: string | undefined;
+function newSelection(id?:string) {
+  return {id, write:Promise.resolve()};
+}
+let selection = newSelection();
 let currentPage = 'studio';
 let tab: 'props' | 'anim' = 'props';
 let grid = true,
@@ -53,7 +56,7 @@ function toolbar() {
     ? `${row.code}  /  ${row.category.toUpperCase()}  /  ${recipe?.quality === 'hd' ? 'HD' : 'STANDARD'}`
     : category().toUpperCase();
   el('save').innerHTML =
-    icon(savedId ? 'save' : 'plus', 16) + (savedId ? ' Save changes' : ' Save to inventory');
+    icon(selection.id ? 'save' : 'plus', 16) + (selection.id ? ' Save changes' : ' Save to inventory');
 }
 function controls() {
   el('propertiesTab').classList.toggle('active', tab === 'props');
@@ -121,7 +124,7 @@ function choose(next: Recipe, id?: string) {
   openSequence++;
   recipe = valid;
   imported = null;
-  savedId = id;
+  selection = newSelection(id);
   tab = 'props';
   swap(model, true);
   toolbar();
@@ -137,32 +140,31 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
   }
   recipe = null;
   imported = asset;
-  savedId = id;
+  selection = newSelection(id);
   tab = 'props';
   swap(asset.group, true);
   toolbar();
   showPage('studio');
   shelf.renderLibrary();
 }
-let pendingSave: { selection: number; promise: Promise<string> } | undefined;
 function save(): Promise<string> {
-  const selection = openSequence;
-  if (pendingSave?.selection === selection) return pendingSave.promise;
-  const persist = async () => {
-    const asset = recipe ? saveAsset(recipe, savedId) : imported ? await saveImport(imported, savedId) : null;
-    if (!asset) throw new Error('Choose an asset to save.');
-    if (selection === openSequence) {
-      savedId = asset.id;
+  const target = selection;
+  const draft = recipe ? {...recipe} : null;
+  const file = imported ? {...imported, edits:{...imported.edits}} : null;
+  // Each call owns the values it acknowledged. Queue writes on the displayed asset,
+  // even if another catalog request starts or finishes before its first ID is assigned.
+  const result = target.write.then(async () => {
+    const saved = draft ? saveAsset(draft,target.id) : file ? await saveImport(file,target.id) : null;
+    if (!saved) throw new Error('Choose an asset to save.');
+    target.id = saved.id;
+    if (target === selection) {
       toolbar();
+      notify('Saved to inventory');
     }
-    notify('Saved to inventory');
-    return asset.id;
-  };
-  const promise = persist().finally(() => {
-    if (pendingSave?.selection === selection) pendingSave = undefined;
+    return saved.id;
   });
-  pendingSave = { selection, promise };
-  return promise;
+  target.write = result.then(() => undefined, () => undefined);
+  return result;
 }
 async function exportGLB(): Promise<ArrayBuffer> {
   const source = imported?.group;
@@ -200,16 +202,20 @@ const shelf = setupShelf({
   active: () => recipe,
   openImport: (id) => openImport(() => openSavedImport(id), id),
   deleted: (id) => {
-    if (savedId === id) {
-      savedId = undefined;
+    if (selection.id === id) {
+      selection = newSelection();
       toolbar();
     }
   },
 });
 function applyRecipe(input: unknown) {
   const next = parseRecipe(input);
-  if (recipe && next.template === recipe.template) choose(next, savedId);
-  else choose(next);
+  if (!recipe || next.template !== recipe.template) { choose(next); return; }
+  openSequence++;
+  const model=buildModel(next);
+  recipe=next;
+  swap(model,false);
+  toolbar();controls();
 }
 const openRemote = (id: string, title: string, signal?: AbortSignal) =>
   openImport(() => openPolyforkGlb(id, title, signal), undefined, signal);
@@ -250,7 +256,7 @@ el('animationTab').onclick = () => {
 el('reset').onclick = () => {
   if (recipe) {
     const row = catalog.find((v) => v.id === recipe?.template);
-    if (row) choose({ ...row.recipe }, savedId);
+    if (row) { applyRecipe(row.recipe); stage.place(true); }
   } else if (imported) {
     applyImportEdits(imported, {
       name:

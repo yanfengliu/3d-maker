@@ -2,7 +2,7 @@
 
 ## What this is
 
-A three.js object and character studio with an editable procedural starter collection, a browser-local inventory and PolyFork GLB imports. Read [the design spec](docs/design/spec.md) for module boundaries, capture controls, and the agent interface. The owner requested direct commits on main for this rebuild.
+A desktop-browser three.js object and character studio with an editable procedural starter collection, a browser-local inventory and PolyFork GLB imports. Read [the design spec](docs/design/spec.md) for module boundaries, capture controls, and the agent interface. The owner requested direct commits on main for this rebuild.
 
 <!-- FLEET-CANON:BEGIN sha=114721fc6d4b generated from ../fleet/FLEET.md by `npm run sync-canon` — do not edit inside this block; this repo's own rules go in docs/policies/local-rules.md -->
 ## Fleet constitution

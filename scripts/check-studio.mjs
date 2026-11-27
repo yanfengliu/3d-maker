@@ -161,26 +161,27 @@ try {
   assert.ok(roundTrip.triangles,'Wireframe preview leaked into the exported GLB');
   await page.locator('#assetName').fill('Imported pilot');
   await page.locator('#assetName').press('Tab');
-  const ids = await page.evaluate(() => Promise.all([window.forgeStudio.save(), window.forgeStudio.save()]));
+  const ids = await page.evaluate(() => {
+    const api=window.forgeStudio, first=api.save();
+    api.setImportEdits({...api.getImportEdits(),name:'Imported pilot final', tint:'#aabbcc'});
+    return Promise.all([first,api.save()]);
+  });
   assert.equal(ids[0], ids[1]);
+  const saved=await page.evaluate(async id=>(await window.forgeStudio.listInventory()).find(a=>a.id===id),ids[0]);
+  assert.equal(saved.name,'Imported pilot final');assert.equal(saved.edits.tint,'#aabbcc');
   await page.waitForFunction(async () => (await window.forgeStudio.listInventory()).length === 2);
   await page.click('#navInventory');
   await page.locator('.openasset').filter({ hasText: 'Imported pilot' }).click();
-  await page.waitForFunction(() => window.forgeStudio.getImportEdits()?.name === 'Imported pilot');
+  await page.waitForFunction(() => window.forgeStudio.getImportEdits()?.name === 'Imported pilot final');
   await page.click('#navInventory');
   const stale=await page.context().newPage();await stale.goto(origin+site);await stale.waitForFunction(()=>window.__shotReady);
   await stale.click('#navInventory');await stale.locator('.openasset').filter({hasText:'Imported pilot'}).click();
-  await stale.waitForFunction(()=>window.forgeStudio.getImportEdits()?.name==='Imported pilot');
+  await stale.waitForFunction(()=>window.forgeStudio.getImportEdits()?.name==='Imported pilot final');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Delete Imported pilot' }).click();
   await page.waitForFunction(async () => (await window.forgeStudio.listInventory()).length === 1);
   const staleError=await stale.evaluate(async()=>{try{await window.forgeStudio.save();return '';}catch(error){return error.message;}});
   assert.match(staleError,/removed|no longer|deleted/i);await stale.close();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(origin + site + '?asset=survey-bot&shot=1');
-  await page.waitForFunction(() => window.__shotReady);
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-  await page.screenshot({ path: join(out, 'mobile.png'), fullPage: true });
   const sdk = await browser.newPage();
   await sdk.goto(origin + '/sdk-check');
   const result = await sdk.evaluate(async () => {
@@ -198,7 +199,7 @@ try {
   assert.ok(result.every((r) => r.group && r.clips > 0));
   assert.deepEqual(failures, []);
   console.log(
-    'Verified six rendered starters, orbit and preset controls, editing, inventory across reload, animation playback, GLB export/import, mobile layout and the three.js SDK.',
+    'Verified six rendered starters, orbit and preset controls, editing, inventory across reload, animation playback, GLB export/import, and the three.js SDK.',
   );
   console.log('Viewport pixel sample', before);
 } finally {

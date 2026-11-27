@@ -38,4 +38,3 @@
 .exportrow + .exportrow { border-top:1px solid var(--line); padding-top:15px; }
 #dialog button:disabled { opacity:.48; cursor:default; }
 #dialog [hidden] { display:none; }
-@media (max-width:500px) { #dialogBody,.dialoghead { padding-inline:14px; } .resultrow { gap:6px; } .resultthumb { flex-basis:36px; height:36px; } }

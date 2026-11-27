@@ -7,11 +7,13 @@ Form Foundry edits procedural three.js assets in the browser. Fetch ./catalog.js
 Open the studio and use window.forgeStudio.
 
 - listTemplates() lists the available starters.
-- getRecipe() reads the active starter recipe. Returns null while viewing a PolyFork import.
+- getRecipe() reads the active starter recipe. Returns null while viewing an imported GLB.
 - applyRecipe(recipe) validates and displays a complete starter recipe.
 - save() saves the active asset to this browser's inventory.
 - listInventory() reads the browser's saved inventory.
 - exportGLB() returns a Promise<ArrayBuffer> containing the active asset as a binary glTF file.
+- getImportEdits() and setImportEdits({name, tint, scale, proportion}) read and apply edits to a loaded GLB.
+- listClips() returns clip names and durations. playClip(index) previews a clip.
 - openPolyfork(id, name) loads a free GLB directly from PolyFork and returns a Promise<void>.
 
 To change an asset, read its recipe, replace the requested fields, apply the full recipe and save when the user requests persistence. Both colors take six-digit sRGB hex values. Scale and proportion are numbers in [0.65, 1.5]. The detail field toggles optional secondary parts. Quality selects the authored geometry level, either "standard" or "hd". All six catalog recipes use HD. Version 1 recipes that omit quality render at standard quality.
