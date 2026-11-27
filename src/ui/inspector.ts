@@ -99,26 +99,59 @@ export function showAnimation(
   playing: boolean,
   speed: number,
   select: (i: number) => void,
-  toggle: () => void,
+  toggle: () => boolean,
   seek: (n: number) => void,
   setSpeed: (n: number) => void,
 ) {
-  el('inspectorBody').innerHTML = clips.length
-    ? `<div class="propgroup anim"><h3 class="micro">ANIMATION CLIPS</h3><div class="cliplist">${clips.map((clip, i) => `<button data-clip="${String(i)}" class="clip ${index === i ? 'selected' : ''}">${icon('film', 16)}<span>${escapeHtml(clip.name)}</span><small>${clip.duration.toFixed(1)}s</small></button>`).join('')}</div></div>
-    <div class="propgroup anim"><h3 class="micro">PLAYBACK</h3><button class="btn" id="play">${icon(playing ? 'pause' : 'play', 15)} ${playing ? 'Pause' : 'Play clip'}</button><label class="rangelabel" for="timeline">Timeline</label><input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/><label class="accentrow" for="speed">Speed<select id="speed">${[0.5, 1, 1.5, 2].map((n) => `<option value="${String(n)}" ${n === speed ? 'selected' : ''}>${String(n)}×</option>`).join('')}</select></label></div>`
-    : '<div class="empty-mini">This asset has no embedded animation clips.</div>';
-  if (!clips.length) return;
-  el('play').onclick = toggle;
-  el<HTMLInputElement>('timeline').oninput = (e) => {
-    seek(Number((e.currentTarget as HTMLInputElement).value));
+  const panel = el('inspectorBody');
+  const canSearch = clips.length > 8;
+  if (!clips.length) {
+    panel.innerHTML = '<p class="empty-mini">This asset has no playable clips.</p>';
+    return;
+  }
+  const rows = clips.map((clip, i) => `<button type="button" data-clip="${i}" class="clip" aria-pressed="false">${icon('film', 15)}<span>${escapeHtml(clip.name)}</span><small>${clip.duration.toFixed(1)}s</small></button>`).join('');
+  panel.innerHTML = `<section class="propgroup anim motion-picker"><h3 class="micro">ANIMATION CLIPS <span id="motionCount"></span></h3>
+    ${canSearch ? '<input type="search" class="namefield" aria-label="Search animations" id="motionSearch" placeholder="Search animations…" autocomplete="off"/>' : ''}
+    <div class="cliplist" id="clipList">${rows}<p id="noMotionMatches" hidden>No matching animations.</p></div></section>
+    <section class="propgroup anim"><h3 class="micro">PLAYBACK</h3><strong id="motionName"></strong>
+    <button class="btn" id="play"></button><label class="rangelabel" for="timeline">Timeline</label><input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/>
+    <label class="accentrow" for="speed">Speed<select id="speed">${[0.5, 1, 1.5, 2].map(n => `<option value="${n}" ${n === speed ? 'selected' : ''}>${n}×</option>`).join('')}</select></label></section>`;
+  const buttons = [...el('clipList').querySelectorAll<HTMLButtonElement>('[data-clip]')];
+  function currentClip(selected: number) {
+    el('motionName').textContent = clips[selected]?.name ?? '';
+    for (const [i, button] of buttons.entries()) {
+      button.setAttribute('aria-pressed', String(i === selected));
+      button.classList.toggle('selected', i === selected);
+    }
+  }
+  function transport(on: boolean) {
+    el('play').innerHTML = icon(on ? 'pause' : 'play', 15) + (on ? ' Pause' : ' Play clip');
+  }
+  currentClip(index);
+  transport(playing);
+  el('motionCount').textContent = String(clips.length);
+  el('clipList').onclick = event => {
+    const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-clip]') : null;
+    if (!button) return;
+    const next = Number(button.dataset.clip);
+    select(next);
+    currentClip(next);
   };
-  el<HTMLSelectElement>('speed').onchange = (e) => {
-    setSpeed(Number((e.currentTarget as HTMLSelectElement).value));
-  };
-  document.querySelectorAll<HTMLButtonElement>('[data-clip]').forEach(
-    (b) =>
-      (b.onclick = () => {
-        select(Number(b.dataset.clip));
-      }),
-  );
+  if (canSearch) {
+    const search = el<HTMLInputElement>('motionSearch');
+    search.oninput = () => {
+      const query = search.value.trim().toLowerCase();
+      let matches = 0;
+      for (const [i, button] of buttons.entries()) {
+        button.hidden = !clips[i]?.name.toLowerCase().includes(query);
+        if (!button.hidden) matches++;
+      }
+      el('noMotionMatches').hidden = matches > 0;
+      el('motionCount').textContent = query ? matches + ' / ' + clips.length : String(clips.length);
+      el('clipList').scrollTop = 0;
+    };
+  }
+  el('play').onclick = () => { transport(toggle()); };
+  el<HTMLInputElement>('timeline').oninput = e => { seek(Number((e.currentTarget as HTMLInputElement).value)); };
+  el<HTMLSelectElement>('speed').onchange = e => { setSpeed(Number((e.currentTarget as HTMLSelectElement).value)); };
 }

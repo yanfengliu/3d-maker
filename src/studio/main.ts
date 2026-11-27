@@ -83,11 +83,11 @@ function controls() {
       stage.speed,
       (i) => {
         stage.setClip(i);
-        controls();
+        stage.seek(0);
       },
       () => {
         stage.play(!stage.playing);
-        controls();
+        return stage.playing;
       },
       (n) => {
         stage.seek(n);

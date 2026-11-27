@@ -118,7 +118,13 @@ try {
   assert.equal(recipe.quality, 'standard');
   assert.equal(recipe.primary, '#cb714d');
   await page.click('#animationTab');
-  await page.locator('[data-clip]').last().click();
+  const originalClips = await page.evaluate(() => window.forgeStudio.listClips().map(clip => clip.name));
+  assert.equal(originalClips.length, 87);
+  await page.getByRole('searchbox', { name:'Search animations' }).fill('swimm');
+  assert.equal(await page.locator('[data-clip]:visible').count(), 1);
+  await page.locator('[data-clip]:visible').click();
+  assert.equal(await page.locator('#motionName').innerText(), 'Swimming');
+  assert.equal(await page.locator('#motionSearch').inputValue(), 'swimm');
   await page.click('#play');
   await page.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > 0.03);
   await page.click('#play');
@@ -132,7 +138,9 @@ try {
   assert.equal(glb.toString('ascii', 0, 4), 'glTF');
   assert.equal(glb.readUInt32LE(8), glb.length);
   const doc = JSON.parse(glb.toString('utf8', 20, 20 + glb.readUInt32LE(12)));
-  assert.ok(doc.skins[0].joints.length >= 15 && doc.animations.length >= 2);
+  assert.ok(doc.skins[0].joints.length >= 15);
+  assert.deepEqual(doc.animations.map(clip => clip.name), originalClips);
+  assert.ok(doc.animations.every(clip => clip.channels.length > 0));
   await page.click('#import');
   // Include a legitimate, unnamed animated node. The loader binds it by UUID.
   const channel=doc.animations[0].channels[0], anonymous=doc.nodes.push({})-1;
@@ -146,7 +154,7 @@ try {
   await page.waitForFunction(
     () => !document.querySelector('dialog').open && window.forgeStudio.getRecipe() === null,
   );
-  assert.ok((await page.evaluate(() => window.forgeStudio.listClips())).length >= 2);
+  assert.deepEqual(await page.evaluate(() => window.forgeStudio.listClips().map(clip => clip.name)), originalClips);
   await page.click('#wire');
   const roundTrip=await page.evaluate(async()=>{
     const bytes=await window.forgeStudio.exportGLB(),length=new DataView(bytes).getUint32(12,true);

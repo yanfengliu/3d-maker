@@ -89,3 +89,12 @@
 }
 .shot-only #inventoryPanel,.shot-only .editor-heading{display:none}
 .shot-only .workspace-shell,.shot-only #editorPanel,.shot-only .editor-body{padding:0;margin:0;display:block;min-height:0}
+
+#inspectorBody:has(.motion-picker){height:clamp(208px,27vh,310px);min-height:208px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-content:stretch}
+.motion-picker{display:flex;flex-direction:column;min-height:0}
+#motionCount{letter-spacing:0;color:#4c5a41}
+#motionSearch{flex-shrink:0;margin-bottom:8px}
+#clipList{min-height:0;overflow:auto;scrollbar-width:thin;padding:2px}
+#clipList .clip{text-align:left}
+#motionName{display:block;margin-bottom:8px;font-size:14px;overflow-wrap:anywhere}
+#noMotionMatches{font-size:12px;color:var(--muted);padding:6px 0}
