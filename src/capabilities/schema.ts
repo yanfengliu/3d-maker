@@ -1,4 +1,5 @@
 import type { Object3D } from 'three';
+import { parseCompositeChildren, type CompositeChildSpec } from './compose-schema';
 import { parseIkSpec, type AssetIkSpec } from './ik-schema';
 import { parseModelParamSpecs, type ModelParamSpec } from './param-schema';
 import {
@@ -10,9 +11,11 @@ import {
   type SurfaceSpec,
 } from './spatial-schema';
 
+export type * from './compose-schema';
 export type * from './ik-schema';
 export type * from './param-schema';
 export type * from './spatial-schema';
+export { COMPOSITE_CHILD_ID_PATTERN, parseCompositeChildren } from './compose-schema';
 export { parseIkSpec } from './ik-schema';
 export { parseModelParamSpecs, parseRecipeParams, resolveModelParams } from './param-schema';
 export { parseClearanceZones, parseColliders, parseSurfaces } from './spatial-schema';
@@ -115,6 +118,7 @@ export interface AssetCapabilities {
   colliders?: ColliderSpec[];
   clearanceZones?: ClearanceZoneSpec[];
   surfaces?: SurfaceSpec[];
+  children?: CompositeChildSpec[];
   clips?: { name: string; duration: number; synthesized?: boolean }[];
   state?: AssetRuntimeState;
 }
@@ -393,6 +397,8 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
   if (clearanceZones) result.clearanceZones = clearanceZones;
   const surfaces = parseSurfaces(value.surfaces);
   if (surfaces) result.surfaces = surfaces;
+  const children = parseCompositeChildren(value.children, parseCapabilities);
+  if (children) result.children = children;
   const clips = parseClips(value.clips);
   if (clips) result.clips = clips;
   if (isRecord(value.state)) {
@@ -455,9 +461,13 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
 /** Write a clean JSON snapshot of capabilities onto the root node, clearing stale wrapper-level copies only. */
 export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
   for (const child of root.children) {
-    if ('formFoundry' in child.userData) delete child.userData.formFoundry;
+    if (!child.userData.compositeChild && !child.userData.compositeSlot && 'formFoundry' in child.userData) {
+      delete child.userData.formFoundry;
+    }
     for (const grand of child.children) {
-      if ('formFoundry' in grand.userData) delete grand.userData.formFoundry;
+      if (!grand.userData.compositeChild && !grand.userData.compositeSlot && 'formFoundry' in grand.userData) {
+        delete grand.userData.formFoundry;
+      }
     }
   }
   root.userData.formFoundry = structuredClone(capabilities);

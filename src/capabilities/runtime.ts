@@ -180,11 +180,17 @@ export function synthesizeRigClips(root: T.Object3D, capabilities?: AssetCapabil
 }
 
 /** Build a runtime controller for any model so studio UI, games, and AI code drive parts identically. */
-export function createAssetController(root: T.Object3D, initialCapabilities?: AssetCapabilities): AssetController {
+export function createAssetController(
+  root: T.Object3D,
+  initialCapabilities?: AssetCapabilities,
+  nodePrefix?: string,
+): AssetController {
   const capabilities = structuredClone(initialCapabilities ?? inspectAsset(root));
+  const prefix = nodePrefix ?? '';
+  const findNode = (name: string) => (prefix ? root.getObjectByName(prefix + name) : undefined) ?? root.getObjectByName(name);
   const bindings = new Map<string, PartBinding>();
   for (const spec of capabilities.riggedParts) {
-    const node = root.getObjectByName(spec.name);
+    const node = findNode(spec.name);
     if (!node) continue;
     // Recover true quaternion/position rest transform by backing out state.pose so posed GLBs never double-rotate past 90 deg.
     const initialVal = clampToRange(spec.range, capabilities.state?.pose?.[spec.name] ?? 0);
@@ -199,7 +205,7 @@ export function createAssetController(root: T.Object3D, initialCapabilities?: As
   }
   const detachables = new Map<string, T.Object3D>();
   for (const spec of capabilities.detachableParts) {
-    const node = root.getObjectByName(spec.name);
+    const node = findNode(spec.name);
     if (node) detachables.set(spec.name, node);
   }
   const hiddenParts = new Set<string>();
@@ -363,7 +369,8 @@ export function createAssetController(root: T.Object3D, initialCapabilities?: As
     },
     applyPoseToClone(cloneRoot) {
       for (const binding of bindings.values()) {
-        const cloned = cloneRoot.getObjectByName(binding.spec.name);
+        const cloned = (prefix ? cloneRoot.getObjectByName(prefix + binding.spec.name) : undefined)
+          ?? cloneRoot.getObjectByName(binding.spec.name);
         if (cloned) applyPoseToNode(binding, cloned);
       }
     },

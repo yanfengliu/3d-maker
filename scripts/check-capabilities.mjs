@@ -388,11 +388,23 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.equal(pavilionCaps?.source?.kit, 'harbor-timber');
     assert.equal(pavilionCaps?.params?.length, 5);
 
-    // 7. Verify SDK exports inspectAsset, createAssetController, listVariations, resolveVariationRecipe, deriveIkMetadata, and mergeStaticParts.
+    // 7. Verify SDK exports inspectAsset, createAssetController, composeAsset, createCompositeController, validateComposite, deriveIkMetadata, and mergeStaticParts.
     const sdkPage = await context.newPage();
     await sdkPage.goto(originUrl + '/sdk-check');
     const sdkResult = await sdkPage.evaluate(async () => {
-      const { createAsset, catalog, inspectAsset, createAssetController, listVariations, resolveVariationRecipe, deriveIkMetadata, mergeStaticParts } = await import('/3d-maker/studio-sdk.js');
+      const {
+        createAsset,
+        catalog,
+        inspectAsset,
+        createAssetController,
+        composeAsset,
+        createCompositeController,
+        validateComposite,
+        listVariations,
+        resolveVariationRecipe,
+        deriveIkMetadata,
+        mergeStaticParts,
+      } = await import('/3d-maker/studio-sdk.js');
       const pod = createAsset(catalog.find(row => row.id === 'cargo-pod').recipe);
       const info = inspectAsset(pod);
       const ctrl = createAssetController(pod);
@@ -401,6 +413,19 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
       const lifterInfo = inspectAsset(lifter);
       const pilot = createAsset(catalog.find(row => row.id === 'field-pilot').recipe);
       const pilotIk = deriveIkMetadata(pilot);
+      const yard = composeAsset({
+        name: 'SDK Yard',
+        parts: [
+          { id: 'podA', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [-1.5, 0, 0], coupling: 'surface' } },
+          { id: 'podB', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [1.5, 0, 0], coupling: 'surface' } },
+        ],
+      });
+      const compValid = validateComposite(yard).valid;
+      const compCtrl = createCompositeController(yard);
+      compCtrl.openPart('podA/CaseLid');
+      const compA = compCtrl.getPart('podA/CaseLid');
+      const compB = compCtrl.getPart('podB/CaseLid');
+      compCtrl.dispose();
       return {
         parts: info.riggedParts.map(p => p.name),
         opened,
@@ -410,6 +435,9 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
         pilotIkType: pilotIk?.type,
         pilotLegCount: pilotIk?.legs?.limbs.length ?? 0,
         hasMergeStatic: typeof mergeStaticParts === 'function',
+        compValid,
+        compA,
+        compB,
       };
     });
     assert.deepEqual(sdkResult.parts, ['CaseLid']);
@@ -420,6 +448,9 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.equal(sdkResult.pilotIkType, 'legs');
     assert.equal(sdkResult.pilotLegCount, 2);
     assert.equal(sdkResult.hasMergeStatic, true);
+    assert.equal(sdkResult.compValid, true);
+    assert.equal(sdkResult.compA, -72);
+    assert.equal(sdkResult.compB, 0);
     await sdkPage.close();
     assert.deepEqual(errors, []);
   } finally {

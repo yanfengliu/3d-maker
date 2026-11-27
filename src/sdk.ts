@@ -1,10 +1,20 @@
 import { addCharacterAnimations } from './animation/library';
+import { composeAsset as composeAssetRaw, type ComposeAssetOptions } from './capabilities/compose';
 import { parseRecipe } from './data/recipe';
 import { buildModel } from './models';
 export { catalog, getModelParamSpecs, listVariations, parseRecipe, resolveVariationRecipe } from './data/recipe';
 export type { CatalogEntry, ModelVariationEntry, Recipe, TemplateId, VariationSummary } from './data/recipe';
 export { createAssetController, inspectAsset, synthesizeRigClips } from './capabilities/runtime';
 export type { AssetController } from './capabilities/runtime';
+export { validateComposite } from './capabilities/compose';
+export type {
+  ComposeAssetOptions,
+  CompositePartInput,
+  CompositeSurfaceIssue,
+  CompositeValidationResult,
+} from './capabilities/compose';
+export { createCompositeController } from './capabilities/compose-runtime';
+export type { CompositeAssetController, PlayChildClipSpec } from './capabilities/compose-runtime';
 export { obbContainedIn, obbOverlap, resolveAssetVolumes, validateScenePlacement } from './capabilities/obb';
 export type {
   OrientedBox,
@@ -38,6 +48,10 @@ export type {
   ColliderSpec,
   ColorZoneSpec,
   ColorwayPresetSpec,
+  CompositeChildSpec,
+  CompositeJointSpec,
+  CompositeJointType,
+  CompositeMountSpec,
   DecalSlotSpec,
   DetachablePartSpec,
   IkArmSegmentSpec,
@@ -48,6 +62,7 @@ export type {
   ModelParamValue,
   ModelParamValues,
   NightZoneSpec,
+  PhysicsCoupling,
   RangeParamSpec,
   RiggedPartSpec,
   SpatialRestPose,
@@ -57,4 +72,11 @@ export type {
 /** Build an independent animated Group from validated JSON for a three.js scene. */
 export function createAsset(recipe: unknown) {
   return addCharacterAnimations(buildModel(parseRecipe(recipe)));
+}
+/** Compose multiple assets or recipes into a scoped hierarchical Group with preserved knobs, animations, and physics coupling. */
+export function composeAsset(options: ComposeAssetOptions) {
+  return composeAssetRaw({
+    ...options,
+    buildRecipe: options.buildRecipe ?? (recipe => createAsset(recipe)),
+  });
 }

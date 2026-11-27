@@ -70,3 +70,11 @@ When generating a kit of many original models:
    - Run `npm run verify`, `npm run check:studio:ci`, and full `npm run check:studio` (including testing any new `params` controls live in the studio UI).
    - Remove temporary worktree symlinks and confirm no `output/` files or binaries `> 512 KiB` are staged.
    - Append a dated line to `docs/devlog/summary.md`, fast-forward merge to `main`, remove the worktree/branch, push `origin/main`, and follow GitHub Actions CI to green.
+
+## Composing Multi-Piece Assets (Assemblies & Scenes)
+
+When combining two or more pieces into a complex assembly (e.g. a house with 20 appliances, a truck with a mounted crane, or a desk with lamps), follow `docs/design/composition.md` and use the deterministic SDK primitives instead of flattening meshes together:
+
+- **Keep modular boundaries**: Keep tightly coupled hinges on one rigid body inside a single asset; keep independently swappable, movable, or repeatable pieces as separate assets composed via `composeAsset()` (`src/capabilities/compose.ts`).
+- **Scope names, knobs, and animations**: `composeAsset()` wraps each child in `Slot_<id>` with `${id}__` node/track prefixes and persists `recipe` + `capabilities` under `extras.formFoundry.children`. Drive children concurrently and independently with `createCompositeController()` (`ctrl.openPart('fridge/FridgeDoor')`, `ctrl.playClips([...])`, `ctrl.setChildParams('pavilion', { bays: 4 }, buildModel)`).
+- **Respect physics coupling and validate**: Declare `mount.coupling` (`'weld'` sums welded mass onto parent rigid body; `'surface'` auto-seats onto a host `SurfaceSpec`; `'joint'` declares an articulated rigid-body link) and run `validateComposite(group)` to check surface footprints, `clearanceY` headroom, sibling OBB overlaps, and every child's rigged-part sweeps.

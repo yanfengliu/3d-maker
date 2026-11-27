@@ -56,12 +56,19 @@ export function cloneForExport(source: Group, options?: ExportOptions, controlle
   // Re-apply authoritative rigged part poses onto the clone so animation mixer resets never bake stale transforms.
   controller?.applyPoseToClone(root);
 
-  // Keep declared detachable subtrees in the exported GLB even while hidden; state.hiddenParts restores visibility on load.
-  for (const part of capabilities.detachableParts) {
-    let node: Object3D | null = root.getObjectByName(part.name) ?? null;
-    while (node) {
-      node.visible = true;
-      node = node === root ? null : node.parent;
+  // Keep declared detachable subtrees (including composite children) in exported GLB even while hidden.
+  const ensureVisible = (node: Object3D | undefined) => {
+    let cur: Object3D | null = node ?? null;
+    while (cur) {
+      cur.visible = true;
+      cur = cur === root ? null : cur.parent;
+    }
+  };
+  for (const part of capabilities.detachableParts) ensureVisible(root.getObjectByName(part.name));
+  for (const child of capabilities.children ?? []) {
+    const prefix = child.nodePrefix ?? '';
+    for (const part of child.capabilities.detachableParts) {
+      ensureVisible((prefix ? root.getObjectByName(prefix + part.name) : undefined) ?? root.getObjectByName(part.name));
     }
   }
 
