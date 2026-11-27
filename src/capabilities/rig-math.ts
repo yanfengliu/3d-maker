@@ -84,30 +84,44 @@ export function axisTuple(axis: Axis | AxisVector): AxisVector {
 }
 
 /**
- * Remove any `mimic` link whose leader does not exist in `parts`, points to itself, or forms a cycle.
- * Returns a sanitized shallow-copied array preserving input order.
+ * Remove any `mimic` link whose immediate leader is missing/invalid or participates in a cycle.
+ * Preserves valid surviving downstream links when an upstream leader is pruned (e.g. missing A in A->B->C keeps B->C).
  */
 export function sanitizeMimicLinks<T extends { name: string; mimic?: RiggedMimicSpec }>(parts: readonly T[]): T[] {
   const byName = new Map<string, T>();
   for (const part of parts) byName.set(part.name, part);
 
-  const validMimic = (part: T): boolean => {
-    if (!part.mimic) return false;
-    if (!Number.isFinite(part.mimic.multiplier) || Math.abs(part.mimic.multiplier) < 1e-12) return false;
+  // Pass 1: keep only links whose immediate leader exists and has a valid non-zero multiplier.
+  const step1 = parts.map(part => {
+    const m = part.mimic;
+    if (!m) return part;
+    const ok = m.part !== part.name
+      && byName.has(m.part)
+      && Number.isFinite(m.multiplier)
+      && Math.abs(m.multiplier) >= 1e-12;
+    if (ok) return part;
+    const copy = { ...part };
+    delete copy.mimic;
+    return copy;
+  });
+
+  // Pass 2: strip only links that reach a cycle among surviving links.
+  const survivingByName = new Map<string, T>();
+  for (const part of step1) survivingByName.set(part.name, part);
+
+  const acyclic = (part: T): boolean => {
     const seen = new Set<string>([part.name]);
-    let cur: string | undefined = part.mimic.part;
+    let cur: string | undefined = part.mimic?.part;
     while (cur) {
       if (seen.has(cur)) return false;
       seen.add(cur);
-      const next = byName.get(cur);
-      if (!next) return false;
-      cur = next.mimic?.part;
+      cur = survivingByName.get(cur)?.mimic?.part;
     }
     return true;
   };
 
-  return parts.map(part => {
-    if (!part.mimic || validMimic(part)) return part;
+  return step1.map(part => {
+    if (!part.mimic || acyclic(part)) return part;
     const copy = { ...part };
     delete copy.mimic;
     return copy;
@@ -195,6 +209,7 @@ export function propagateMimicValues(
 
 const MAX_CLIP_LEG_STEPS = 64;
 const MAX_CLIP_SPIN_STEPS = 128;
+const MAX_CLIP_SPIN_DEG = 3600;
 
 export interface ClipPoseSchedule {
   times: number[];
@@ -202,10 +217,70 @@ export interface ClipPoseSchedule {
   followerValues: Map<string, number[]>;
 }
 
+function collectMimicBreakpoints(
+  part: RiggedPartSpec,
+  allParts: readonly RiggedPartSpec[],
+  startVal: number,
+  endVal: number,
+): number[] {
+  const loBound = Math.min(startVal, endVal);
+  const hiBound = Math.max(startVal, endVal);
+  const span = hiBound - loBound;
+  if (span < 1e-9) return [];
+  const byName = new Map(allParts.map(p => [p.name, p]));
+  const cumMult = new Map<string, number>([[part.name, 1]]);
+  const breaks: number[] = [];
+  for (const fName of listMimicFollowers(allParts, part.name)) {
+    const fSpec = byName.get(fName);
+    if (!fSpec?.mimic) continue;
+    const parentMult = cumMult.get(fSpec.mimic.part);
+    if (parentMult === undefined) continue;
+    const mult = parentMult * fSpec.mimic.multiplier;
+    cumMult.set(fName, mult);
+    if (fSpec.continuous || Math.abs(mult) < 1e-12) continue;
+    for (const lim of fSpec.range) {
+      const bp = lim / mult;
+      if (Number.isFinite(bp) && bp > loBound + span * 1e-6 && bp < hiBound - span * 1e-6) {
+        breaks.push(bp);
+      }
+    }
+  }
+  const dir = endVal >= startVal ? 1 : -1;
+  breaks.sort((a, b) => (a - b) * dir);
+  const deduped: number[] = [];
+  for (const bp of breaks) {
+    const prev = deduped[deduped.length - 1];
+    if (prev === undefined || Math.abs(bp - prev) > span * 1e-5) deduped.push(bp);
+  }
+  return deduped;
+}
+
+/** Return the maximum total angular excursion (in degrees) across `part` and all of its rotating mimic followers. */
+export function maxCoupledRotateSpan(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): number {
+  const [r0, r1] = part.range;
+  const byName = new Map(allParts.map(p => [p.name, p]));
+  const followerNames = listMimicFollowers(allParts, part.name);
+  const pts = [r0, ...collectMimicBreakpoints(part, allParts, r0, r1), r1];
+  let maxDeg = part.type === 'rotate' ? Math.abs(r1 - r0) : 0;
+  for (const fName of followerNames) {
+    const fSpec = byName.get(fName);
+    if (!fSpec || fSpec.type !== 'rotate') continue;
+    let total = 0;
+    let prev = propagateMimicValues(allParts, part.name, pts[0] ?? r0).get(fName) ?? 0;
+    for (let i = 1; i < pts.length; i++) {
+      const cur = propagateMimicValues(allParts, part.name, pts[i] ?? r1).get(fName) ?? 0;
+      total += Math.abs(cur - prev);
+      prev = cur;
+    }
+    if (total > maxDeg) maxDeg = total;
+  }
+  return maxDeg;
+}
+
 /**
  * Build synchronized keyframe times and pose curves for a leader joint plus all transitive mimic followers.
- * Subdivides open/close legs whenever the leader OR any rotating follower exceeds 45° so quaternion tracks
- * never collapse a 360° follower spin into a no-op, while bounding keyframe count for malformed ranges.
+ * Inserts exact breakpoints at every follower mechanical stop and subdivides every segment so consecutive
+ * quaternion keys never exceed 45° (preventing 360° collapse or >180° reverse slerp), while keeping key counts bounded.
  */
 export function buildClipPoseSchedule(
   part: RiggedPartSpec,
@@ -213,40 +288,83 @@ export function buildClipPoseSchedule(
 ): ClipPoseSchedule {
   const far = Math.abs(part.range[1]) >= Math.abs(part.range[0]) ? part.range[1] : part.range[0];
   const isContinuousCycle = part.type === 'rotate' && (Math.abs(far) >= 359 || Boolean(part.continuous));
-  const target = isContinuousCycle && part.continuous && Math.abs(far) < 359 ? 360 : far;
+  let target = isContinuousCycle && part.continuous && Math.abs(far) < 359 ? 360 : far;
+  if (isContinuousCycle && Math.abs(target) > MAX_CLIP_SPIN_DEG) {
+    target = Math.sign(target) * MAX_CLIP_SPIN_DEG;
+  }
 
   const followerNames = listMimicFollowers(allParts, part.name);
   const byName = new Map(allParts.map(p => [p.name, p]));
-  const startCoupled = propagateMimicValues(allParts, part.name, 0);
-  const endCoupled = propagateMimicValues(allParts, part.name, target);
+  const maxBudget = isContinuousCycle ? MAX_CLIP_SPIN_STEPS : MAX_CLIP_LEG_STEPS;
 
-  let maxDegSpan = part.type === 'rotate' ? Math.abs(target) : 0;
-  for (const fName of followerNames) {
-    const fSpec = byName.get(fName);
-    if (!fSpec || fSpec.type !== 'rotate') continue;
-    const fSpan = Math.abs((endCoupled.get(fName) ?? 0) - (startCoupled.get(fName) ?? 0));
-    if (fSpan > maxDegSpan) maxDegSpan = fSpan;
+  const buildSegments = (endVal: number) => {
+    const knots = [0, ...collectMimicBreakpoints(part, allParts, 0, endVal), endVal];
+    const segs: { a: number; b: number; deg: number }[] = [];
+    let prevCoupled = propagateMimicValues(allParts, part.name, 0);
+    let totalDeg = 0;
+    for (let i = 0; i < knots.length - 1; i++) {
+      const a = knots[i] ?? 0;
+      const b = knots[i + 1] ?? endVal;
+      const nextCoupled = propagateMimicValues(allParts, part.name, b);
+      let segDeg = part.type === 'rotate' ? Math.abs(b - a) : 0;
+      for (const fName of followerNames) {
+        const fSpec = byName.get(fName);
+        if (!fSpec || fSpec.type !== 'rotate') continue;
+        const d = Math.abs((nextCoupled.get(fName) ?? 0) - (prevCoupled.get(fName) ?? 0));
+        if (d > segDeg) segDeg = d;
+      }
+      segs.push({ a, b, deg: segDeg });
+      totalDeg += segDeg;
+      prevCoupled = nextCoupled;
+    }
+    return { segs, totalDeg };
+  };
+
+  const initial = buildSegments(target);
+  let segs = initial.segs;
+  if (initial.totalDeg > maxBudget * 45) {
+    const shrink = (maxBudget * 45) / initial.totalDeg;
+    target *= shrink;
+    segs = buildSegments(target).segs;
+  }
+
+  const legValues: number[] = [0];
+  const legFracs: number[] = [0];
+  const targetSpan = Math.abs(target) > 1e-12 ? target : 1;
+  for (const seg of segs) {
+    const steps = Math.max(1, Math.ceil(seg.deg / 45));
+    for (let i = 1; i <= steps; i++) {
+      const v = seg.a + ((seg.b - seg.a) * i) / steps;
+      legValues.push(v);
+      legFracs.push(Math.max(0, Math.min(1, v / targetSpan)));
+    }
+  }
+  if (isContinuousCycle && legValues.length < 9) {
+    legValues.length = 0;
+    legFracs.length = 0;
+    for (let i = 0; i <= 8; i++) {
+      legFracs.push(i / 8);
+      legValues.push((target * i) / 8);
+    }
   }
 
   const times: number[] = [];
   const leaderValues: number[] = [];
   if (isContinuousCycle) {
-    const steps = Math.min(MAX_CLIP_SPIN_STEPS, Math.max(8, Math.ceil(maxDegSpan / 45)));
-    for (let i = 0; i <= steps; i++) {
-      times.push((i / steps) * 2.4);
-      leaderValues.push((target * i) / steps);
+    for (let i = 0; i < legValues.length; i++) {
+      times.push((legFracs[i] ?? 0) * 2.4);
+      leaderValues.push(legValues[i] ?? 0);
     }
   } else {
-    const steps = Math.min(MAX_CLIP_LEG_STEPS, Math.max(1, Math.ceil(maxDegSpan / 45)));
-    for (let i = 0; i <= steps; i++) {
-      times.push((i / steps) * 0.9);
-      leaderValues.push((target * i) / steps);
+    for (let i = 0; i < legValues.length; i++) {
+      times.push((legFracs[i] ?? 0) * 0.9);
+      leaderValues.push(legValues[i] ?? 0);
     }
     times.push(1.5);
     leaderValues.push(target);
-    for (let i = 1; i <= steps; i++) {
-      times.push(1.5 + (i / steps) * 0.9);
-      leaderValues.push(target * (1 - i / steps));
+    for (let i = legValues.length - 2; i >= 0; i--) {
+      times.push(1.5 + (1 - (legFracs[i] ?? 0)) * 0.9);
+      leaderValues.push(legValues[i] ?? 0);
     }
   }
 

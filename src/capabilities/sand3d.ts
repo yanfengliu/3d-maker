@@ -62,13 +62,34 @@ function readAxisTuple(value: unknown): [number, number, number] | null {
 /**
  * Canonicalize any pivot carrying negative `scale.y` or `scale.z` into Three.js's exact `Matrix4.decompose()`
  * convention (only `scale.x` may be negative when `det < 0`) without altering its local transform matrix.
- * Guarantees mirrored hinges behave identically on first import AND after binary GLB export/reload.
+ * Also right-multiplies matching `.quaternion` tracks in `clips` by `qOld^-1 * qNew` so authored animations
+ * produce bit-for-bit identical world matrices after canonicalization.
  */
-function canonicalizePivotTrs(node: T.Object3D): void {
+function canonicalizePivotTrs(node: T.Object3D, clips: readonly T.AnimationClip[]): void {
   if (node.scale.y >= 0 && node.scale.z >= 0) return;
+  const oldQuat = node.quaternion.clone();
   node.updateMatrix();
   node.matrix.decompose(node.position, node.quaternion, node.scale);
   node.updateMatrixWorld(true);
+  if (!clips.length) return;
+  const qDelta = oldQuat.invert().multiply(node.quaternion).normalize();
+  const qKey = new T.Quaternion();
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      if (!(track instanceof T.QuaternionKeyframeTrack)) continue;
+      if (!track.name.endsWith('.quaternion')) continue;
+      const target = track.name.slice(0, -'.quaternion'.length);
+      if (target !== node.uuid && (!node.name || target !== node.name)) continue;
+      const vals = track.values;
+      for (let i = 0; i + 3 < vals.length; i += 4) {
+        qKey.set(vals[i] ?? 0, vals[i + 1] ?? 0, vals[i + 2] ?? 0, vals[i + 3] ?? 1).multiply(qDelta).normalize();
+        vals[i] = qKey.x;
+        vals[i + 1] = qKey.y;
+        vals[i + 2] = qKey.z;
+        vals[i + 3] = qKey.w;
+      }
+    }
+  }
 }
 
 /**
@@ -83,8 +104,9 @@ function convertSand3dAxis(
   rawAxis: [number, number, number],
   isSlide: boolean,
   baseInv: T.Matrix4,
+  clips: readonly T.AnimationClip[],
 ): { axis: Axis | AxisVector; slideScale?: number } | null {
-  canonicalizePivotTrs(node);
+  canonicalizePivotTrs(node, clips);
   if (isSlide) {
     const nodeRel = new T.Matrix4().multiplyMatrices(baseInv, node.matrixWorld);
     const parentRel = node.parent
@@ -187,6 +209,7 @@ export function readSand3dCapabilities(
 
   root.updateMatrixWorld(true);
   const baseInv = root.parent ? root.parent.matrixWorld.clone().invert() : new T.Matrix4();
+  const clipPool = Array.from(new Set([...(options.animations ?? []), ...root.animations]));
 
   root.traverse(node => {
     const raw: unknown = node.userData.s3d_joint;
@@ -198,7 +221,7 @@ export function readSand3dCapabilities(
     const rawAxis = readAxisTuple(raw.axis);
     if (!rawAxis) return;
     const isSlide = raw.type === 'prismatic';
-    const converted = convertSand3dAxis(node, rawAxis, isSlide, baseInv);
+    const converted = convertSand3dAxis(node, rawAxis, isSlide, baseInv, clipPool);
     if (!converted) return;
 
     const extrasName = typeof raw.name === 'string' && raw.name.trim()
@@ -222,7 +245,8 @@ export function readSand3dCapabilities(
 
     const valueRaw = finiteNum(raw.value) ?? 0;
     const rawScaledVal = isSlide ? r4(valueRaw) : r3(valueRaw * scale);
-    const value = Number.isFinite(rawScaledVal) && Math.abs(rawScaledVal) <= boundLimit ? rawScaledVal : 0;
+    const valueLimit = raw.type === 'continuous' ? 1e9 : boundLimit;
+    const value = Number.isFinite(rawScaledVal) && Math.abs(rawScaledVal) <= valueLimit ? rawScaledVal : 0;
 
     let mimicJoint: string | undefined;
     let mimicMultiplier: number | undefined;
@@ -276,7 +300,7 @@ export function readSand3dCapabilities(
     visiting.add(j.partName);
     const { mimic, leader } = resolveMimic(j);
     const leaderInfo = leader ? resolveBounds(leader, visiting) : undefined;
-    const continuous = j.continuous || Boolean(leaderInfo?.continuous);
+    const continuous = j.continuous || (!j.range && j.type === 'rotate' && Boolean(leaderInfo?.continuous));
     let range = j.range;
     if (!range) {
       if (mimic && leaderInfo) {

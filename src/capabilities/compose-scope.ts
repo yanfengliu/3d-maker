@@ -39,12 +39,22 @@ export function restoreOwnNodeTransforms(snap: NodeTransformSnapshot): void {
 /** Capture rest transforms of `root`'s own nodes by temporarily backing out any manual posed parts. */
 export function captureRestNodeTransforms(
   root: T.Object3D,
-  controller: { getState(): { pose?: Record<string, number> }; resetParts(): void; setPart(name: string, value: number): number },
+  controller: {
+    readonly capabilities?: { riggedParts?: readonly { name: string; mimic?: { part: string } }[] };
+    getState(): { pose?: Record<string, number> };
+    resetParts(): void;
+    setPart(name: string, value: number): number;
+  },
 ): NodeTransformSnapshot {
   const entries = Object.entries(controller.getState().pose ?? {});
   if (entries.length) controller.resetParts();
   const snap = captureOwnNodeTransforms(root);
-  for (const [p, v] of entries) controller.setPart(p, v);
+  const parts = controller.capabilities?.riggedParts ?? [];
+  const validNames = new Set(parts.map(p => p.name));
+  const coupled = new Set(parts.filter(p => p.mimic && validNames.has(p.mimic.part)).map(p => p.name));
+  for (const [p, v] of entries) {
+    if (!coupled.has(p)) controller.setPart(p, v);
+  }
   return snap;
 }
 

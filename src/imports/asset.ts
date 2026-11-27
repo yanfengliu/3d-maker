@@ -44,6 +44,7 @@ export interface ImportedAsset {
   baseDimensions?: AssetDimensionsSpec;
   baseColorZones?: ColorZoneSpec[];
   baseNightZones: NightZoneSpec[];
+  authoredPoseFromSand3d?: boolean;
   metadataUnavailable?: boolean;
   preservedUnavailableEdits?: Partial<Pick<ImportEdits, 'paint' | 'pose' | 'hiddenParts' | 'night' | 'decalText'>>;
   droppedPaintSlots?: string[];
@@ -88,13 +89,15 @@ export function reconcileSavedEdits(
       }
     }
   }
-  // Preserve authored GLB poses for joints that were unknown when the inventory entry was originally saved.
+  // Preserve authored GLB poses only for newly discovered joints (such as legacy saves of posed Sand3D GLBs before importer support).
   const authoredPose = asset.edits.pose;
   if (authoredPose) {
     const knownSet = knownRiggedParts ? new Set(knownRiggedParts) : null;
     for (const [name, value] of Object.entries(authoredPose)) {
       if (name in keptPose) continue;
-      if (knownSet ? !knownSet.has(name) : saved.pose === undefined) keptPose[name] = value;
+      if (knownSet ? !knownSet.has(name) : (Boolean(asset.authoredPoseFromSand3d) && saved.pose === undefined)) {
+        keptPose[name] = value;
+      }
     }
   }
   if (Object.keys(keptPose).length) base.pose = keptPose;
@@ -419,6 +422,7 @@ async function openBinary(
     ...(controller.capabilities.dimensions ? { baseDimensions: structuredClone(controller.capabilities.dimensions) } : {}),
     ...(controller.capabilities.colorZones ? { baseColorZones: structuredClone(controller.capabilities.colorZones) } : {}),
     baseNightZones: structuredClone(controller.capabilities.nightZones),
+    ...(!embedded && controller.capabilities.source?.kit === 'sand3d' ? { authoredPoseFromSand3d: true } : {}),
     ...(metadataUnavailable ? { metadataUnavailable: true } : {}),
   };
   applyImportEdits(asset, initialEdits);

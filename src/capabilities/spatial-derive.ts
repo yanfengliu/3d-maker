@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { axisTuple, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
+import { axisTuple, listMimicFollowers, maxCoupledRotateSpan, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import type {
   ClearanceZoneSpec,
   ColliderLayer,
@@ -93,6 +93,21 @@ function p6(n: number): number {
   return Number(Math.abs(n).toPrecision(6));
 }
 
+function r6(n: number): number {
+  return Math.round(n * 1e6) / 1e6 || 0;
+}
+
+function isShearedMatrix(m: T.Matrix4): boolean {
+  const e = m.elements;
+  const c0 = new T.Vector3(e[0], e[1], e[2]);
+  const c1 = new T.Vector3(e[4], e[5], e[6]);
+  const c2 = new T.Vector3(e[8], e[9], e[10]);
+  const l0 = c0.length(), l1 = c1.length(), l2 = c2.length();
+  if (l0 < 1e-9 || l1 < 1e-9 || l2 < 1e-9) return false;
+  c0.divideScalar(l0); c1.divideScalar(l1); c2.divideScalar(l2);
+  return Math.abs(c0.dot(c1)) > 1e-4 || Math.abs(c1.dot(c2)) > 1e-4 || Math.abs(c2.dot(c0)) > 1e-4;
+}
+
 function computeRestPose(
   node: T.Object3D,
   localCenter: T.Vector3,
@@ -109,10 +124,12 @@ function computeRestPose(
   const ax = Math.abs(scl.x), ay = Math.abs(scl.y), az = Math.abs(scl.z);
   const hasScale = ax > 1e-9 && ay > 1e-9 && az > 1e-9
     && (Math.abs(ax - 1) > 1e-4 || Math.abs(ay - 1) > 1e-4 || Math.abs(az - 1) > 1e-4);
+  const sheared = isShearedMatrix(rel);
   return {
     at: roundVec3(worldCenter.x, worldCenter.y, worldCenter.z),
     ...(hasRot ? { rotation: roundVec3(euler.x, euler.y, euler.z) } : {}),
     ...(hasScale ? { scale: [p6(ax), p6(ay), p6(az)] } : {}),
+    ...(sheared ? { matrix: rel.elements.map(r6) } : {}),
   };
 }
 
@@ -341,13 +358,22 @@ export function deriveSpatialMetadata(
       })
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
     const corners = localBox.isEmpty() ? [] : boxCorners(localBox);
-    if (!corners.length && !followerStates.some(fs => fs.corners.length > 0)) continue;
+    const sweptRoots = new Set<T.Object3D>([node, ...followerStates.map(fs => fs.node)]);
+    // Include independently rigged/detachable descendants carried along rigidly by this leader or its followers.
+    const carriedDescendants: { node: T.Object3D; corners: T.Vector3[] }[] = [];
+    for (const dn of dynamicNodes) {
+      if (sweptRoots.has(dn) || !isDescendantOfAny(dn, sweptRoots, root)) continue;
+      dn.updateMatrixWorld(true);
+      const dBox = computeBoxInFrame(dn, dn.matrixWorld.clone().invert(), dynamicNodes);
+      if (!dBox.isEmpty()) carriedDescendants.push({ node: dn, corners: boxCorners(dBox) });
+    }
+    if (!corners.length && !followerStates.some(fs => fs.corners.length > 0) && !carriedDescendants.length) continue;
 
     const sweepBox = new T.Box3();
     const rel = new T.Matrix4();
     const pt = new T.Vector3();
-    const span = part.type === 'rotate' ? Math.abs(part.range[1] - part.range[0]) : 0;
-    const sampleCount = Math.min(37, Math.max(13, span > 180 ? Math.ceil(span / 20) + 1 : 13));
+    const span = maxCoupledRotateSpan(part, riggedParts);
+    const sampleCount = Math.min(145, Math.max(13, span > 180 ? Math.ceil(span / 15) + 1 : 13));
     try {
       for (let i = 0; i < sampleCount; i++) {
         const t = i / (sampleCount - 1);
@@ -370,21 +396,17 @@ export function deriveSpatialMetadata(
           }
         }
         root.updateMatrixWorld(true);
-        if (corners.length) {
-          rel.multiplyMatrices(invRoot, node.matrixWorld);
-          for (const corner of corners) {
+        const expandCorners = (n: T.Object3D, cs: readonly T.Vector3[]) => {
+          if (!cs.length) return;
+          rel.multiplyMatrices(invRoot, n.matrixWorld);
+          for (const corner of cs) {
             pt.copy(corner).applyMatrix4(rel);
             if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) sweepBox.expandByPoint(pt);
           }
-        }
-        for (const fs of followerStates) {
-          if (!fs.corners.length) continue;
-          rel.multiplyMatrices(invRoot, fs.node.matrixWorld);
-          for (const corner of fs.corners) {
-            pt.copy(corner).applyMatrix4(rel);
-            if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) sweepBox.expandByPoint(pt);
-          }
-        }
+        };
+        expandCorners(node, corners);
+        for (const fs of followerStates) expandCorners(fs.node, fs.corners);
+        for (const cd of carriedDescendants) expandCorners(cd.node, cd.corners);
       }
     } finally {
       node.position.copy(restPos);

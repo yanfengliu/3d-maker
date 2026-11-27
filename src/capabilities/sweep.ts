@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, traverseOwnSubtree } from './compose-tree';
-import { axisTuple, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
+import { axisTuple, listMimicFollowers, maxCoupledRotateSpan, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import { readSand3dCapabilities } from './sand3d';
 import {
   readCapabilities,
@@ -90,9 +90,17 @@ function measureLocalNodeBox(
   };
 }
 
+function isDescendantOf(candidate: T.Object3D, ancestor: T.Object3D, stopAt?: T.Object3D): boolean {
+  let cur: T.Object3D | null = candidate.parent;
+  while (cur && cur !== stopAt) {
+    if (cur === ancestor) return true;
+    cur = cur.parent;
+  }
+  return cur === ancestor;
+}
+
 /** Sweep every rigged part across its declared range, verifying clearance-zone coverage and external obstacles. */
 export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions = {}): RiggedSweepReport {
-  const steps = Math.max(2, options.steps ?? 7);
   const tolerance = options.tolerance ?? 0.015;
   const defaultObstacles = options.obstacles ?? [];
   const caps = options.capabilities ?? readCapabilities(root) ?? readSand3dCapabilities(root);
@@ -117,6 +125,16 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     list.push(col);
     colliderByNode.set(col.node, list);
   }
+  const allDynamicNodes = new Map<string, T.Object3D>();
+  for (const col of caps.colliders ?? []) {
+    if (!col.node || col.layer === 'none') continue;
+    const dn = findOwnNodeByName(root, col.node, prefix);
+    if (dn) allDynamicNodes.set(col.node, dn);
+  }
+  for (const rp of caps.riggedParts) {
+    const dn = findOwnNodeByName(root, rp.name, prefix);
+    if (dn) allDynamicNodes.set(rp.name, dn);
+  }
 
   const issues: RiggedSweepIssue[] = [];
   let checkedParts = 0;
@@ -124,10 +142,46 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
   for (const part of caps.riggedParts) {
     if (part.mimic) continue;
     const localName = prefix && part.name.startsWith(prefix) ? part.name.slice(prefix.length) : part.name;
-    if (hiddenSet.has(part.name) || hiddenSet.has(localName)) continue;
     const node = findOwnNodeByName(root, part.name, prefix);
-    if (!node || !isVisibleInTree(node) || hasHiddenAncestor(node, root, hiddenSet, prefix)) continue;
+    if (!node) continue;
+    const leaderVisible = !hiddenSet.has(part.name) && !hiddenSet.has(localName)
+      && isVisibleInTree(node) && !hasHiddenAncestor(node, root, hiddenSet, prefix);
+
+    const followerNames = listMimicFollowers(caps.riggedParts, part.name);
+    const followers = followerNames
+      .map(fname => {
+        const fSpec = caps.riggedParts.find(p => p.name === fname);
+        const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
+        if (!fSpec || !fNode) return null;
+        const fLocal = prefix && fSpec.name.startsWith(prefix) ? fSpec.name.slice(prefix.length) : fSpec.name;
+        const visible = !hiddenSet.has(fSpec.name) && !hiddenSet.has(fLocal)
+          && isVisibleInTree(fNode) && !hasHiddenAncestor(fNode, root, hiddenSet, prefix);
+        const fOrigPos = fNode.position.clone();
+        const fOrigQuat = fNode.quaternion.clone();
+        const fAxis = axisVector(fSpec.axis);
+        const fSlideScale = slideOffsetFactor(fSpec);
+        const fReg = getRiggedRestPose(fNode);
+        const fRestPos = fReg ? fReg.pos.clone() : fOrigPos.clone();
+        const fRestQuat = fReg ? fReg.quat.clone() : fOrigQuat.clone();
+        if (!fReg) {
+          const fCur = poseMap[fSpec.name] ?? poseMap[fLocal] ?? 0;
+          if (Math.abs(fCur) > 1e-9) {
+            if (fSpec.type === 'slide') fRestPos.addScaledVector(fAxis, -fCur * fSlideScale);
+            else fRestQuat.multiply(new T.Quaternion().setFromAxisAngle(fAxis, -T.MathUtils.degToRad(fCur))).normalize();
+          }
+        }
+        const fCols = visible ? (colliderByNode.get(fSpec.name) ?? colliderByNode.get(fLocal)) : undefined;
+        return {
+          spec: fSpec, localName: fLocal, node: fNode, visible, origPos: fOrigPos, origQuat: fOrigQuat,
+          restPos: fRestPos, restQuat: fRestQuat, axis: fAxis, slideScale: fSlideScale, cols: fCols,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+    const visibleFollowers = followers.filter(f => f.visible);
+    if (!leaderVisible && visibleFollowers.length === 0) continue;
     checkedParts++;
+
     const origPos = node.position.clone();
     const origQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
@@ -145,38 +199,46 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         }
       }
     }
-    const followerNames = listMimicFollowers(caps.riggedParts, part.name);
-    const followers = followerNames
-      .map(fname => {
-        const fSpec = caps.riggedParts.find(p => p.name === fname);
-        const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
-        if (!fSpec || !fNode) return null;
-        const fOrigPos = fNode.position.clone();
-        const fOrigQuat = fNode.quaternion.clone();
-        const fAxis = axisVector(fSpec.axis);
-        const fSlideScale = slideOffsetFactor(fSpec);
-        const fReg = getRiggedRestPose(fNode);
-        const fRestPos = fReg ? fReg.pos.clone() : fOrigPos.clone();
-        const fRestQuat = fReg ? fReg.quat.clone() : fOrigQuat.clone();
-        const fLocal = prefix && fSpec.name.startsWith(prefix) ? fSpec.name.slice(prefix.length) : fSpec.name;
-        if (!fReg) {
-          const fCur = poseMap[fSpec.name] ?? poseMap[fLocal] ?? 0;
-          if (Math.abs(fCur) > 1e-9) {
-            if (fSpec.type === 'slide') fRestPos.addScaledVector(fAxis, -fCur * fSlideScale);
-            else fRestQuat.multiply(new T.Quaternion().setFromAxisAngle(fAxis, -T.MathUtils.degToRad(fCur))).normalize();
-          }
-        }
-        const fCols = colliderByNode.get(fSpec.name) ?? colliderByNode.get(fLocal);
-        const fFallback = fCols?.length ? null : measureLocalNodeBox(fNode);
-        return {
-          spec: fSpec, node: fNode, origPos: fOrigPos, origQuat: fOrigQuat,
-          restPos: fRestPos, restQuat: fRestQuat, axis: fAxis, slideScale: fSlideScale, cols: fCols, fallback: fFallback,
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => Boolean(x));
-    const authoredColliders = colliderByNode.get(part.name) ?? colliderByNode.get(localName);
-    const followerNodeSet = followers.length ? new Set(followers.map(f => f.node)) : undefined;
-    const fallbackBox = authoredColliders?.length ? null : measureLocalNodeBox(node, followerNodeSet);
+
+    const activeMovingNodes: T.Object3D[] = [
+      ...(leaderVisible ? [node] : []),
+      ...visibleFollowers.map(f => f.node),
+    ];
+    const sweptNodeSet = new Set<T.Object3D>([node, ...followers.map(f => f.node)]);
+    const dynamicExclude = new Set<T.Object3D>(allDynamicNodes.values());
+    const authoredColliders = leaderVisible ? (colliderByNode.get(part.name) ?? colliderByNode.get(localName)) : undefined;
+    const fallbackBox = leaderVisible && !authoredColliders?.length ? measureLocalNodeBox(node, dynamicExclude) : null;
+    const followerFallbacks = new Map<T.Object3D, { at: Vec3Tuple; halfExtents: Vec3Tuple } | null>();
+    for (const f of visibleFollowers) {
+      followerFallbacks.set(f.node, f.cols?.length ? null : measureLocalNodeBox(f.node, dynamicExclude));
+    }
+
+    // Collect independently rigged/detachable descendant nodes carried rigidly inside active moving nodes.
+    const carriedOwnDescendants: {
+      name: string;
+      carrierName: string;
+      node: T.Object3D;
+      cols?: ColliderSpec[];
+      fallback: { at: Vec3Tuple; halfExtents: Vec3Tuple } | null;
+    }[] = [];
+    for (const [dName, dNode] of allDynamicNodes) {
+      if (sweptNodeSet.has(dNode)) continue;
+      const dLocal = prefix && dName.startsWith(prefix) ? dName.slice(prefix.length) : dName;
+      if (hiddenSet.has(dName) || hiddenSet.has(dLocal) || !isVisibleInTree(dNode) || hasHiddenAncestor(dNode, root, hiddenSet, prefix)) {
+        continue;
+      }
+      const carrier = activeMovingNodes.find(mn => isDescendantOf(dNode, mn, root));
+      if (!carrier) continue;
+      const dCols = colliderByNode.get(dName) ?? colliderByNode.get(dLocal);
+      carriedOwnDescendants.push({
+        name: dName,
+        carrierName: carrier.name || dName,
+        node: dNode,
+        ...(dCols?.length ? { cols: dCols } : {}),
+        fallback: dCols?.length ? null : measureLocalNodeBox(dNode, dynamicExclude),
+      });
+    }
+
     const partClearanceSpecs = clearanceByPart.get(part.name) ?? clearanceByPart.get(localName) ?? [];
     const clearanceZones = partClearanceSpecs.map(z =>
       buildOrientedBox(root.matrixWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
@@ -189,8 +251,11 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         ...(z.rotation ? { rotation: z.rotation } : {}),
       }),
     );
-    const movingNodes: T.Object3D[] = [node, ...followers.map(f => f.node)];
-    const obstacles = options.getObstaclesForPart ? options.getObstaclesForPart(localName, node, movingNodes) : defaultObstacles;
+    const obstacles = options.getObstaclesForPart ? options.getObstaclesForPart(localName, node, activeMovingNodes) : defaultObstacles;
+    const coupledDegSpan = maxCoupledRotateSpan(part, caps.riggedParts);
+    const steps = options.steps !== undefined
+      ? Math.max(2, options.steps)
+      : Math.min(73, Math.max(7, Math.ceil(coupledDegSpan / 30) + 1));
 
     try {
       for (let s = 0; s < steps; s++) {
@@ -224,41 +289,54 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
         }
 
         const partBoxes: OrientedBox[] = [];
+        const leaderTag = node.name || part.name;
         if (authoredColliders?.length) {
           for (const col of authoredColliders) {
             partBoxes.push(buildOrientedBox(node.matrixWorld, col.at, colliderHalfExtents(col), {
-              id: `sweep:${col.name}`,
-              name: col.name,
-              ownerId: root.name || 'Asset',
-              kind: 'collider',
-              layer: col.layer ?? 'solid',
-              part: part.name,
+              id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
+              kind: 'collider', layer: col.layer ?? 'solid', part: leaderTag,
               ...(col.rotation ? { rotation: col.rotation } : {}),
             }));
           }
         } else if (fallbackBox) {
           partBoxes.push(buildOrientedBox(node.matrixWorld, fallbackBox.at, fallbackBox.halfExtents, {
-            id: `sweep:${part.name}`,
-            name: part.name,
-            ownerId: root.name || 'Asset',
-            kind: 'collider',
-            layer: 'solid',
-            part: part.name,
+            id: `sweep:${part.name}`, name: part.name, ownerId: root.name || 'Asset',
+            kind: 'collider', layer: 'solid', part: leaderTag,
           }));
         }
-        for (const f of followers) {
+        for (const f of visibleFollowers) {
+          const fTag = f.node.name || f.spec.name;
           if (f.cols?.length) {
             for (const col of f.cols) {
               partBoxes.push(buildOrientedBox(f.node.matrixWorld, col.at, colliderHalfExtents(col), {
                 id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
-                kind: 'collider', layer: col.layer ?? 'solid', part: f.spec.name,
+                kind: 'collider', layer: col.layer ?? 'solid', part: fTag,
                 ...(col.rotation ? { rotation: col.rotation } : {}),
               }));
             }
-          } else if (f.fallback) {
-            partBoxes.push(buildOrientedBox(f.node.matrixWorld, f.fallback.at, f.fallback.halfExtents, {
-              id: `sweep:${f.spec.name}`, name: f.spec.name, ownerId: root.name || 'Asset',
-              kind: 'collider', layer: 'solid', part: f.spec.name,
+          } else {
+            const fb = followerFallbacks.get(f.node);
+            if (fb) {
+              partBoxes.push(buildOrientedBox(f.node.matrixWorld, fb.at, fb.halfExtents, {
+                id: `sweep:${f.spec.name}`, name: f.spec.name, ownerId: root.name || 'Asset',
+                kind: 'collider', layer: 'solid', part: fTag,
+              }));
+            }
+          }
+        }
+        for (const cd of carriedOwnDescendants) {
+          if (cd.cols?.length) {
+            for (const col of cd.cols) {
+              partBoxes.push(buildOrientedBox(cd.node.matrixWorld, col.at, colliderHalfExtents(col), {
+                id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
+                kind: 'collider', layer: col.layer ?? 'solid', part: cd.carrierName,
+                ...(col.rotation ? { rotation: col.rotation } : {}),
+              }));
+            }
+          } else if (cd.fallback) {
+            partBoxes.push(buildOrientedBox(cd.node.matrixWorld, cd.fallback.at, cd.fallback.halfExtents, {
+              id: `sweep:${cd.name}`, name: cd.name, ownerId: root.name || 'Asset',
+              kind: 'collider', layer: 'solid', part: cd.carrierName,
             }));
           }
         }
@@ -286,8 +364,10 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
           }
         }
 
-        const carriedBoxes = options.getCarriedBoxes ? options.getCarriedBoxes(localName, node, movingNodes) : [];
-        for (const box of carriedBoxes) {
+        const carriedBoxes = options.getCarriedBoxes ? options.getCarriedBoxes(localName, node, activeMovingNodes) : [];
+        for (let i = 0; i < carriedBoxes.length; i++) {
+          const box = carriedBoxes[i];
+          if (!box) continue;
           for (const obs of obstacles) {
             if (obs.kind === 'clearance' && obs.layer === 'cavity') continue;
             const hit = obbOverlap(box, obs, -tolerance);
@@ -297,6 +377,32 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
                 kind: 'obstacle-blocked',
                 value: Math.round(value * 1000) / 1000,
                 detail: `Carried ${box.ownerId}:${box.name} blocked by ${obs.ownerId}:${obs.name} (penetration ${hit.penetration.toFixed(3)}m) at pose ${value.toFixed(2)}`,
+              });
+            }
+          }
+          // Check opposing or independently moving carried loads against each other and non-host moving parts.
+          for (let j = i + 1; j < carriedBoxes.length; j++) {
+            const other = carriedBoxes[j];
+            if (!other || box.ownerId === other.ownerId || (box.part && box.part === other.part)) continue;
+            const hit = obbOverlap(box, other, -tolerance);
+            if (hit.overlaps) {
+              issues.push({
+                part: part.name,
+                kind: 'obstacle-blocked',
+                value: Math.round(value * 1000) / 1000,
+                detail: `Carried ${box.ownerId}:${box.name} collides with carried ${other.ownerId}:${other.name} (penetration ${hit.penetration.toFixed(3)}m) at pose ${value.toFixed(2)}`,
+              });
+            }
+          }
+          for (const pBox of partBoxes) {
+            if (!box.part || !pBox.part || box.part === pBox.part) continue;
+            const hit = obbOverlap(box, pBox, -tolerance);
+            if (hit.overlaps) {
+              issues.push({
+                part: part.name,
+                kind: 'obstacle-blocked',
+                value: Math.round(value * 1000) / 1000,
+                detail: `Carried ${box.ownerId}:${box.name} collides with moving part ${pBox.name} (penetration ${hit.penetration.toFixed(3)}m) at pose ${value.toFixed(2)}`,
               });
             }
           }

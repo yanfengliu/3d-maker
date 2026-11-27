@@ -9,6 +9,8 @@ export interface SpatialRestPose {
   rotation?: [number, number, number];
   /** Optional asset-root rest scale converting node-local collider sizes into asset-root meters (e.g. `[0.001, 0.001, 0.001]` for mm GLBs). */
   scale?: [number, number, number];
+  /** Optional 16-element column-major node-to-root rest matrix when ancestor non-uniform scale + rotation introduces shear. */
+  matrix?: number[];
 }
 
 export interface ColliderSpec {
@@ -106,7 +108,10 @@ function parseRestPose(value: unknown): SpatialRestPose | undefined {
   const rotation = tuple3(value.rotation) ?? undefined;
   const rawScale = tuple3(value.scale);
   const scale = rawScale && rawScale[0] > 0 && rawScale[1] > 0 && rawScale[2] > 0 ? rawScale : undefined;
-  return { at, ...(rotation ? { rotation } : {}), ...(scale ? { scale } : {}) };
+  const matrix = Array.isArray(value.matrix) && value.matrix.length === 16 && value.matrix.every(v => typeof v === 'number' && Number.isFinite(v))
+    ? [...(value.matrix as number[])]
+    : undefined;
+  return { at, ...(rotation ? { rotation } : {}), ...(scale ? { scale } : {}), ...(matrix ? { matrix } : {}) };
 }
 
 function humanizeSpatialLabel(raw: string): string {

@@ -366,6 +366,14 @@ function appendResolvedVolumes(
           }));
         } else {
           if (!spec.restPose) continue;
+          if (spec.restPose.matrix) {
+            const restMat = rootWorld.clone().multiply(new T.Matrix4().fromArray(spec.restPose.matrix));
+            volumes.push(buildOrientedBox(restMat, spec.at, colliderHalfExtents(spec), {
+              id: `${ownerId}:collider:${volName}`, name: volName, ownerId, kind: 'collider', layer, part: spec.node,
+              ...(spec.rotation ? { rotation: spec.rotation } : {}),
+            }));
+            continue;
+          }
           const restHalf = colliderHalfExtents(spec);
           if (spec.restPose.scale) {
             restHalf[0] *= Math.abs(spec.restPose.scale[0]);

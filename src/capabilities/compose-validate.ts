@@ -329,8 +329,16 @@ export function validateComposite(
         const carried: OrientedBox[] = [];
         for (const other of entries) {
           if (other.id === entry.id) continue;
-          if (!activeNodes.some(mn => isDescendantOrSelf(other.slot, mn))) continue;
-          carried.push(...resolveLiveOwnColliders(other));
+          let carrier: T.Object3D | undefined;
+          for (const mn of activeNodes) {
+            if (!isDescendantOrSelf(other.slot, mn)) continue;
+            if (!carrier || isDescendantOrSelf(mn, carrier)) carrier = mn;
+          }
+          if (!carrier) continue;
+          const carrierTag = carrier.name || carrier.uuid;
+          for (const box of resolveLiveOwnColliders(other)) {
+            carried.push({ ...box, part: carrierTag });
+          }
         }
         return carried;
       },

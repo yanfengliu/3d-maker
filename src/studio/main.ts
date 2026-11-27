@@ -156,8 +156,10 @@ function applyOriginalState(ctrl: AssetController, state?: ReturnType<AssetContr
   if (!state) return;
   if (state.pose && Object.keys(state.pose).length) {
     if (!stage.playing) stage.syncExternalPose();
+    const names = new Set(ctrl.capabilities.riggedParts.map(p => p.name));
+    const coupled = new Set(ctrl.capabilities.riggedParts.filter(p => p.mimic && names.has(p.mimic.part)).map(p => p.name));
     for (const [part, value] of Object.entries(state.pose)) {
-      if (ctrl.capabilities.riggedParts.some(p => p.name === part)) ctrl.setPart(part, value);
+      if (names.has(part) && !coupled.has(part)) ctrl.setPart(part, value);
     }
   }
   for (const part of state.hiddenParts ?? []) {
