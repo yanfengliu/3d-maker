@@ -162,7 +162,7 @@ export class Viewport {
     if (changed && this.model) this.renderer.render(this.scene, this.camera);
     this.invalidate();
   }
-  setModel(model: T.Group, refit = true) {
+  setModel(model: T.Group, refit = true, autoBind = true) {
     // Actions restore original node transforms when stopped, including skinned poses.
     this.mixer?.stopAllAction();
     if (this.model) {
@@ -184,11 +184,12 @@ export class Viewport {
     this.mixer = new T.AnimationMixer(model);
     this.playing = false;
     this.action = null;
+    this.clipIndex = 0;
     this.clipBounds.clear();
     this.framedClip = null;
     if (refit) this.appliedShift.set(0, 0, 0);
     this.place(refit);
-    this.bindClip(0);
+    if (autoBind) this.bindClip(0);
     this.settled = 0;
     this.invalidate();
   }

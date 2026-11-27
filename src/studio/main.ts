@@ -136,8 +136,8 @@ function swap(model: T.Group, refit: boolean) {
   } else if (previous) {
     model.animations.push(...previous.animations.slice(model.animations.length));
   }
-  stage.setModel(model, refit);
   const firstClipSynthesized = Boolean(readCapabilities(model)?.clips?.[0]?.synthesized);
+  stage.setModel(model, refit, !firstClipSynthesized);
   if (refit) stage.play(autoplay && !firstClipSynthesized);
   if (clip) {
     const next = model.animations.findIndex(candidate => candidate.name === clip.name);
@@ -153,10 +153,12 @@ function swap(model: T.Group, refit: boolean) {
 
 function reapplyOriginalPose(ctrl: AssetController, pose?: Record<string, number>) {
   if (!pose || !Object.keys(pose).length) return;
+  // Unbind the clip BEFORE posing so Three.js PropertyMixer restoration does not overwrite the restored pose.
+  if (!stage.playing) stage.syncExternalPose();
   for (const [part, value] of Object.entries(pose)) {
     if (ctrl.capabilities.riggedParts.some(p => p.name === part)) ctrl.setPart(part, value);
   }
-  if (!stage.playing) stage.syncExternalPose();
+  stage.invalidate();
 }
 
 function edit(patch: Partial<Recipe & ImportEdits>) {
@@ -220,7 +222,7 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
   if (asset.droppedPaintSlots?.length) {
     notify(asset.metadataUnavailable
       ? 'PolyFork metadata was temporarily unavailable; some saved edits could not be restored.'
-      : `Skipped ${String(asset.droppedPaintSlots.length)} outdated saved color override(s) that no longer match this model.`);
+      : `Skipped ${String(asset.droppedPaintSlots.length)} outdated saved edit(s) that no longer match this model.`);
   }
 }
 
@@ -330,11 +332,11 @@ const shelf = setupShelf({
   },
 });
 
-function applyRecipe(input: unknown) {
+function applyRecipe(input: unknown, carryPose = true) {
   const next = parseRecipe(input);
   if (!recipe || next.template !== recipe.template) { choose(next); return; }
   openSequence++;
-  const prevPose = originalController?.getState().pose;
+  const prevPose = carryPose ? originalController?.getState().pose : undefined;
   const model = buildModel(next);
   originalController?.dispose();
   originalController = createAssetController(model);
@@ -413,7 +415,7 @@ el('pickColor').onclick = () => { ui.togglePickMode(); };
 el('reset').onclick = () => {
   if (recipe) {
     const row = catalog.find(v => v.id === recipe?.template);
-    if (row) { applyRecipe(row.recipe); stage.place(true); }
+    if (row) { applyRecipe(row.recipe, false); stage.place(true); }
   } else if (imported) {
     stopPartPreviewAnimation();
     imported.controller.setDecalsVisible(false, {});

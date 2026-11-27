@@ -37,14 +37,17 @@ export interface ImportedAsset {
   baseColorZones?: ColorZoneSpec[];
   baseNightZones: NightZoneSpec[];
   metadataUnavailable?: boolean;
+  preservedUnavailableEdits?: Partial<Pick<ImportEdits, 'paint' | 'pose' | 'hiddenParts' | 'night' | 'decalText'>>;
   droppedPaintSlots?: string[];
 }
 
 export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): { edits: ImportEdits; dropped: string[] } {
   const dropped: string[] = [];
+  const preserved: Partial<Pick<ImportEdits, 'paint' | 'pose' | 'hiddenParts' | 'night' | 'decalText'>> = {};
   const base: ImportEdits = { name: saved.name, tint: saved.tint, scale: saved.scale, proportion: saved.proportion };
   if (saved.paint) {
     const kept: Record<string, string> = {};
+    const keptUnavailable: Record<string, string> = {};
     for (const [id, hex] of Object.entries(saved.paint)) {
       if (asset.palette.slots.has(id)) {
         kept[id] = hex;
@@ -54,42 +57,62 @@ export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): {
           if (!(migrated in kept)) kept[migrated] = hex;
         } else {
           dropped.push(id);
+          if (asset.metadataUnavailable && id.startsWith('zone-')) keptUnavailable[id] = hex;
         }
       }
     }
     if (Object.keys(kept).length) base.paint = kept;
+    if (Object.keys(keptUnavailable).length) preserved.paint = keptUnavailable;
   }
   if (saved.pose) {
     const validRigged = new Set(asset.capabilities.riggedParts.map(p => p.name));
     const keptPose: Record<string, number> = {};
+    const unavailablePose: Record<string, number> = {};
     for (const [name, value] of Object.entries(saved.pose)) {
       if (validRigged.has(name) && Number.isFinite(value)) keptPose[name] = value;
-      else dropped.push('pose:' + name);
+      else {
+        dropped.push('pose:' + name);
+        if (asset.metadataUnavailable && Number.isFinite(value)) unavailablePose[name] = value;
+      }
     }
     if (Object.keys(keptPose).length) base.pose = keptPose;
+    if (Object.keys(unavailablePose).length) preserved.pose = unavailablePose;
   }
   if (saved.hiddenParts?.length) {
     const validDetach = new Set(asset.capabilities.detachableParts.map(p => p.name));
+    const unavailableHidden: string[] = [];
     const keptHidden = saved.hiddenParts.filter(name => {
       if (validDetach.has(name)) return true;
       dropped.push('part:' + name);
+      if (asset.metadataUnavailable) unavailableHidden.push(name);
       return false;
     });
     if (keptHidden.length) base.hiddenParts = [...new Set(keptHidden)];
+    if (unavailableHidden.length) preserved.hiddenParts = [...new Set(unavailableHidden)];
   }
   if (saved.night) {
     if (asset.capabilities.nightZones.length) base.night = true;
-    else dropped.push('night');
+    else {
+      dropped.push('night');
+      if (asset.metadataUnavailable) preserved.night = true;
+    }
   }
   if (saved.decalText) {
     const validDecals = new Set(asset.capabilities.decals.map(d => d.name));
     const keptText: Record<string, string> = {};
+    const unavailableText: Record<string, string> = {};
     for (const [name, text] of Object.entries(saved.decalText)) {
       if (validDecals.has(name) && text.trim()) keptText[name] = text.trim().slice(0, 60);
-      else if (text.trim()) dropped.push('decal:' + name);
+      else if (text.trim()) {
+        dropped.push('decal:' + name);
+        if (asset.metadataUnavailable) unavailableText[name] = text.trim().slice(0, 60);
+      }
     }
     if (Object.keys(keptText).length) base.decalText = keptText;
+    if (Object.keys(unavailableText).length) preserved.decalText = unavailableText;
   }
+  if (Object.keys(preserved).length) asset.preservedUnavailableEdits = preserved;
+  else delete asset.preservedUnavailableEdits;
   return { edits: base, dropped };
 }
 
@@ -442,7 +465,21 @@ export async function openPolyforkGlb(
       name,
       null,
       group => {
-        if (detail) return buildPolyforkCapabilities(group, assetId, name, detail);
+        if (detail) {
+          const built = buildPolyforkCapabilities(group, assetId, name, detail);
+          if (fallbackCapabilities) {
+            if (!built.colorZones?.length && fallbackCapabilities.colorZones?.length) {
+              built.colorZones = structuredClone(fallbackCapabilities.colorZones);
+            }
+            if (!built.presets?.length && fallbackCapabilities.presets?.length) {
+              built.presets = structuredClone(fallbackCapabilities.presets);
+            }
+            if (!built.nightZones.length && fallbackCapabilities.nightZones.length) {
+              built.nightZones = structuredClone(fallbackCapabilities.nightZones);
+            }
+          }
+          return built;
+        }
         if (fallbackCapabilities) return intersectWithNodes(group, fallbackCapabilities);
         return buildPolyforkCapabilities(group, assetId, name, null);
       },

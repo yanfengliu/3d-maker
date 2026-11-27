@@ -1,8 +1,9 @@
 import * as T from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalog } from '../data/recipe';
+import { clearPolyforkBackoff } from '../data/polyfork';
 import { buildPolyforkCapabilities, clearPolyforkDetailCache, fetchPolyforkDetail } from '../data/polyfork-detail';
-import { applyImportEdits, listPaintSlots, openPolyforkGlb, reconcileSavedEdits } from '../imports/asset';
+import { applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, reconcileSavedEdits } from '../imports/asset';
 import { colorwayPaintPatch, pickPaintSlot } from '../imports/paint';
 import { buildModel } from '../models';
 import { cloneForExport } from '../studio/export';
@@ -128,6 +129,7 @@ const shopParamsJson = {
 
 afterEach(() => {
   clearPolyforkDetailCache();
+  clearPolyforkBackoff();
   vi.restoreAllMocks();
 });
 
@@ -223,8 +225,10 @@ describe('self-describing asset capabilities and runtime controller', () => {
     applyImportEdits(asset, { ...asset.edits, scale: 1.5, proportion: 0.8 });
     expect(asset.capabilities.dimensions?.sizeM).toEqual({ x: 6, y: 3.6, z: 6.585 });
 
-    // Legacy pre-upgrade `vertex-*` paint keys migrate onto semantic `zone-*` slots instead of dropping.
-    const legacyDoorId = [...asset.palette.legacyMap.entries()].find(([, zone]) => zone === 'zone-paint')?.[0];
+    // Legacy pre-upgrade `vertex-*` paint keys (derived independently without colorZones) migrate onto semantic `zone-*` slots.
+    const legacyOnly = await openLocalGlb(new File([bytes], 'legacy.glb'));
+    const legacyDoorId = listPaintSlots(legacyOnly).find(s => s.id.startsWith('vertex-1-'))?.id;
+    legacyOnly.controller.dispose();
     expect(legacyDoorId).toMatch(/^vertex-1-[\da-f]{6}$/);
     const legacyReconciled = reconcileSavedEdits(asset, {
       name: 'Legacy Shop', tint: '#ffffff', scale: 1, proportion: 1,
@@ -261,6 +265,11 @@ describe('self-describing asset capabilities and runtime controller', () => {
     ctrl.setPart('DishMount', 120);
     ctrl.setPart('RearGate', 200);
     ctrl.setPart('YawedLid', 90);
+    // Open YawedLid must equal Ry(90°) * Rx(90°) (local X axis), NOT Euler XYZ(90°, 90°, 0).
+    const expectedYawedOpen = new T.Quaternion()
+      .setFromAxisAngle(new T.Vector3(0, 1, 0), Math.PI / 2)
+      .multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), Math.PI / 2));
+    expect(yawedLid.quaternion.angleTo(expectedYawedOpen)).toBeLessThan(1e-4);
 
     // Export posed at 120/200/90 deg, re-wrap with a new controller (simulating GLB round-trip), and verify exact close to rest!
     const snap = cloneForExport(root, { includePartClips: true }, ctrl);
@@ -336,11 +345,52 @@ describe('self-describing asset capabilities and runtime controller', () => {
     expect(iron.children.length).toBe(0);
     ironCtrl.dispose();
     offlineAsset.controller.dispose();
+
+    // Partial metadata failure (detail 200, params 429): must NOT cache partial detail and MUST merge fallback colorZones.
+    clearPolyforkDetailCache();
+    clearPolyforkBackoff();
+    let detailCalls = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(raw => {
+      const url = typeof raw === 'string' ? raw : raw instanceof URL ? raw.href : raw.url;
+      if (url.endsWith('.glb')) return Promise.resolve(new Response(bytes));
+      if (url.endsWith('/api/assets/village-shopfront-d3088e')) {
+        detailCalls++;
+        return Promise.resolve(Response.json(shopDetailJson));
+      }
+      return Promise.resolve(new Response(null, { status: 429 }));
+    });
+    const partialAsset = await openPolyforkGlb('village-shopfront-d3088e', 'Village Shopfront', undefined, 'building', fallbackCaps);
+    expect(partialAsset.capabilities.colorZones?.some(z => z.name === 'paint')).toBe(true);
+    expect(listPaintSlots(partialAsset).some(s => s.id === 'zone-paint')).toBe(true);
+    clearPolyforkBackoff();
+    await fetchPolyforkDetail('village-shopfront-d3088e');
+    expect(detailCalls).toBe(2);
+    partialAsset.controller.dispose();
+
+    // Legacy entry without snapshot during total metadata outage preserves unavailable edits so save does not wipe them.
+    clearPolyforkDetailCache();
+    clearPolyforkBackoff();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(raw => {
+      const url = typeof raw === 'string' ? raw : raw instanceof URL ? raw.href : raw.url;
+      if (url.endsWith('.glb')) return Promise.resolve(new Response(bytes));
+      return Promise.resolve(new Response(null, { status: 503 }));
+    });
+    const noSnapshot = await openPolyforkGlb('village-shopfront-d3088e', 'Village Shopfront', undefined, 'building');
+    expect(noSnapshot.metadataUnavailable).toBe(true);
+    reconcileSavedEdits(noSnapshot, {
+      name: 'Old Remix', tint: '#ffffff', scale: 1, proportion: 1,
+      paint: { 'zone-paint': '#47582c' }, pose: { door: 80 }, hiddenParts: ['planter'], night: true,
+    });
+    expect(noSnapshot.preservedUnavailableEdits).toEqual({
+      paint: { 'zone-paint': '#47582c' }, pose: { door: 80 }, hiddenParts: ['planter'], night: true,
+    });
+    noSnapshot.controller.dispose();
   });
 
   it('falls back cleanly when PolyFork detail metadata is unavailable or non-JSON', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not json', { status: 200, headers: { 'content-type': 'text/html' } }));
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not json', { status: 200, headers: { 'content-type': 'text/html' } }));
     const detail = await fetchPolyforkDetail('missing-asset');
+    expect(fetcher).toHaveBeenCalledTimes(1);
     expect(detail).toBeNull();
     const empty = new T.Group();
     const caps: AssetCapabilities = buildPolyforkCapabilities(empty, 'missing-asset', 'Fallback', detail);

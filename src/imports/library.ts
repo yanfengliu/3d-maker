@@ -57,7 +57,16 @@ function capabilitySnapshot(asset: ImportedAsset): AssetCapabilities | undefined
 }
 
 export async function saveImport(asset: ImportedAsset, id?: string): Promise<ImportEntry> {
-  const edits = validateEdits(asset.edits);
+  const carried = asset.preservedUnavailableEdits;
+  const mergedEdits: ImportEdits = carried ? {
+    ...asset.edits,
+    ...(carried.paint || asset.edits.paint ? { paint: { ...(carried.paint ?? {}), ...(asset.edits.paint ?? {}) } } : {}),
+    ...(carried.pose || asset.edits.pose ? { pose: { ...(carried.pose ?? {}), ...(asset.edits.pose ?? {}) } } : {}),
+    ...(carried.hiddenParts || asset.edits.hiddenParts ? { hiddenParts: [...new Set([...(carried.hiddenParts ?? []), ...(asset.edits.hiddenParts ?? [])])] } : {}),
+    ...(carried.night || asset.edits.night ? { night: true } : {}),
+    ...(carried.decalText || asset.edits.decalText ? { decalText: { ...(carried.decalText ?? {}), ...(asset.edits.decalText ?? {}) } } : {}),
+  } : asset.edits;
+  const edits = validateEdits(mergedEdits);
   const capabilities = capabilitySnapshot(asset);
   const entry: ImportEntry = {
     id: id ?? crypto.randomUUID(),

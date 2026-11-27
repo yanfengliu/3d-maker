@@ -262,8 +262,10 @@ export async function editImportWithPrompt(
       let clause = trimmed;
       if (verbMatch?.[1]) {
         lastDetachVerb = /^(?:show|attach)$/i.test(verbMatch[1]) ? 'show' : 'hide';
-      } else if (lastDetachVerb && capabilities?.detachableParts.some(p =>
-        p.name.toLowerCase() === trimmed.toLowerCase() || p.label.toLowerCase() === trimmed.toLowerCase())) {
+      } else if (lastDetachVerb && capabilities?.detachableParts.some(p => {
+        const clean = unquote(trimmed).toLowerCase();
+        return p.name.toLowerCase() === clean || p.label.toLowerCase() === clean;
+      })) {
         clause = `${lastDetachVerb} ${trimmed}`;
       } else {
         lastDetachVerb = null;

@@ -33,8 +33,8 @@ function buildShopfrontFixtureGlb() {
   ]);
   const doorColors = new Uint8Array(Array.from({ length: 6 }, () => [linearByte(70), linearByte(120), linearByte(168), 255]).flat());
 
-  // Detachable terracotta planter (#c0463e -> 192, 70, 62).
-  const planterVerts = new Float32Array([-0.3, 0, 0, 0.3, 0, 0, 0, 0.9, 0]);
+  // Detachable terracotta planter (#c0463e -> 192, 70, 62) centered in front of the wall so eyedropper visibly switches when hidden.
+  const planterVerts = new Float32Array([-0.6, 0.6, 0, 0.6, 0.6, 0, 0, 1.9, 0]);
   const planterColors = new Uint8Array(Array.from({ length: 3 }, () => [linearByte(192), linearByte(70), linearByte(62), 255]).flat());
 
   const parts = [
@@ -59,7 +59,7 @@ function buildShopfrontFixtureGlb() {
       { name: 'shop-body', mesh: 0 },
       { name: 'door', translation: [-1.1, 0, 0.15], children: [3] },
       { name: 'door-leaf', mesh: 1 },
-      { name: 'planter', translation: [-1.5, 0, 0.25], children: [5] },
+      { name: 'planter', translation: [0, 0, 0.25], children: [5] },
       { name: 'planter-mesh', mesh: 2 },
     ],
     meshes: [
@@ -73,7 +73,7 @@ function buildShopfrontFixtureGlb() {
       { bufferView: 1, componentType: 5121, normalized: true, count: bodyVerts.length / 3, type: 'VEC4' },
       { bufferView: 2, componentType: 5126, count: 6, type: 'VEC3', min: [0, 0, 0], max: [0.9, 2.0, 0] },
       { bufferView: 3, componentType: 5121, normalized: true, count: 6, type: 'VEC4' },
-      { bufferView: 4, componentType: 5126, count: 3, type: 'VEC3', min: [-0.3, 0, 0], max: [0.3, 0.9, 0] },
+      { bufferView: 4, componentType: 5126, count: 3, type: 'VEC3', min: [-0.6, 0.6, 0], max: [0.6, 1.9, 0] },
       { bufferView: 5, componentType: 5121, normalized: true, count: 3, type: 'VEC4' },
     ],
     buffers: [{ byteLength }], bufferViews,
@@ -144,7 +144,8 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
   };
 
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, acceptDownloads: true });
-  let failMetadata = false;
+  let failDetail = false;
+  let failParams = false;
   try {
     await context.route(origin + '/**', async route => {
       const url = new URL(route.request().url());
@@ -152,10 +153,10 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
       if (url.pathname === '/api/assets') {
         await route.fulfill({ headers, json: { page: 1, per_page: 12, total: 1, assets: [detail] } });
       } else if (url.pathname === `/api/assets/${assetId}`) {
-        if (failMetadata) await route.fulfill({ status: 429, headers });
+        if (failDetail) await route.fulfill({ status: 429, headers });
         else await route.fulfill({ headers, json: detail });
       } else if (url.pathname === `/cdn/${assetId}-params.json`) {
-        if (failMetadata) await route.fulfill({ status: 429, headers });
+        if (failParams) await route.fulfill({ status: 429, headers });
         else await route.fulfill({ headers, json: params });
       } else if (url.pathname === `/cdn/${assetId}.glb`) {
         await route.fulfill({ headers, contentType: 'model/gltf-binary', body: glb });
@@ -222,22 +223,27 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable[0].visible)), true);
 
-    // 4b. Test 3D viewport eyedropper selects a visible paint slot on click (and ignores hidden detachable parts).
-    await page.uncheck('[data-detach-part="planter"]');
+    // 4b. Test 3D viewport eyedropper picks visible planter at center, then ignores it once hidden (traverseVisible).
     await page.click('#pickColor');
     assert.equal(await page.locator('#pickColor').getAttribute('aria-pressed'), 'true');
     const vp = await page.locator('#viewport').boundingBox();
     await page.mouse.click(vp.x + vp.width * 0.5, vp.y + vp.height * 0.5);
     await waitFrames(page, 2);
-    const pickedSlot = await page.locator('#paintSlot').inputValue();
-    assert.ok(pickedSlot.startsWith('zone-') && pickedSlot !== 'zone-pot', 'Unexpected picked slot: ' + pickedSlot);
+    assert.equal(await page.locator('#paintSlot').inputValue(), 'zone-pot', 'Visible planter should be picked first');
+    await page.uncheck('[data-detach-part="planter"]');
+    await waitFrames(page, 2);
+    await page.mouse.click(vp.x + vp.width * 0.5, vp.y + vp.height * 0.5);
+    await waitFrames(page, 2);
+    const pickedBehind = await page.locator('#paintSlot').inputValue();
+    assert.ok(pickedBehind.startsWith('zone-') && pickedBehind !== 'zone-pot', 'Hidden planter was picked: ' + pickedBehind);
     await page.click('#pickColor');
 
-    // 5. Re-open door, save remix, then simulate PolyFork metadata outage (429) on reload and verify all edits persist via cached snapshot!
+    // 5. Re-open door, save remix, then simulate partial metadata outage (detail 200, params 429) on reload and verify all edits persist!
     await page.click('[data-part-toggle="door"]');
     await page.click('#save');
     await page.waitForFunction(() => document.querySelector('#save')?.textContent?.includes('Save changes'));
-    failMetadata = true;
+    failDetail = false;
+    failParams = true;
     await page.reload();
     await page.waitForFunction(() => window.__shotReady);
     await page.locator('[data-source-filter="saved"]').click();
@@ -248,7 +254,7 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.equal(restoredEdits.night, true);
     assert.equal(restoredEdits.decalText.fascia, 'BAKERY');
     assert.equal(restoredEdits.paint['zone-paint'], '#47582c');
-    failMetadata = false;
+    failParams = false;
 
     // 6. Export GLB with default checked rigged-part clips, verify extras.formFoundry + clip, then re-import offline.
     await page.click('#export');
@@ -270,8 +276,12 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Offline Shopfront');
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 80);
     assert.deepEqual(await page.evaluate(() => window.forgeStudio.listClips().map(c => c.name)), ['Open door']);
-    // Synthesized clip does NOT autoplay and overwrite the posed door.
+    // Synthesized clip does NOT autoplay and Fit does NOT snap the posed door back to clip frame 0.
     assert.match(await page.locator('#play').innerText(), /Play clip/);
+    const openReimportBeforeFit = await canvasSample(page);
+    await page.click('#fit');
+    await waitFrames(page, 3);
+    assert.equal((await canvasSample(page)).sig, openReimportBeforeFit.sig, 'Fit snapped re-imported posed door to clip frame 0');
     // Detachable part survived export hidden and can be toggled visible again!
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable[0].visible)), false);
     await page.check('[data-detach-part="planter"]');
@@ -279,7 +289,7 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     // Colorway zone-paint survived repainted export intact and can switch back to Aegean blue.
     await page.click('[data-colorway="aegean-blue"]');
     assert.equal((await page.evaluate(() => window.forgeStudio.listPaintSlots().find(s => s.id === 'zone-paint')?.color)), '#4678a8');
-    // Closing door after re-import and re-exporting must bake 0 deg (not stale 80 deg from clip bind)!
+    // Closing door after re-import and re-exporting must bake 0 deg on the actual glTF door node (not stale 80 deg)!
     await page.click('.parts-drawer summary');
     await page.click('[data-part-toggle="door"]');
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
@@ -289,9 +299,12 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
       return JSON.parse(new TextDecoder().decode(new Uint8Array(bytes, 20, len)));
     });
     const secondManifest = secondGlb.nodes.map(n => n.extras?.formFoundry).find(Boolean);
+    const secondDoor = secondGlb.nodes.find(n => n.name === 'door');
     assert.equal(secondManifest.state?.pose, undefined);
+    const doorRot = secondDoor?.rotation ?? [0, 0, 0, 1];
+    assert.ok(Math.abs(doorRot[1]) < 1e-4 && Math.abs(Math.abs(doorRot[3]) - 1) < 1e-4, 'Exported closed door had non-zero rotation: ' + JSON.stringify(doorRot));
 
-    // 6b. Switch from 0-clip PolyFork model to original Cargo Pod: no leaked click handler, pose survives swatch edit, and AI tools omits rigged parts.
+    // 6b. Switch from 0-clip PolyFork model to original Cargo Pod: no leaked click handler, actual lid stays open in WebGL after swatch edit, Reset clears pose, and AI tools omits rigged parts.
     await page.locator('[data-source-filter="all"]').click();
     await page.locator(`[data-key="polyfork:${assetId}"]`).click();
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Shopfront Fixture');
@@ -299,10 +312,21 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Cargo Pod');
     await page.click('.parts-drawer summary');
     await page.click('[data-part-toggle="CaseLid"]');
+    await waitFrames(page, 3);
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), -72);
     await page.getByRole('button', { name: 'Terracotta' }).click();
+    await waitFrames(page, 3);
+    const podOpenAfterSwatch = await canvasSample(page);
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), -72);
+    // Closing the lid after the swatch rebuild MUST change the actual rendered viewport pixels (proving lid stayed open in WebGL!).
     await page.click('[data-part-toggle="CaseLid"]');
+    await waitFrames(page, 3);
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
+    assert.notEqual((await canvasSample(page)).sig, podOpenAfterSwatch.sig, 'Cargo Pod lid had snapped shut after swatch edit');
+    // Re-open lid, click Reset, and verify Reset clears the pose instead of carrying it.
+    await page.click('[data-part-toggle="CaseLid"]');
+    assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), -72);
+    await page.click('#reset');
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().rigged[0].value)), 0);
     await page.click('#assistant');
     assert.ok(!(await page.locator('dialog').innerText()).includes('Interactive parts and model capabilities'));

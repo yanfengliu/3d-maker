@@ -224,23 +224,33 @@ export async function fetchPolyforkDetail(assetId: string, signal?: AbortSignal)
     if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) return null;
     const raw: unknown = await response.json();
     let paramsRaw: unknown = null;
+    let paramsFailed = false;
     if (isRecord(raw) && typeof raw.params_url === 'string' && raw.params_url.startsWith(`${origin}/cdn/`)) {
       try {
         const paramsTimeout = AbortSignal.timeout(3_000);
         const paramsSignal = signal ? AbortSignal.any([signal, paramsTimeout]) : paramsTimeout;
         const paramsRes = await fetch(raw.params_url, { credentials: 'omit', signal: paramsSignal });
-        if (paramsRes.status === 429) recordPolyforkRateLimit(paramsRes.headers.get('Retry-After'));
-        else if (paramsRes.ok && (paramsRes.headers.get('content-type') ?? '').includes('json')) paramsRaw = await paramsRes.json();
+        if (paramsRes.status === 429) {
+          recordPolyforkRateLimit(paramsRes.headers.get('Retry-After'));
+          paramsFailed = true;
+        } else if (paramsRes.ok && (paramsRes.headers.get('content-type') ?? '').includes('json')) {
+          paramsRaw = await paramsRes.json();
+        } else {
+          paramsFailed = true;
+        }
       } catch {
-        // Optional colorways/descriptions; proceed cleanly with core detail record.
+        paramsFailed = true;
       }
     }
     const parsed = parseDetailResponse(assetId, raw, paramsRaw);
-    if (cache.size >= cacheLimit) {
-      const first = cache.keys().next();
-      if (!first.done) cache.delete(first.value);
+    // Do not cache partial records whose params fetch failed so retries and saved fallbacks can recover color zones.
+    if (parsed && !paramsFailed) {
+      if (cache.size >= cacheLimit) {
+        const first = cache.keys().next();
+        if (!first.done) cache.delete(first.value);
+      }
+      cache.set(assetId, { value: parsed, expires: Date.now() + cacheTtl });
     }
-    cache.set(assetId, { value: parsed, expires: Date.now() + cacheTtl });
     return parsed;
   } catch {
     return null;

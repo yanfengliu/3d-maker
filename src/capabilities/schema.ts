@@ -388,7 +388,9 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
   const found: DecalSlotSpec[] = [];
   const seen = new Set<string>();
   root.traverse(node => {
+    if (found.length >= maxDecals) return;
     for (const slot of parseDecalSlots(node.userData.decals)) {
+      if (found.length >= maxDecals) break;
       if (seen.has(slot.name)) continue;
       seen.add(slot.name);
       found.push(slot);
@@ -397,10 +399,13 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
   return found;
 }
 
-/** Write a clean JSON snapshot of capabilities onto the root node, clearing any stale nested copies. */
+/** Write a clean JSON snapshot of capabilities onto the root node, clearing stale wrapper-level copies only. */
 export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
-  root.traverse(node => {
-    if (node !== root && 'formFoundry' in node.userData) delete node.userData.formFoundry;
-  });
+  for (const child of root.children) {
+    if ('formFoundry' in child.userData) delete child.userData.formFoundry;
+    for (const grand of child.children) {
+      if ('formFoundry' in grand.userData) delete grand.userData.formFoundry;
+    }
+  }
   root.userData.formFoundry = structuredClone(capabilities);
 }
