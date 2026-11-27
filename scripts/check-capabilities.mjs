@@ -186,6 +186,7 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.match(await page.locator('#motionCount').innerText(), /1 interactive part/);
 
     // 2. Open door via real UI button and verify rendered pixels change.
+    await waitFrames(page, 4);
     const beforeDoor = await canvasSample(page);
     await page.click('[data-part-toggle="door"]');
     await waitFrames(page, 4);
@@ -279,9 +280,10 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.deepEqual(await page.evaluate(() => window.forgeStudio.listClips().map(c => c.name)), ['Open door']);
     // Synthesized clip does NOT autoplay and Fit does NOT snap the posed door back to clip frame 0.
     assert.match(await page.locator('#play').innerText(), /Play clip/);
+    await waitFrames(page, 4);
     const openReimportBeforeFit = await canvasSample(page);
     await page.click('#fit');
-    await waitFrames(page, 3);
+    await waitFrames(page, 4);
     assert.equal((await canvasSample(page)).sig, openReimportBeforeFit.sig, 'Fit snapped re-imported posed door to clip frame 0');
     // Detachable part survived export hidden and can be toggled visible again!
     assert.equal((await page.evaluate(() => window.forgeStudio.listParts().detachable[0].visible)), false);
