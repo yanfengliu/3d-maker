@@ -1,4 +1,27 @@
 import type { Object3D } from 'three';
+import {
+  parseClearanceZones,
+  parseColliders,
+  parseSurfaces,
+  type ClearanceZoneKind,
+  type ClearanceZoneSpec,
+  type ColliderLayer,
+  type ColliderShape,
+  type ColliderSpec,
+  type SpatialRestPose,
+  type SurfaceSpec,
+} from './spatial-schema';
+
+export type {
+  ClearanceZoneKind,
+  ClearanceZoneSpec,
+  ColliderLayer,
+  ColliderShape,
+  ColliderSpec,
+  SpatialRestPose,
+  SurfaceSpec,
+};
+export { parseClearanceZones, parseColliders, parseSurfaces };
 
 export type Axis = 'x' | 'y' | 'z';
 
@@ -99,6 +122,9 @@ export interface AssetCapabilities {
   dimensions?: AssetDimensionsSpec;
   physics?: AssetPhysicsSpec;
   ik?: AssetIkSpec;
+  colliders?: ColliderSpec[];
+  clearanceZones?: ClearanceZoneSpec[];
+  surfaces?: SurfaceSpec[];
   clips?: { name: string; duration: number; synthesized?: boolean }[];
   state?: AssetRuntimeState;
 }
@@ -373,6 +399,12 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
       ...(typeof value.ik.summary === 'string' ? { summary: value.ik.summary.trim().slice(0, maxDescLen) } : {}),
     };
   }
+  const colliders = parseColliders(value.colliders);
+  if (colliders) result.colliders = colliders;
+  const clearanceZones = parseClearanceZones(value.clearanceZones);
+  if (clearanceZones) result.clearanceZones = clearanceZones;
+  const surfaces = parseSurfaces(value.surfaces);
+  if (surfaces) result.surfaces = surfaces;
   const clips = parseClips(value.clips);
   if (clips) result.clips = clips;
   if (isRecord(value.state)) {

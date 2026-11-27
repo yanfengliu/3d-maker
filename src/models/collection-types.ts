@@ -1,9 +1,12 @@
 import type * as T from 'three';
 import type {
+  ClearanceZoneSpec,
+  ColliderSpec,
   DecalSlotSpec,
   DetachablePartSpec,
   NightZoneSpec,
   RiggedPartSpec,
+  SurfaceSpec,
 } from '../capabilities/schema';
 import type { BrowseCategory } from '../data/browse';
 import type { Finish } from './parts';
@@ -24,5 +27,8 @@ export interface ProceduralAssetDef {
   detachableParts?: readonly DetachablePartSpec[];
   nightZones?: readonly NightZoneSpec[];
   decals?: readonly DecalSpec[];
+  colliders?: readonly ColliderSpec[];
+  clearanceZones?: readonly ClearanceZoneSpec[];
+  surfaces?: readonly SurfaceSpec[];
   build: (root: T.Group, p: Finish, detail: boolean) => void;
 }

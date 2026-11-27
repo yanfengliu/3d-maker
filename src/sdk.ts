@@ -5,18 +5,39 @@ export { catalog, listVariations, parseRecipe, resolveVariationRecipe } from './
 export type { CatalogEntry, ModelVariationEntry, Recipe, TemplateId, VariationSummary } from './data/recipe';
 export { createAssetController, inspectAsset, synthesizeRigClips } from './capabilities/runtime';
 export type { AssetController } from './capabilities/runtime';
+export { obbContainedIn, obbOverlap, resolveAssetVolumes, validateScenePlacement } from './capabilities/obb';
+export type {
+  OrientedBox,
+  PlacementOverlap,
+  PlacementValidationOptions,
+  PlacementValidationResult,
+  ResolveVolumeOptions,
+  ScenePlacementItem,
+  Vec3Tuple,
+} from './capabilities/obb';
+export { checkRiggedSweep } from './capabilities/sweep';
+export type { RiggedSweepIssue, RiggedSweepOptions, RiggedSweepReport } from './capabilities/sweep';
+export { deriveSpatialMetadata } from './capabilities/spatial-derive';
+export type { DerivedSpatialMetadata } from './capabilities/spatial-derive';
 export type {
   AssetCapabilities,
   AssetDimensionsSpec,
   AssetIkSpec,
   AssetPhysicsSpec,
   AssetRuntimeState,
+  ClearanceZoneKind,
+  ClearanceZoneSpec,
+  ColliderLayer,
+  ColliderShape,
+  ColliderSpec,
   ColorZoneSpec,
   ColorwayPresetSpec,
   DecalSlotSpec,
   DetachablePartSpec,
   NightZoneSpec,
   RiggedPartSpec,
+  SpatialRestPose,
+  SurfaceSpec,
 } from './capabilities/schema';
 /** Build an independent animated Group from validated JSON for a three.js scene. */
 export function createAsset(recipe: unknown) {

@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { Recipe } from '../data/recipe';
 import { writeCapabilities, type AssetCapabilities, type RiggedPartSpec } from '../capabilities/schema';
+import { deriveSpatialMetadata } from '../capabilities/spatial-derive';
 import { extraAssets } from './collections';
 import { DEFAULT_VARIATION_ID, findVariation, variationsForTemplate } from './variations';
 
@@ -77,6 +78,15 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
   const decals = uniqueByName([...(extra?.decals ?? []), ...(variation?.decals ?? [])]);
   const riggedParts = riggedSource.filter(part => Boolean(root.getObjectByName(part.name)));
   const detachableParts = detachableSource.filter(part => Boolean(root.getObjectByName(part.name)));
+  const authoredColliders = variation?.colliders ?? extra?.colliders;
+  const authoredClearance = variation?.clearanceZones ?? extra?.clearanceZones;
+  const authoredSurfaces = variation?.surfaces ?? extra?.surfaces;
+  const derivedSpatial = (!authoredColliders || !authoredClearance || !authoredSurfaces)
+    ? deriveSpatialMetadata(root, riggedParts, detachableParts)
+    : null;
+  const colliders = authoredColliders ? [...authoredColliders] : (derivedSpatial?.colliders ?? []);
+  const clearanceZones = authoredClearance ? [...authoredClearance] : (derivedSpatial?.clearanceZones ?? []);
+  const surfaces = authoredSurfaces ? [...authoredSurfaces] : (derivedSpatial?.surfaces ?? []);
   const siblingDefs = variationsForTemplate(recipe.template);
   const variations = siblingDefs.length
     ? [
@@ -106,6 +116,9 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
     physics: {
       body: extra?.physicsBody ?? (recipe.template === 'signal-tower' ? 'static' : 'dynamic'),
     },
+    ...(colliders.length ? { colliders } : {}),
+    ...(clearanceZones.length ? { clearanceZones } : {}),
+    ...(surfaces.length ? { surfaces } : {}),
     ...(root.animations.length ? { clips: root.animations.map(c => ({ name: c.name, duration: Math.round(c.duration * 1000) / 1000 })) } : {}),
   };
   writeCapabilities(root, capabilities);

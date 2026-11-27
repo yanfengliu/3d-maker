@@ -1,9 +1,12 @@
 import * as T from 'three';
 import type {
+  ClearanceZoneSpec,
+  ColliderSpec,
   DecalSlotSpec,
   DetachablePartSpec,
   NightZoneSpec,
   RiggedPartSpec,
+  SurfaceSpec,
   VariationSummary,
 } from '../capabilities/schema';
 import { box, group, ring, rotationTrack, shell, strut, tube, type Finish } from './parts';
@@ -42,6 +45,9 @@ export interface ModelVariationDef extends VariationSummary {
   detachableParts?: readonly DetachablePartSpec[];
   nightZones?: readonly NightZoneSpec[];
   decals?: readonly DecalSlotSpec[];
+  colliders?: readonly ColliderSpec[];
+  clearanceZones?: readonly ClearanceZoneSpec[];
+  surfaces?: readonly SurfaceSpec[];
 }
 
 function snowMaterial() {
