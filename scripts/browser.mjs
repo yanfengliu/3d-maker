@@ -14,9 +14,11 @@ export async function studioBrowser() {
     ].find((path) => existsSync(path));
   if (!executablePath)
     throw new Error('Set SHOT_CHROME to Chrome or run npx playwright-core install chromium.');
+  const args = ['--enable-webgl', '--ignore-gpu-blocklist'];
+  if (process.platform === 'linux') args.push('--enable-unsafe-swiftshader');
   return chromium.launch({
     executablePath,
     headless: true,
-    args: ['--enable-webgl', '--ignore-gpu-blocklist'],
+    args,
   });
 }

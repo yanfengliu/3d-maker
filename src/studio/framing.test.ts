@@ -107,6 +107,35 @@ describe('clip preview framing', () => {
     expect(Math.abs(bounds.min.y - rest.min.y)).toBeLessThan(0.015);
     expect(clipFocusShift(rest, bounds, radius).length()).toBe(0);
   });
+
+  it('computes finite, grounded framing across all 87 humanoid clips without mutating rest transforms', () => {
+    const model = pilotModel();
+    expect(model.animations.length).toBe(87);
+    const rest = new T.Box3().setFromObject(model, true);
+    const restCenter = rest.getCenter(new T.Vector3());
+    const radius = rest.getSize(new T.Vector3()).length() / 2;
+    const hips = model.getObjectByName('Hips');
+    if (!hips) throw new Error('Missing Hips bone.');
+    const restHips = hips.position.clone();
+    const cam = cameraAt(restCenter, [5, 3.55, 6.5], radius);
+    const restProjected = projectedBoxSize(rest, cam.matrixWorldInverse);
+    const baseW = restProjected.x * 1.18;
+    const baseH = restProjected.y * 1.15;
+
+    for (const clip of model.animations) {
+      const sampled = sampleClipBounds(model, clip, rest);
+      expect(sampled.isEmpty(), `Empty bounds for clip "${clip.name}"`).toBe(false);
+      const size = sampled.getSize(new T.Vector3());
+      expect(size.toArray().every(v => Number.isFinite(v) && v > 0.05 && v < 15), `Invalid size for "${clip.name}"`).toBe(true);
+      const shift = clipFocusShift(rest, sampled, radius);
+      expect(shift.toArray().every(Number.isFinite), `Non-finite shift for "${clip.name}"`).toBe(true);
+      const frame = expandedFrame(baseW, baseH, rest, sampled, cam.matrixWorldInverse, radius, 1.18, 1.15);
+      expect(frame.width).toBeGreaterThanOrEqual(baseW - 1e-6);
+      expect(frame.height).toBeGreaterThanOrEqual(baseH - 1e-6);
+      expect(Number.isFinite(frame.width) && Number.isFinite(frame.height)).toBe(true);
+    }
+    expect(hips.position.distanceTo(restHips)).toBeLessThan(1e-6);
+  }, 15_000);
 });
 
 describe('camera projection and cross-port localhost persistence', () => {

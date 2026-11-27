@@ -1,7 +1,7 @@
 import { BufferAttribute, Color, Mesh, SRGBColorSpace } from 'three';
 import type { BufferGeometry, InterleavedBufferAttribute, Material, Object3D } from 'three';
 import type { GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
-import type { ColorZoneSpec, ColorwayPresetSpec } from '../capabilities/schema';
+import { COLOR_ZONE_NAME_PATTERN, type ColorZoneSpec, type ColorwayPresetSpec } from '../capabilities/schema';
 
 export interface PaintSlot {
   id: string;
@@ -215,12 +215,17 @@ export function buildPalette(
   return { slots, materials, vertices, legacyMap };
 }
 
+function validPaintSlotId(id: string): boolean {
+  if (id.startsWith('zone-')) return COLOR_ZONE_NAME_PATTERN.test(id.slice(5));
+  return /^(?:material-(?:default|\d+)|vertex-\d+-[\da-f]{6})$/.test(id);
+}
+
 export function validatePaint(value: unknown): Record<string, string> | undefined {
   if (value === undefined) return undefined;
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Supply a paint color map.');
   const result: Record<string, string> = {};
   for (const [id, hex] of Object.entries(value)) {
-    if (!/^(?:material-(?:default|\d+)|vertex-\d+-[\da-f]{6}|zone-[a-zA-Z0-9][a-zA-Z0-9_-]{0,63})$/.test(id) ||
+    if (!validPaintSlotId(id) ||
         typeof hex !== 'string' || !/^#[\da-f]{6}$/i.test(hex)) throw new Error('Invalid paint slot or color.');
     result[id] = hex.toLowerCase();
   }

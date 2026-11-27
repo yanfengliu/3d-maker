@@ -114,6 +114,9 @@ const maxClips = 256;
 const maxNameLen = 80;
 const maxDescLen = 280;
 
+/** Canonical identifier pattern shared by colorZones, presets, and `zone-<name>` paint slots. */
+export const COLOR_ZONE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/;
+
 function trimText(value: unknown, maxLen: number): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -251,9 +254,9 @@ function parseColorZones(value: unknown): ColorZoneSpec[] | undefined {
   const seen = new Set<string>();
   for (const row of value) {
     if (zones.length >= maxZones) break;
-    if (!isRecord(row)) continue;
-    const name = trimText(row.name, maxNameLen);
-    if (!name || seen.has(name) || typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
+    if (!isRecord(row) || typeof row.name !== 'string') continue;
+    const name = row.name.trim();
+    if (!COLOR_ZONE_NAME_PATTERN.test(name) || seen.has(name) || typeof row.color !== 'string' || !hexPattern.test(row.color)) continue;
     seen.add(name);
     const label = trimText(row.label, maxNameLen) ?? humanizeLabel(name);
     const describe = trimText(row.describe, maxDescLen);
@@ -274,8 +277,8 @@ function parsePresets(value: unknown): ColorwayPresetSpec[] | undefined {
     const colors: Record<string, string> = {};
     for (const [k, v] of Object.entries(row.colors)) {
       if (Object.keys(colors).length >= maxZones) break;
-      const key = trimText(k, maxNameLen);
-      if (key && typeof v === 'string' && hexPattern.test(v)) colors[key] = v.toLowerCase();
+      const key = k.trim();
+      if (COLOR_ZONE_NAME_PATTERN.test(key) && typeof v === 'string' && hexPattern.test(v)) colors[key] = v.toLowerCase();
     }
     if (!Object.keys(colors).length) continue;
     seen.add(name);

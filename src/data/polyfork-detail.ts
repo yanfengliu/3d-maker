@@ -1,6 +1,7 @@
 import type { Object3D } from 'three';
 import { isPolyforkRateLimited, recordPolyforkRateLimit } from './polyfork';
 import {
+  COLOR_ZONE_NAME_PATTERN,
   humanizeLabel,
   parseDecalSlots,
   readEmbeddedDecals,
@@ -66,7 +67,7 @@ function parseParamsMetadata(raw: unknown): {
       if (typeof entry.describe === 'string' && entry.describe.trim()) {
         partDescriptions.set(key, entry.describe.trim());
       }
-      if (entry.type === 'color' && typeof entry.default === 'string' && hexPattern.test(entry.default)) {
+      if (entry.type === 'color' && COLOR_ZONE_NAME_PATTERN.test(key) && typeof entry.default === 'string' && hexPattern.test(entry.default)) {
         colorZones.push({
           name: key,
           label: typeof entry.label === 'string' && entry.label.trim() ? entry.label.trim() : humanizeLabel(key),
@@ -81,7 +82,7 @@ function parseParamsMetadata(raw: unknown): {
       if (!isRecord(entry)) continue;
       const colors: Record<string, string> = {};
       for (const [knob, val] of Object.entries(entry)) {
-        if (typeof val === 'string' && hexPattern.test(val)) colors[knob] = val.toLowerCase();
+        if (COLOR_ZONE_NAME_PATTERN.test(knob) && typeof val === 'string' && hexPattern.test(val)) colors[knob] = val.toLowerCase();
       }
       if (!Object.keys(colors).length) continue;
       presets.push({ name: key, label: humanizeLabel(key), colors });
@@ -107,7 +108,7 @@ function parseParamsMetadata(raw: unknown): {
   return { colorZones, presets, partDescriptions, nightFallback };
 }
 
-function parseDetailResponse(assetId: string, raw: unknown, paramsRaw: unknown): PolyforkDetail | null {
+export function parseDetailResponse(assetId: string, raw: unknown, paramsRaw: unknown): PolyforkDetail | null {
   if (!isRecord(raw) || raw.id !== assetId) return null;
   const params = parseParamsMetadata(paramsRaw);
   const riggedParts: RiggedPartSpec[] = [];
