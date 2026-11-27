@@ -70,6 +70,9 @@ function summarizeMaterial(mat: T.Material) {
 }
 
 export function fingerprintRecipe(recipe: Recipe): string {
+  const paramEntries = recipe.params
+    ? Object.entries(recipe.params).sort(([a], [b]) => a.localeCompare(b))
+    : [];
   return sha256({
     version: recipe.version,
     template: recipe.template,
@@ -81,6 +84,7 @@ export function fingerprintRecipe(recipe: Recipe): string {
     proportion: q(recipe.proportion),
     detail: recipe.detail,
     quality: recipe.quality ?? 'standard',
+    ...(paramEntries.length ? { params: Object.fromEntries(paramEntries) } : {}),
   });
 }
 

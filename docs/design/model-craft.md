@@ -88,3 +88,12 @@ This writes full-resolution `front.png`, `back.png`, `left.png`, `right.png`, `t
 - **Clean grounding**: `minY` sits at `0` (within `±0.02 m`) with all feet, wheels, skids, or plinths resting evenly on the floor plane (except explicit floating watercraft).
 - **Articulated clearance**: Rigged hinges/slides sit on visible pivots/tracks and stay attached through their declared motion range.
 - **360-degree finish quality**: Back and side elevations carry cohesive trim, proportions, and silhouette rather than looking unfinished compared to the front 3/4 hero angle.
+
+## End-to-end authoring procedure
+
+For generating new original procedural models or batch kit variations, follow the five-stage workflow packaged in `.agents/skills/author-3d-model/SKILL.md`:
+
+1. **Kit grammar, brief, and 2D turnaround art**: Reuse shared matte palettes and joinery helpers in `src/models/kit-grammar.ts` / `src/models/kit-materials.ts`, write a part brief, and generate a front+rear 2D reference image before coding geometry.
+2. **Parametric model-as-code + static mesh merge**: Declare semantic structural knobs (`ModelParamSpec[]` via `src/capabilities/param-schema.ts`), compress static sub-meshes with `mergeStaticParts()` (`src/models/merge-static.ts`) for compact draw calls and deterministic `tone` vertex-color shading while preserving live `primary`/`accent` tint zones and rigged/detachable pivots.
+3. **Truth harness & automatic metadata**: Lock append-only variations (`npm run variations:lock`), verify craft invariants, spatial colliders/clearances/surfaces, measured `ik` (`src/capabilities/ik-derive.ts`), and render all seven views (`npm run inspect:model`).
+4. **Fresh-session adversarial visual judge**: Run an isolated read-only subagent reviewing ONLY the brief, 2D reference image, `metrics.json`, and all 7 PNGs; fix every concrete visual defect and re-verify until approved.

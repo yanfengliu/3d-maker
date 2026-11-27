@@ -363,23 +363,53 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.ok(droneVarManifest.riggedParts.some(p => p.name === 'CargoHook'));
     assert.ok(droneVarManifest.variations?.some(v => v.id === 'default'));
 
-    // 7. Verify SDK exports inspectAsset, createAssetController, listVariations, and resolveVariationRecipe.
+    // 6d. Parametric kit variation UI: open Harbor Timber Pavilion, drive #modelParams live controls, and confirm pixel & recipe updates.
+    await page.evaluate(() => { window.forgeStudio.selectVariation('harbor-timber-kit', 'market-pavilion'); });
+    await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Harbor Timber Pavilion');
+    await waitFrames(page, 4);
+    assert.equal(await page.locator('#param-bays').inputValue(), '3');
+    assert.equal(await page.locator('#param-awning').isChecked(), true);
+    assert.equal(await page.locator('#param-colorway').inputValue(), 'harbor-oak');
+    await page.screenshot({ path: join(out, 'model-params.png') });
+    const pavilionBefore = await canvasSample(page);
+    await page.selectOption('#param-colorway', 'cedar-slate');
+    await page.uncheck('#param-awning');
+    await page.locator('#param-bays').evaluate(input => {
+      input.value = '4';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await waitFrames(page, 4);
+    const pavilionParams = await page.evaluate(() => window.forgeStudio.getRecipe()?.params);
+    assert.equal(pavilionParams?.bays, 4);
+    assert.equal(pavilionParams?.awning, false);
+    assert.equal(pavilionParams?.colorway, 'cedar-slate');
+    assert.notEqual((await canvasSample(page)).sig, pavilionBefore.sig, 'Editing #modelParams did not update viewport');
+    const pavilionCaps = await page.evaluate(() => window.forgeStudio.inspectModel());
+    assert.equal(pavilionCaps?.source?.kit, 'harbor-timber');
+    assert.equal(pavilionCaps?.params?.length, 5);
+
+    // 7. Verify SDK exports inspectAsset, createAssetController, listVariations, resolveVariationRecipe, deriveIkMetadata, and mergeStaticParts.
     const sdkPage = await context.newPage();
     await sdkPage.goto(originUrl + '/sdk-check');
     const sdkResult = await sdkPage.evaluate(async () => {
-      const { createAsset, catalog, inspectAsset, createAssetController, listVariations, resolveVariationRecipe } = await import('/3d-maker/studio-sdk.js');
+      const { createAsset, catalog, inspectAsset, createAssetController, listVariations, resolveVariationRecipe, deriveIkMetadata, mergeStaticParts } = await import('/3d-maker/studio-sdk.js');
       const pod = createAsset(catalog.find(row => row.id === 'cargo-pod').recipe);
       const info = inspectAsset(pod);
       const ctrl = createAssetController(pod);
       const opened = ctrl.openPart('CaseLid');
       const lifter = createAsset(resolveVariationRecipe('relay-drone', 'cargo-lifter'));
       const lifterInfo = inspectAsset(lifter);
+      const pilot = createAsset(catalog.find(row => row.id === 'field-pilot').recipe);
+      const pilotIk = deriveIkMetadata(pilot);
       return {
         parts: info.riggedParts.map(p => p.name),
         opened,
         lidRotX: pod.getObjectByName('CaseLid').rotation.x,
         variationCount: listVariations('bakery-shopfront').length,
         lifterVariation: lifterInfo.source?.variation,
+        pilotIkType: pilotIk?.type,
+        pilotLegCount: pilotIk?.legs?.limbs.length ?? 0,
+        hasMergeStatic: typeof mergeStaticParts === 'function',
       };
     });
     assert.deepEqual(sdkResult.parts, ['CaseLid']);
@@ -387,6 +417,9 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.ok(sdkResult.lidRotX < -1.2);
     assert.equal(sdkResult.variationCount, 3);
     assert.equal(sdkResult.lifterVariation, 'cargo-lifter');
+    assert.equal(sdkResult.pilotIkType, 'legs');
+    assert.equal(sdkResult.pilotLegCount, 2);
+    assert.equal(sdkResult.hasMergeStatic, true);
     await sdkPage.close();
     assert.deepEqual(errors, []);
   } finally {

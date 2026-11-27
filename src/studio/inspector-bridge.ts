@@ -1,10 +1,11 @@
 import type { AssetController } from '../capabilities/runtime';
 import type { ColorwayPresetSpec } from '../capabilities/schema';
-import { catalog, type Recipe } from '../data/recipe';
+import { catalog, getModelParamSpecs, type Recipe } from '../data/recipe';
 import { colorwayPaintPatch, listPaintSlots, pickPaintSlot, type ImportedAsset, type ImportEdits } from '../imports';
 import { el, notify } from '../ui/dom';
 import { showAnimation, showPlayback, showProperties } from '../ui/inspector';
 import { showModelPaint } from '../ui/model-paint';
+import { showModelParams } from '../ui/model-params';
 import { showModelPartsProperties, showRiggedParts } from '../ui/model-parts';
 import type { Viewport } from './viewport';
 
@@ -90,6 +91,11 @@ export function createInspectorBridge(host: WorkspaceBridge) {
         },
         host.edit,
         host.selectVariation,
+      );
+      showModelParams(
+        getModelParamSpecs(recipe.template, recipe.variation),
+        recipe.params,
+        nextParams => { host.edit({ params: nextParams }); },
       );
       const ctrl = host.getController();
       if (ctrl) {

@@ -1,3 +1,8 @@
+import {
+  parseRecipeParams,
+  type ModelParamSpec,
+  type ModelParamValues,
+} from '../capabilities/param-schema.ts';
 import { extraAssets } from '../models/collections/index.ts';
 import {
   DEFAULT_VARIATION_ID,
@@ -21,6 +26,7 @@ export interface Recipe {
   proportion: number;
   detail: boolean;
   quality?: 'standard' | 'hd';
+  params?: ModelParamValues;
 }
 
 export interface CatalogEntry {
@@ -84,11 +90,19 @@ function dimension(value: unknown, field: string): number {
   return value;
 }
 
+const extraParamsById = new Map(extraAssets.map(asset => [asset.id, asset.params]));
+
+/** Return declared model-specific structural parameter specs for a template/variation pair. */
+export function getModelParamSpecs(template: TemplateId, variation?: string): readonly ModelParamSpec[] | undefined {
+  const varDef = findVariation(template, variation);
+  return varDef?.paramSpecs ?? extraParamsById.get(template);
+}
+
 /** Validate inputs at the point of import. Recipes carry data only. */
 export function parseRecipe(input: unknown): Recipe {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('A recipe must be a JSON object.');
   const value = input as Record<string, unknown>;
-  const allowed = ['version', 'template', 'variation', 'name', 'primary', 'accent', 'scale', 'proportion', 'detail', 'quality'];
+  const allowed = ['version', 'template', 'variation', 'name', 'primary', 'accent', 'scale', 'proportion', 'detail', 'quality', 'params'];
   if (Object.keys(value).some(key => !allowed.includes(key))) throw new Error('The recipe contains an unknown field.');
   if (value.version !== 1) throw new Error('The recipe must use version 1.');
   if (!isTemplate(value.template)) throw new Error('Choose a template from the studio catalog.');
@@ -112,9 +126,12 @@ export function parseRecipe(input: unknown): Recipe {
   if (value.quality !== undefined && value.quality !== 'standard' && value.quality !== 'hd') {
     throw new Error('quality must be standard or hd.');
   }
+  const paramSpecs = getModelParamSpecs(value.template, variation);
+  const params = parseRecipeParams(value.params, paramSpecs);
   return {
     version: 1, template: value.template, ...(variation ? { variation } : {}), name: value.name.trim(), detail: value.detail,
     ...(value.quality === undefined ? {} : { quality: value.quality }),
+    ...(params ? { params } : {}),
     primary: color(value.primary, 'primary'), accent: color(value.accent, 'accent'),
     scale: dimension(value.scale, 'scale'), proportion: dimension(value.proportion, 'proportion'),
   };

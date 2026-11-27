@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { Recipe } from '../data/recipe';
+import { deriveIkMetadata } from '../capabilities/ik-derive';
 import { writeCapabilities, type AssetCapabilities, type RiggedPartSpec } from '../capabilities/schema';
 import { deriveSpatialMetadata } from '../capabilities/spatial-derive';
 import { extraAssets } from './collections';
@@ -87,6 +88,9 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
   const colliders = authoredColliders ? [...authoredColliders] : (derivedSpatial?.colliders ?? []);
   const clearanceZones = authoredClearance ? [...authoredClearance] : (derivedSpatial?.clearanceZones ?? []);
   const surfaces = authoredSurfaces ? [...authoredSurfaces] : (derivedSpatial?.surfaces ?? []);
+  const ik = variation?.ik ?? extra?.ik ?? deriveIkMetadata(root, riggedParts);
+  const kit = variation?.kit ?? extra?.kit;
+  const paramSpecs = variation?.paramSpecs ?? extra?.params;
   const siblingDefs = variationsForTemplate(recipe.template);
   const variations = siblingDefs.length
     ? [
@@ -102,12 +106,14 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
       kind: 'original',
       id: recipe.template,
       variation: variation?.id ?? DEFAULT_VARIATION_ID,
+      ...(kit ? { kit } : {}),
     },
     ...(variations ? { variations } : {}),
     riggedParts,
     detachableParts,
     nightZones,
     decals,
+    ...(paramSpecs?.length ? { params: [...paramSpecs] } : {}),
     dimensions: {
       sizeM: { x: round(size.x), y: round(size.y), z: round(size.z) },
       originY: round(box.isEmpty() ? 0 : box.min.y),
@@ -116,6 +122,7 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
     physics: {
       body: extra?.physicsBody ?? (recipe.template === 'signal-tower' ? 'static' : 'dynamic'),
     },
+    ...(ik ? { ik } : {}),
     ...(colliders.length ? { colliders } : {}),
     ...(clearanceZones.length ? { clearanceZones } : {}),
     ...(surfaces.length ? { surfaces } : {}),

@@ -172,6 +172,18 @@
       ],
       "default": "standard",
       "description": "Choose the authored geometry level. Older recipes use standard when this field is absent."
+    },
+    "params": {
+      "type": "object",
+      "maxProperties": 24,
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "string", "minLength": 1, "maxLength": 60 }
+        ]
+      },
+      "description": "Optional model-specific structural knobs declared in the model's capabilities.params manifest (for example bays, roofPitch, awning, colorway, or tone)."
     }
   }
 }

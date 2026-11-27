@@ -72,7 +72,7 @@ describe('cross-module schema, paint, SDK, and llms.txt contracts', () => {
 
     // 1. Self-describing GLB manifest location and keys documented in llms.txt.
     expect(llms).toContain('nodes[0].extras.formFoundry');
-    for (const key of ['riggedParts', 'detachableParts', 'nightZones', 'decals', 'colorZones', 'presets', 'dimensions', 'physics', 'ik', 'colliders', 'clearanceZones', 'surfaces', 'clips', 'state']) {
+    for (const key of ['riggedParts', 'detachableParts', 'nightZones', 'decals', 'colorZones', 'presets', 'params', 'dimensions', 'physics', 'ik', 'colliders', 'clearanceZones', 'surfaces', 'clips', 'state']) {
       expect(llms, `public/llms.txt missing capability field "${key}"`).toContain(`\`${key}\``);
     }
 
@@ -135,6 +135,7 @@ describe('cross-module schema, paint, SDK, and llms.txt contracts', () => {
       'accent',
       'detail',
       'name',
+      'params',
       'primary',
       'proportion',
       'quality',

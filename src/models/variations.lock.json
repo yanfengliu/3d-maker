@@ -1059,6 +1059,24 @@
         "ProduceStall"
       ]
     },
+    "market-pavilion@harbor-timber-kit": {
+      "template": "market-pavilion",
+      "variation": "harbor-timber-kit",
+      "label": "Harbor Timber Kit",
+      "situation": "Parametric waterfront timber market pavilion with adjustable bays, pitched shingled roof, toggleable ribbed awning, matte colorways, and tonal vertex-color variation.",
+      "recipeHash": "sha256:d569e9262ab965fdb62f6a102b4ff68e72fca323b62419c0788c09bcb9ac1925",
+      "standardHash": "sha256:ff64fb138e4652e2cd429af64f1822b0dc5f52d99f9e1a1cc3b196ab1716a422",
+      "hdHash": "sha256:bac6e6bbacac598da22fe9d6c4096fd4044ee380086d94d3ebfc4750e41345c3",
+      "clips": [
+        "Breeze sway"
+      ],
+      "riggedParts": [
+        "HangingSign"
+      ],
+      "detachableParts": [
+        "ProduceStall"
+      ]
+    },
     "mech-engineer@default": {
       "template": "mech-engineer",
       "variation": "default",

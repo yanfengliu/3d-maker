@@ -88,7 +88,10 @@
 #propertiesBody .variation-group{padding-top:2px}
 #propertiesBody .variation-group select{min-width:0;max-width:65%;height:28px;border:1px solid var(--line);background:#fafbf6;border-radius:5px;padding:0 6px;font-size:12px}
 .variation-note{margin:4px 0 0;font-size:11px;line-height:1.35;color:#697261}
-#modelPaint:empty,#modelParts:empty{display:none}
+#modelPaint:empty,#modelParams:empty,#modelParts:empty{display:none}
+.param-list{display:grid;gap:6px;margin-top:6px}
+.param-choice select{min-width:0;max-width:58%;height:28px;border:1px solid var(--line);background:#fafbf6;border-radius:5px;padding:0 6px;font-size:12px}
+.param-row .slider{margin-bottom:4px}
 .paint-editor{display:flex;align-items:center;gap:6px;margin-top:5px}
 .paint-editor select{min-width:0;flex:1;height:29px;border:1px solid var(--line);background:#fafbf6;border-radius:4px;padding:0 5px;font-size:12px}
 .paint-editor input{width:30px;height:29px;flex:none;padding:2px;border:1px solid var(--line);border-radius:4px;background:#fafbf6;cursor:pointer}

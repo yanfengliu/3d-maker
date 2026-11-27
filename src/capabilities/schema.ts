@@ -1,27 +1,21 @@
 import type { Object3D } from 'three';
+import { parseIkSpec, type AssetIkSpec } from './ik-schema';
+import { parseModelParamSpecs, type ModelParamSpec } from './param-schema';
 import {
   parseClearanceZones,
   parseColliders,
   parseSurfaces,
-  type ClearanceZoneKind,
   type ClearanceZoneSpec,
-  type ColliderLayer,
-  type ColliderShape,
   type ColliderSpec,
-  type SpatialRestPose,
   type SurfaceSpec,
 } from './spatial-schema';
 
-export type {
-  ClearanceZoneKind,
-  ClearanceZoneSpec,
-  ColliderLayer,
-  ColliderShape,
-  ColliderSpec,
-  SpatialRestPose,
-  SurfaceSpec,
-};
-export { parseClearanceZones, parseColliders, parseSurfaces };
+export type * from './ik-schema';
+export type * from './param-schema';
+export type * from './spatial-schema';
+export { parseIkSpec } from './ik-schema';
+export { parseModelParamSpecs, parseRecipeParams, resolveModelParams } from './param-schema';
+export { parseClearanceZones, parseColliders, parseSurfaces } from './spatial-schema';
 
 export type Axis = 'x' | 'y' | 'z';
 
@@ -83,11 +77,6 @@ export interface AssetPhysicsSpec {
   material?: string;
 }
 
-export interface AssetIkSpec {
-  type: 'legs' | 'arm';
-  summary?: string;
-}
-
 export interface AssetRuntimeState {
   pose?: Record<string, number>;
   hiddenParts?: string[];
@@ -119,6 +108,7 @@ export interface AssetCapabilities {
   decals: DecalSlotSpec[];
   colorZones?: ColorZoneSpec[];
   presets?: ColorwayPresetSpec[];
+  params?: ModelParamSpec[];
   dimensions?: AssetDimensionsSpec;
   physics?: AssetPhysicsSpec;
   ik?: AssetIkSpec;
@@ -374,6 +364,8 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
   if (colorZones) result.colorZones = colorZones;
   const presets = parsePresets(value.presets);
   if (presets) result.presets = presets;
+  const params = parseModelParamSpecs(value.params);
+  if (params) result.params = params;
   if (isRecord(value.dimensions) && isRecord(value.dimensions.sizeM)) {
     const { x, y, z } = value.dimensions.sizeM;
     const originY = value.dimensions.originY;
@@ -393,12 +385,8 @@ export function parseCapabilities(value: unknown): AssetCapabilities | null {
       ...(typeof value.physics.material === 'string' ? { material: value.physics.material } : {}),
     };
   }
-  if (isRecord(value.ik) && (value.ik.type === 'legs' || value.ik.type === 'arm')) {
-    result.ik = {
-      type: value.ik.type,
-      ...(typeof value.ik.summary === 'string' ? { summary: value.ik.summary.trim().slice(0, maxDescLen) } : {}),
-    };
-  }
+  const ik = parseIkSpec(value.ik);
+  if (ik) result.ik = ik;
   const colliders = parseColliders(value.colliders);
   if (colliders) result.colliders = colliders;
   const clearanceZones = parseClearanceZones(value.clearanceZones);

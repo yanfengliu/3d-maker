@@ -1,15 +1,19 @@
 import * as T from 'three';
 import type {
+  AssetIkSpec,
   ClearanceZoneSpec,
   ColliderSpec,
   DecalSlotSpec,
   DetachablePartSpec,
+  ModelParamSpec,
+  ModelParamValues,
   NightZoneSpec,
   RiggedPartSpec,
   SurfaceSpec,
   VariationSummary,
 } from '../capabilities/schema';
 import { box, group, ring, rotationTrack, shell, strut, tube, type Finish } from './parts';
+import { buildHarborTimberPavilion, HARBOR_PAVILION_PARAM_SPECS } from './kits/harbor-pavilion';
 
 export type { VariationSummary };
 
@@ -21,6 +25,7 @@ export interface VariationRecipeOverrides {
   proportion?: number;
   detail?: boolean;
   quality?: 'standard' | 'hd';
+  params?: ModelParamValues;
 }
 
 export interface VariationInitialState {
@@ -33,18 +38,23 @@ export interface VariationInitialState {
 export interface ModelVariationDef extends VariationSummary {
   /** Base template ID in the catalog (for example 'bakery-shopfront'). */
   template: string;
+  /** Optional kit grammar identifier shared across a cohesive model collection. */
+  kit?: string;
+  /** Optional model-specific semantic structural knobs exposed in studio UI and recipes. */
+  paramSpecs?: readonly ModelParamSpec[];
   /** Optional recipe overrides merged onto the base catalog entry. */
   recipe?: VariationRecipeOverrides;
   /** Optional initial interactive state applied when opening this variation in the studio. */
   state?: VariationInitialState;
   /** Optional geometry modifier layered on top of the base model (or replacement if replaceBase is true). */
-  modify?: (root: T.Group, p: Finish, detail: boolean) => void;
+  modify?: (root: T.Group, p: Finish, detail: boolean, params?: ModelParamValues) => void;
   /** When true, modify() builds the entire geometry instead of calling the base template builder first. */
   replaceBase?: boolean;
   riggedParts?: readonly RiggedPartSpec[];
   detachableParts?: readonly DetachablePartSpec[];
   nightZones?: readonly NightZoneSpec[];
   decals?: readonly DecalSlotSpec[];
+  ik?: AssetIkSpec;
   colliders?: readonly ColliderSpec[];
   clearanceZones?: readonly ClearanceZoneSpec[];
   surfaces?: readonly SurfaceSpec[];
@@ -256,6 +266,28 @@ export const modelVariations: readonly ModelVariationDef[] = [
     label: 'Obsidian Paladin',
     situation: 'Dark fantasy night-watch or boss encounter variant with gunmetal plate and crimson trim.',
     recipe: { name: 'Medieval Knight (Obsidian)', primary: '#383d47', accent: '#c0392b' },
+  },
+  {
+    template: 'market-pavilion',
+    id: 'harbor-timber-kit',
+    label: 'Harbor Timber Kit',
+    kit: 'harbor-timber',
+    situation: 'Parametric waterfront timber market pavilion with adjustable bays, pitched shingled roof, toggleable ribbed awning, matte colorways, and tonal vertex-color variation.',
+    paramSpecs: HARBOR_PAVILION_PARAM_SPECS,
+    recipe: {
+      name: 'Harbor Timber Pavilion',
+      primary: '#8b6a4e',
+      accent: '#a64533',
+      params: { bays: 3, roofPitch: 34, awning: true, colorway: 'harbor-oak', tone: 0.4 },
+    },
+    replaceBase: true,
+    modify: buildHarborTimberPavilion,
+    riggedParts: [
+      { name: 'HangingSign', label: 'Hanging sign', type: 'rotate', axis: 'z', range: [-22, 22], describe: 'Swings the brass-bracketed timber market signboard in the breeze' },
+    ],
+    detachableParts: [
+      { name: 'ProduceStall', label: 'Produce stall', describe: 'Central timber counter stacked with tilted produce crates' },
+    ],
   },
 ];
 

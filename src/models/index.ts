@@ -1,5 +1,6 @@
 import * as T from 'three'
-import type { Recipe } from '../data/recipe'
+import { resolveModelParams } from '../capabilities/param-schema'
+import { getModelParamSpecs, type Recipe } from '../data/recipe'
 import { character } from './character'
 import { attachOriginalCapabilities } from './capabilities'
 import { extraAssets } from './collections'
@@ -16,6 +17,8 @@ export function buildModel(recipe: Recipe): T.Group {
   root.name = 'Asset'
   const palette = finishes(recipe)
   const variation = findVariation(recipe.template, recipe.variation)
+  const paramSpecs = getModelParamSpecs(recipe.template, recipe.variation)
+  const resolvedParams = paramSpecs ? resolveModelParams(paramSpecs, recipe.params) : undefined
   if (!variation?.replaceBase) {
     switch (recipe.template) {
       case 'relay-drone': drone(root, palette, recipe.detail); break
@@ -27,13 +30,13 @@ export function buildModel(recipe: Recipe): T.Group {
       default: {
         const build = extraBuilders.get(recipe.template)
         if (!build) throw new Error('Unknown template: ' + recipe.template)
-        build(root, palette, recipe.detail)
+        build(root, palette, recipe.detail, resolvedParams)
         break
       }
     }
   }
-  variation?.modify?.(root, palette, recipe.detail)
-  root.userData.recipe = { ...recipe }
+  variation?.modify?.(root, palette, recipe.detail, resolvedParams)
+  root.userData.recipe = { ...recipe, ...(recipe.params ? { params: { ...recipe.params } } : {}) }
   root.scale.set(recipe.scale * recipe.proportion, recipe.scale, recipe.scale)
   attachOriginalCapabilities(root, recipe)
   return root
