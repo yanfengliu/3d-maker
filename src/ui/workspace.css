@@ -148,7 +148,7 @@
 #noMotionMatches{font-size:12px;color:var(--muted);padding:6px 0}
 #play kbd{font:9px var(--mono);color:#646e5a;border:1px solid var(--line);border-radius:3px;padding:1px 3px;margin-left:1px}
 
-.viewtop{justify-content:flex-end}
+.viewtop{justify-content:flex-end;gap:8px}
 .view-play{display:inline-flex;white-space:nowrap;align-items:center;gap:6px;min-height:29px;border-radius:4px;font-size:12px;font-weight:600;padding:0 7px;color:#35402c}
 .view-play:hover{background:#e5e9dd}
 .view-play[hidden]+.play-divider{display:none}

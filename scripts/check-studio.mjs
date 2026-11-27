@@ -91,7 +91,35 @@ try {
     });
   const before = await pixels();
   assert.ok(before.dark > 200 && before.paint > 100, JSON.stringify(before));
+  assert.equal(await page.evaluate(() => window.forgeStudio.getProjection()), 'perspective');
+  assert.equal(await page.locator('#projection').inputValue(), 'perspective');
   await page.screenshot({ path: join(out, 'desktop.png'), fullPage: true });
+  await page.screenshot({ path: join(out, 'projection-perspective.png') });
+  // Switch to Orthographic and verify both visual projection change and persistence across a second localhost port!
+  await page.selectOption('#projection', 'orthographic');
+  await page.waitForTimeout(160);
+  assert.equal(await page.evaluate(() => window.forgeStudio.getProjection()), 'orthographic');
+  const orthoPixels = await pixels();
+  assert.notEqual(orthoPixels.signature, before.signature, 'Switching to Orthographic did not change viewport rendering');
+  await page.screenshot({ path: join(out, 'projection-orthographic.png') });
+  const secondServer = createServer(server.listeners('request')[0]);
+  await new Promise((ok, fail) => { secondServer.once('error', fail); secondServer.listen(0, '127.0.0.1', ok); });
+  const secondOrigin = 'http://127.0.0.1:' + secondServer.address().port;
+  try {
+    const otherPortPage = await context.newPage();
+    await otherPortPage.goto(secondOrigin + site + '?shot=1');
+    await otherPortPage.waitForFunction(() => window.__shotReady);
+    assert.equal(await otherPortPage.evaluate(() => window.forgeStudio.getProjection()), 'orthographic');
+    assert.equal(await otherPortPage.locator('#projection').inputValue(), 'orthographic');
+    await otherPortPage.selectOption('#projection', 'perspective');
+    await otherPortPage.close();
+  } finally {
+    await new Promise((ok) => secondServer.close(ok));
+  }
+  await page.reload();
+  await page.waitForFunction(() => window.__shotReady);
+  assert.equal(await page.evaluate(() => window.forgeStudio.getProjection()), 'perspective');
+  assert.equal(await page.locator('#projection').inputValue(), 'perspective');
   const rect = await page.locator('#viewport').boundingBox();
   await page.mouse.move(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
   await page.mouse.down();

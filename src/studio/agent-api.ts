@@ -6,6 +6,7 @@ import { listImports, type ImportedAsset, type ImportEdits } from '../imports';
 import { showPlayback } from '../ui/inspector';
 import { stopPartPreviewAnimation } from '../ui/model-parts';
 import type { ExportOptions } from './export';
+import type { Projection } from './projection';
 import type { Viewport } from './viewport';
 
 export interface PaintSlotSummary {
@@ -36,6 +37,7 @@ export interface StudioHost {
   refreshRig: () => void;
   syncViewportTools: () => void;
   applyPreset: (preset: ColorwayPresetSpec) => void;
+  setProjection: (projection: Projection) => void;
 }
 
 export function createAgentApi(host: StudioHost) {
@@ -72,6 +74,8 @@ export function createAgentApi(host: StudioHost) {
     setImportEdits: host.setImportEdits,
     listClips: host.listClips,
     playClip: host.playClip,
+    getProjection: () => host.stage.getProjection(),
+    setProjection: (projection: Projection) => { host.setProjection(projection); },
     inspectModel: (): (AssetCapabilities & { paintSlots: PaintSlotSummary[] }) | null => {
       const ctrl = host.getController();
       return ctrl ? { ...ctrl.syncManifest(), paintSlots: host.listPaintSlots() } : null;

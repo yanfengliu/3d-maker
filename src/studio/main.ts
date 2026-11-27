@@ -2,7 +2,8 @@ import '../ui/style.css';
 import '../ui/workspace.css';
 import type * as T from 'three';
 import type { ExportOptions } from './export';
-import { attachCharacterAnimations, ensureCharacterAnimations, loadCharacterAnimations } from '../animation/lazy';
+import { downloadStudioGlb, exportStudioGlb } from './export-flow';
+import { attachCharacterAnimations, loadCharacterAnimations } from '../animation/lazy';
 import { createAssetController, type AssetController } from '../capabilities/runtime';
 import { readCapabilities } from '../capabilities/schema';
 import { catalog, parseRecipe, resolveVariationRecipe, type Recipe } from '../data/recipe';
@@ -28,13 +29,16 @@ import { stopPartPreviewAnimation } from '../ui/model-parts';
 import { setupDialogs } from '../ui/dialogs';
 import { createAgentApi, type ForgeStudioApi } from './agent-api';
 import { createInspectorBridge } from './inspector-bridge';
+import { parseProjection, readProjectionPreference, saveProjectionPreference, type Projection } from './projection';
 import { setupShelf } from './shelf';
 import { Viewport, disposeModel, type View } from './viewport';
 
 const params = new URLSearchParams(window.location.search);
 el('app').innerHTML = layout;
 if (params.get('shot') === '1' && params.get('noui') === '1') document.body.classList.add('shot-only');
-const stage = new Viewport(el('viewport'));
+const initialProjection = parseProjection(params.get('projection')) ?? readProjectionPreference();
+const stage = new Viewport(el('viewport'), false, initialProjection);
+el<HTMLSelectElement>('projection').value = initialProjection;
 const autoplay = params.get('shot') !== '1';
 let recipe: Recipe | null = null;
 let imported: ImportedAsset | null = null;
@@ -282,48 +286,9 @@ function remix(newName?: string) {
   shelf.markSelection();
 }
 
-async function exportGLB(options?: ExportOptions): Promise<ArrayBuffer> {
-  const [{ GLTFExporter }, { cloneForExport }] = await Promise.all([
-    import('three/addons/exporters/GLTFExporter.js'),
-    import('./export'),
-  ]);
-  const source = imported?.group;
-  const snapshot = source ? stage.restClone(() => cloneForExport(source, options, imported?.controller)) : null;
-  const builtOriginal = recipe ? buildModel(recipe) : null;
-  let exportCtrl: AssetController | null = null;
-  if (builtOriginal) {
-    const origState = originalController?.getState();
-    exportCtrl = createAssetController(builtOriginal);
-    for (const [part, val] of Object.entries(origState?.pose ?? {})) exportCtrl.setPart(part, val);
-    for (const part of origState?.hiddenParts ?? []) exportCtrl.setVisible(part, false);
-    if (origState?.night && exportCtrl.capabilities.nightZones.length) exportCtrl.setNight(true);
-    if (origState?.decalText && exportCtrl.capabilities.decals.length) exportCtrl.setDecalsVisible(true, origState.decalText);
-    await ensureCharacterAnimations(builtOriginal);
-  }
-  const originalSnap = builtOriginal ? cloneForExport(builtOriginal, options, exportCtrl) : null;
-  exportCtrl?.dispose();
-  const model = originalSnap?.root ?? snapshot?.root;
-  if (!model) throw new Error('Choose an asset to export.');
-  try {
-    if (!builtOriginal) await ensureCharacterAnimations(model);
-    return (await new GLTFExporter().parseAsync(model, {
-      binary: true,
-      animations: model.animations,
-      onlyVisible: true,
-    })) as ArrayBuffer;
-  } finally {
-    snapshot?.dispose();
-    originalSnap?.dispose();
-    if (builtOriginal) disposeModel(builtOriginal);
-  }
-}
-
-async function downloadGlb(options?: ExportOptions) {
-  const filename = name().replace(/[^a-z\d -]/gi, '').trim() || 'asset';
-  const url = URL.createObjectURL(new Blob([await exportGLB(options)], { type: 'model/gltf-binary' }));
-  Object.assign(document.createElement('a'), { href: url, download: filename + '.glb' }).click();
-  window.setTimeout(() => { URL.revokeObjectURL(url); }, 10000);
-}
+const exportTarget = () => ({ stage, recipe, imported, originalController });
+const exportGLB = (options?: ExportOptions) => exportStudioGlb(exportTarget(), options);
+const downloadGlb = (options?: ExportOptions) => downloadStudioGlb(name(), exportTarget(), options);
 
 const shelf = setupShelf({
   activeKey: () => {
@@ -452,8 +417,16 @@ el('grid').setAttribute('aria-pressed', 'true');
 el('wire').setAttribute('aria-pressed', 'false');
 el('grid').onclick = () => { grid = !grid; stage.showGrid(grid); el('grid').setAttribute('aria-pressed', String(grid)); };
 el('wire').onclick = () => { wire = !wire; stage.wireframe(wire); el('wire').setAttribute('aria-pressed', String(wire)); };
+function setProjection(mode: Projection) {
+  const valid = parseProjection(mode);
+  if (!valid) throw new Error('Projection must be "perspective" or "orthographic".');
+  stage.setProjection(valid);
+  el<HTMLSelectElement>('projection').value = valid;
+  saveProjectionPreference(valid);
+}
 el('fit').onclick = () => { stage.place(true); el<HTMLSelectElement>('view').value = 'Perspective'; };
 el<HTMLSelectElement>('view').onchange = e => { stage.view((e.currentTarget as HTMLSelectElement).value as View); };
+el<HTMLSelectElement>('projection').onchange = e => { setProjection((e.currentTarget as HTMLSelectElement).value as Projection); };
 el('expand').onclick = () => {
   void (document.fullscreenElement ? document.exitFullscreen() : el('scenePanel').requestFullscreen()).catch(report);
 };
@@ -463,7 +436,6 @@ stage.onTick = frac => {
 };
 stage.onReady = () => {
   window.__shotReady = true;
-  // Warm the separate humanoid motion chunk after the initial frame settles so opening a character feels instant.
   if (!document.body.classList.contains('shot-only')) void loadCharacterAnimations();
 };
 
@@ -476,7 +448,7 @@ const api = createAgentApi({
     if (!availableClips()[index]) throw new Error('Unknown animation clip.');
     stage.setClip(index); stage.play(true); ui.renderControls();
   },
-  syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset,
+  syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset, setProjection,
 });
 declare global { interface Window { forgeStudio: ForgeStudioApi; __shotReady: boolean; } }
 window.forgeStudio = api;

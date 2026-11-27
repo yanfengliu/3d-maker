@@ -1,8 +1,18 @@
 import * as T from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalog } from '../data/recipe';
 import { createAsset } from '../sdk';
 import { clipFocusShift, expandedFrame, projectedBoxSize, sampleClipBounds } from './framing';
+import {
+  DEFAULT_PROJECTION,
+  orthoHalfHeight,
+  orthoZoomForPerspective,
+  parseProjection,
+  perspectiveDistance,
+  perspectiveDistanceForOrtho,
+  readProjectionPreference,
+  saveProjectionPreference,
+} from './projection';
 
 function pilotModel(scale = 1) {
   const row = catalog.find((entry) => entry.id === 'field-pilot');
@@ -96,5 +106,60 @@ describe('clip preview framing', () => {
     const bounds = sampleClipBounds(rover, traverse, rest);
     expect(Math.abs(bounds.min.y - rest.min.y)).toBeLessThan(0.015);
     expect(clipFocusShift(rest, bounds, radius).length()).toBe(0);
+  });
+});
+
+describe('camera projection and cross-port localhost persistence', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('defaults to perspective, normalizes aliases, and persists across localhost ports via cookie + localStorage', () => {
+    const store = new Map<string, string>();
+    const cookies = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, v),
+    });
+    vi.stubGlobal('document', {
+      get cookie() {
+        return [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
+      },
+      set cookie(raw: string) {
+        const pair = raw.split(';')[0] ?? '';
+        const idx = pair.indexOf('=');
+        if (idx > 0) cookies.set(pair.slice(0, idx).trim(), pair.slice(idx + 1).trim());
+      },
+    });
+
+    expect(DEFAULT_PROJECTION).toBe('perspective');
+    expect(parseProjection('Perspective')).toBe('perspective');
+    expect(parseProjection('isometric')).toBe('orthographic');
+    expect(parseProjection('ortho')).toBe('orthographic');
+    expect(parseProjection('fisheye')).toBeNull();
+    expect(readProjectionPreference()).toBe('perspective');
+
+    // Saving on port A sets both cookie and localStorage.
+    saveProjectionPreference('orthographic');
+    expect(readProjectionPreference()).toBe('orthographic');
+
+    // Opening a different localhost port (empty localStorage, shared domain cookie) keeps orthographic.
+    store.clear();
+    expect(readProjectionPreference()).toBe('orthographic');
+
+    // Switching back to perspective on port B overrides a stale localStorage value on port A.
+    store.set('3d-maker:viewport:projection', 'orthographic');
+    saveProjectionPreference('perspective');
+    expect(readProjectionPreference()).toBe('perspective');
+  });
+
+  it('matches apparent visible scale cleanly when switching between perspective and orthographic', () => {
+    const aspect = 1.5;
+    const halfH = orthoHalfHeight(3.2, 2.8, aspect);
+    const dist = perspectiveDistance(3.2, 2.8, 2.2, aspect);
+    expect(dist).toBeGreaterThan(2.5);
+    const matchedDist = perspectiveDistanceForOrtho(halfH, 1.4);
+    const roundTripZoom = orthoZoomForPerspective(halfH, matchedDist, 1);
+    expect(roundTripZoom).toBeCloseTo(1.4, 6);
   });
 });
