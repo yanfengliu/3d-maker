@@ -6,14 +6,8 @@ import type { Axis, DetachablePartSpec, RiggedPartSpec } from '../../capabilitie
 import type { BrowseCategory } from '../../data/browse';
 
 export interface PropAssetDef {
-  id: string;
-  code: string;
-  category: 'Object';
-  browseCategory: BrowseCategory;
-  name: string;
-  primary: string;
-  accent: string;
-  description: string;
+  id: string; code: string; category: 'Object'; browseCategory: BrowseCategory;
+  name: string; primary: string; accent: string; description: string;
   physicsBody: 'static' | 'dynamic';
   riggedParts: readonly RiggedPartSpec[];
   detachableParts: readonly DetachablePartSpec[];
@@ -21,31 +15,34 @@ export interface PropAssetDef {
 }
 
 const HPI = Math.PI / 2;
+function pane(parent: T.Object3D, at: Point, size: Point) {
+  const mat = new T.MeshStandardMaterial({
+    name: 'Display glass', color: '#a8dce2', metalness: 0.1, roughness: 0.08, transparent: true, opacity: 0.22, depthWrite: false,
+  });
+  const part = box(parent, at, size, mat);
+  part.castShadow = false;
+  return part;
+}
 
 function orb(parent: T.Object3D, at: Point, r: number, mat: T.Material, hd: boolean, scale?: Point) {
   const part = mesh(parent, new T.SphereGeometry(r, hd ? 20 : 8, hd ? 14 : 6), mat, at);
   if (scale) part.scale.set(...scale);
   return part;
 }
-
-function torus(parent: T.Object3D, at: Point, r: number, t: number, mat: T.Material, hd: boolean) {
-  return mesh(parent, new T.TorusGeometry(r, t, hd ? 12 : 6, hd ? 28 : 12), mat, at);
-}
-
+const torus = (parent: T.Object3D, at: Point, r: number, t: number, mat: T.Material, hd: boolean) =>
+  mesh(parent, new T.TorusGeometry(r, t, hd ? 12 : 6, hd ? 28 : 12), mat, at);
 function cyl(parent: T.Object3D, at: Point, rt: number, rb: number, h: number, mat: T.Material, axis: Axis, sides = 12) {
   const part = tube(parent, at, rt, rb, h, mat, sides);
   if (axis === 'x') part.rotation.z = HPI;
   else if (axis === 'z') part.rotation.x = HPI;
   return part;
 }
-
 function slideTrack(node: string, rest: Point, axis: 0 | 1 | 2, times: number[], offsets: number[]) {
-  const values = offsets.flatMap(d => {
+  return new T.VectorKeyframeTrack(node + '.position', times, offsets.flatMap(d => {
     const pt: Point = [rest[0], rest[1], rest[2]];
     pt[axis] += d;
     return pt;
-  });
-  return new T.VectorKeyframeTrack(node + '.position', times, values);
+  }));
 }
 
 function spokedWheel(parent: T.Object3D, name: string, at: Point, r: number, width: number, p: Finish, detail: boolean, rimMat: T.Material) {
@@ -132,7 +129,7 @@ function grandfatherClock(root: T.Group, p: Finish, detail: boolean) {
   const door = group(root, 'GlassDoor', [-0.26, 1.15, 0.26]);
   for (const x of [0.04, 0.48]) box(door, [x, 0, 0], [0.075, 0.96, 0.05], p.primary);
   for (const y of [-0.44, 0.44]) box(door, [0.26, y, 0], [0.52, 0.08, 0.05], p.primary);
-  box(door, [0.26, 0, 0], [0.38, 0.8, 0.022], p.optic);
+  pane(door, [0.26, 0, 0], [0.38, 0.8, 0.022]);
   orb(door, [0.47, 0, 0.05], 0.036, p.accent, p.hd);
   if (detail) {
     for (const sx of [-0.14, 0.14]) {
@@ -154,27 +151,30 @@ function grandfatherClock(root: T.Group, p: Finish, detail: boolean) {
 function streetVendingUnit(root: T.Group, p: Finish, detail: boolean) {
   const u = group(root, 'VendingUnit');
   for (const sx of [-0.52, 0.52]) for (const sz of [-0.36, 0.36]) tube(u, [sx, 0.05, sz], 0.055, 0.065, 0.1, p.tire, 10);
-  shell(u, [0, 1.12, 0], [1.24, 2.04, 0.88], p.primary, 0.12);
-  shell(u, [0, 2.04, 0.04], [1.22, 0.22, 0.86], p.accent, 0.14);
-  box(u, [0, 2.04, 0.475], [0.98, 0.14, 0.025], p.stencil);
-  box(u, [-0.14, 1.32, 0.41], [0.8, 1.06, 0.12], p.inset);
-  box(u, [-0.14, 1.32, 0.455], [0.76, 1.02, 0.018], p.optic);
-  for (const y of [0.98, 1.3, 1.62]) box(u, [-0.14, y, 0.36], [0.74, 0.032, 0.2], p.alloy);
-  shell(u, [0.44, 1.26, 0.45], [0.26, 0.72, 0.06], p.dark, 0.2);
-  box(u, [0.44, 1.46, 0.485], [0.16, 0.11, 0.02], p.optic);
-  box(u, [-0.14, 0.44, 0.36], [0.78, 0.32, 0.22], p.inset);
-  const cans = group(root, 'CanDisplay', [-0.14, 1.0, 0.36]);
+  shell(u, [0, 1.12, -0.14], [1.24, 2.04, 0.6], p.primary, 0.12);
+  box(u, [0, 0.44, 0.29], [1.22, 0.68, 0.28], p.primary);
+  box(u, [0.43, 1.36, 0.29], [0.36, 1.18, 0.28], p.primary);
+  box(u, [-0.56, 1.36, 0.29], [0.1, 1.18, 0.28], p.primary);
+  shell(u, [0, 2.04, 0.02], [1.24, 0.22, 0.88], p.accent, 0.14);
+  box(u, [0, 2.04, 0.465], [0.98, 0.14, 0.025], p.stencil);
+  box(u, [-0.13, 1.355, 0.175], [0.76, 1.15, 0.03], p.inset);
+  for (const y of [0.92, 1.24, 1.56]) box(u, [-0.13, y, 0.3], [0.74, 0.028, 0.22], p.alloy);
+  pane(u, [-0.13, 1.355, 0.422], [0.76, 1.14, 0.014]);
+  shell(u, [0.43, 1.26, 0.44], [0.26, 0.72, 0.055], p.dark, 0.2);
+  box(u, [0.43, 1.46, 0.475], [0.16, 0.11, 0.02], p.optic);
+  box(u, [-0.13, 0.44, 0.435], [0.76, 0.3, 0.03], p.inset);
+  const cans = group(root, 'CanDisplay', [-0.13, 0.935, 0.32]);
   const mats = [p.primary, p.accent, p.optic, p.stencil] as const;
   for (const [row, ry] of [0, 0.32, 0.64].entries()) {
-    for (let i = 0; i < 4; i++) tube(cans, [-0.24 + i * 0.16, ry + 0.095, 0], 0.048, 0.048, 0.16, mats[(i + row) % 4] ?? p.accent, 12);
+    for (let i = 0; i < 4; i++) tube(cans, [-0.24 + i * 0.16, ry + 0.095, 0], 0.052, 0.052, 0.18, mats[(i + row) % 4] ?? p.accent, 12);
   }
-  const flap = group(root, 'PickupFlap', [-0.14, 0.56, 0.45]);
+  const flap = group(root, 'PickupFlap', [-0.13, 0.56, 0.455]);
   shell(flap, [0, -0.12, 0.01], [0.74, 0.24, 0.048], p.alloy, 0.2);
   box(flap, [0, -0.21, 0.035], [0.58, 0.04, 0.025], p.tire);
   if (detail) {
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) box(u, [0.38 + c * 0.06, 1.08 + r * 0.075, 0.488], [0.038, 0.042, 0.02], p.accent);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) box(u, [0.37 + c * 0.06, 1.08 + r * 0.075, 0.478], [0.038, 0.042, 0.02], p.accent);
     for (const y of [0.35, 0.48, 0.61, 0.74]) box(u, [0, y, -0.45], [0.88, 0.045, 0.022], p.dark);
-    if (p.hd) for (const sx of [-0.56, 0.56]) fastener(u, [sx, 2.04, 0.48], p, 0.026).rotation.x = HPI;
+    if (p.hd) for (const sx of [-0.56, 0.56]) fastener(u, [sx, 2.04, 0.47], p, 0.026).rotation.x = HPI;
   }
   root.animations = [new T.AnimationClip('Dispense flap', 2.6, [rotationTrack('PickupFlap', 'x', [0, 0.65, 1.8, 2.6], [0, -0.88, -0.88, 0])])];
 }
