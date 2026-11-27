@@ -11,11 +11,20 @@ const paint: Record<string, string> = {
 
 const examples = 'Try “make it teal with cream accents”, “scale 1.2”, or “details off”.';
 
+export function commandColor(value: string): string | undefined {
+  return /^#[a-f\d]{6}$/.test(value) ? value : Object.hasOwn(paint, value) ? paint[value] : undefined;
+}
+
+export function commandName(command: string) {
+  const rename = /^(?:rename|name|call)(?:\s+(?:it|this|the asset))?(?:\s+to)?\s+(.+)$/i.exec(command);
+  return rename?.[1]?.replace(/^(["'])(.*)\1$/, '$2');
+}
+
 function editClause(recipe: Recipe, clause: string): void {
   const command = clause.trim().replace(/^please\s+/i, '').replace(/[.!]$/, '');
-  const rename = /^(?:rename|name|call)(?:\s+(?:it|this|the asset))?(?:\s+to)?\s+(.+)$/i.exec(command);
-  if (rename?.[1]) {
-    recipe.name = rename[1].replace(/^(["'])(.*)\1$/, '$2');
+  const name = commandName(command);
+  if (name !== undefined) {
+    recipe.name = name;
     return;
   }
   const value = command.toLowerCase().replace(/^(?:make|set|paint|repaint|color|turn|change)\s+/, '').replace(/^(?:it|the)\s+/, '');
@@ -44,7 +53,7 @@ function editClause(recipe: Recipe, clause: string): void {
   const prefix = /^(body|primary|main|trim|accents?)(?: colou?r)?(?:\s+(?:to\s+)?|\s*[:=]\s*)(.+)$/.exec(value);
   const suffix = /^(.+)\s+(accents?|trim|body|primary)$/.exec(value);
   const colorName = prefix?.[2] ?? suffix?.[1] ?? value;
-  const color = /^#[a-f\d]{6}$/.test(colorName) ? colorName : Object.hasOwn(paint, colorName) ? paint[colorName] : undefined;
+  const color = commandColor(colorName);
   if (color) {
     const target = prefix?.[1] ?? suffix?.[2] ?? 'body';
     recipe[/^(?:accents?|trim)$/.test(target) ? 'accent' : 'primary'] = color;
@@ -54,19 +63,24 @@ function editClause(recipe: Recipe, clause: string): void {
 }
 
 /** A command must be understood in full before its recipe can be used. */
-export function applyLocalCommand(recipe: Recipe, text: string): Recipe {
-  const next = { ...recipe };
+export function commandClauses(text: string): string[] {
+  const clauses: string[] = [];
   // Keep separators within quoted asset names, including “Search and Rescue”.
   const separators = /"[^"]*"|'[^']*'|[,;]|\s+(?:and then|and|then|with)\s+/gi;
   let start = 0;
   for (const match of text.matchAll(separators)) {
     if (/^["']/.test(match[0])) continue;
     const clause = text.slice(start, match.index).trim();
-    if (clause) editClause(next, clause);
+    if (clause) clauses.push(clause);
     start = match.index + match[0].length;
   }
   const last = text.slice(start).trim();
   if (!last) throw new Error(examples);
-  editClause(next, last);
+  return [...clauses, last];
+}
+
+export function applyLocalCommand(recipe: Recipe, text: string): Recipe {
+  const next = { ...recipe };
+  for (const clause of commandClauses(text)) editClause(next, clause);
   return parseRecipe(next);
 }

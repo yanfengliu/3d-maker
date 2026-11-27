@@ -46,7 +46,7 @@ export async function preparePromptModel(onProgress?: (fraction: number) => void
   session.destroy();
 }
 
-const controls = {
+export const editFields = {
   name: { type: 'string', minLength: 1, maxLength: 80 },
   primary: { type: 'string', pattern: '^#[A-Fa-f0-9]{6}$' },
   accent: { type: 'string', pattern: '^#[A-Fa-f0-9]{6}$' },
@@ -55,44 +55,53 @@ const controls = {
   detail: { type: 'boolean' },
   quality: { type: 'string', enum: ['standard', 'hd'] },
 };
-const responseConstraint = {
-  type: 'object', additionalProperties: false, required: ['supported', 'changes'],
-  properties: {
-    supported: { type: 'boolean' },
-    changes: { type: 'object', properties: controls, additionalProperties: false },
-  },
-};
 const instructions = 'Translate the requested edit to a patch for the existing 3D asset recipe. Return only changed controls. Primary and accent are sRGB hex paint colors. Scale controls overall size and proportion controls breadth. Detail toggles extra parts. Quality selects standard or hd geometry. Preserve the asset name unless asked to rename it. For a request outside these controls or a partial match, return supported=false and an empty changes object.';
 
-function modelRecipe(original: Recipe, json: string): Recipe {
+function modelPatch(controls: object, json: string) {
   let answer: unknown;
   try { answer = JSON.parse(json) as unknown; } catch { throw new Error('The on-device model returned unreadable JSON.'); }
   if (!answer || typeof answer !== 'object' || !('supported' in answer) || !('changes' in answer)) {
     throw new Error('The on-device model returned an invalid edit.');
   }
-  if (answer.supported !== true) throw new Error('This request exceeds the available recipe controls.');
+  if (answer.supported !== true) throw new Error('This request exceeds the available model controls.');
   const patch = answer.changes;
   if (!patch || typeof patch !== 'object' || Array.isArray(patch) || !Object.keys(patch).length || Object.keys(patch).some(key => !Object.hasOwn(controls, key))) {
     throw new Error('The on-device model returned an invalid edit.');
   }
-  return parseRecipe({ ...original, ...patch });
+  return patch;
 }
 
-export async function editWithPrompt(recipe: Recipe, prompt: string): Promise<{ recipe: Recipe; engine: string }> {
-  const original = parseRecipe(recipe);
+export async function translateEdit(context: object, prompt: string, system: string, controls: object, cancel?: AbortSignal) {
   const text = prompt.trim();
   if (!text) throw new Error('Describe an edit to apply.');
   if (text.length > 2000) throw new Error('Keep edit instructions to 2,000 characters.');
   const api = model();
+  cancel?.throwIfAborted();
   if (!api || await getPromptAvailability() !== 'available') {
-    return { recipe: applyLocalCommand(original, text), engine: 'Local command' };
+    cancel?.throwIfAborted();
+    return null;
   }
-  const signal = AbortSignal.timeout(90_000);
-  const session = await api.create({ ...textOptions, signal, initialPrompts: [{ role: 'system', content: instructions }] });
+  const timeout = AbortSignal.timeout(90_000);
+  const signal = cancel ? AbortSignal.any([cancel, timeout]) : timeout;
+  const responseConstraint = {
+    type: 'object', additionalProperties: false, required: ['supported', 'changes'],
+    properties: {
+      supported: { type: 'boolean' },
+      changes: { type: 'object', properties: controls, additionalProperties: false },
+    },
+  };
+  const session = await api.create({ ...textOptions, signal, initialPrompts: [{ role: 'system', content: system }] });
   try {
-    const output = await session.prompt(JSON.stringify({ recipe: original, request: text }), { responseConstraint, signal });
-    return { recipe: modelRecipe(original, output), engine: 'On-device AI' };
+    const output = await session.prompt(JSON.stringify({ ...context, request: text }), { responseConstraint, signal });
+    return modelPatch(controls, output);
   } finally {
     session.destroy();
   }
+}
+
+export async function editWithPrompt(recipe: Recipe, prompt: string, cancel?: AbortSignal): Promise<{ recipe: Recipe; engine: string }> {
+  const original = parseRecipe(recipe);
+  const patch = await translateEdit({ recipe: original }, prompt, instructions, editFields, cancel);
+  return patch ? { recipe: parseRecipe({ ...original, ...patch }), engine: 'On-device AI' } :
+    { recipe: applyLocalCommand(original, prompt), engine: 'Local command' };
 }

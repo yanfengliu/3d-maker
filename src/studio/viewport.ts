@@ -264,7 +264,7 @@ export class Viewport {
     this.mixer.update(0);
     this.invalidate();
   }
-  private invalidate() {
+  invalidate() {
     this.pendingFrames = 6;
     if (!this.frame && !this.thumbnailMode) this.frame = requestAnimationFrame(this.draw);
   }

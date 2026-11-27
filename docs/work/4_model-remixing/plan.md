@@ -1,6 +1,6 @@
 # Model editing and remixing
 
-Status: in progress
+Status: active
 Owner: Codex
 Created: 2026-11-27
 Updated: 2026-11-27
@@ -29,4 +29,4 @@ Start a separate draft with the current settings and playback in place. Use the 
 
 ## Outcome
 
-Pending. Record the verified revision, checks and limitations at closure.
+Handoff on 26 November 2026. The animation list at `4e27aa7` is deployed. Remix, individual color editing and three-source save/reopen/export passed 70 tests, lint, strict types, both builds and the Chrome gate at the local implementation milestone `03df719`. The next checkpoint also wires AI tools and render invalidation for static imports. Verify import prompts through the actual dialog and repaint a stationary static model after the renderer settles, with a pixel regression. The Swimming screenshot at `output/studio/available-animations.png` shows the pilot partly outside the viewport; check clip framing for swimming and other low poses. Finish review, run both gates, push main and verify Pages and the live model workflow. [Partial implementation review](reviews/0_implementation.md)

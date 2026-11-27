@@ -162,6 +162,7 @@ function edit(patch: Partial<Recipe & ImportEdits>) {
     } else if (imported) {
       applyImportEdits(imported, { ...imported.edits, ...patch });
       if (patch.scale !== undefined || patch.proportion !== undefined) stage.place(false);
+      else stage.invalidate();
     }
     toolbar();
   } catch (error) {
@@ -310,12 +311,17 @@ function setImportEdits(edits: ImportEdits) {
   const previous = imported.edits;
   applyImportEdits(imported, edits);
   if (previous.scale !== edits.scale || previous.proportion !== edits.proportion) stage.place(false);
+  else stage.invalidate();
   toolbar();
   properties();
 }
 const dialogs = setupDialogs({
   recipe: () => (recipe ? { ...recipe } : null),
   apply: applyRecipe,
+  importEdits: getImportEdits,
+  applyImportEdits: setImportEdits,
+  paintSlots,
+  selectionKey: () => selection,
   openLocal: (file, signal) => openImport(() => openLocalGlb(file), undefined, signal),
   exportGlb: downloadGlb,
 });

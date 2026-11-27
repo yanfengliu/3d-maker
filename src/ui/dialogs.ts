@@ -1,12 +1,18 @@
 import { editWithPrompt, getPromptAvailability, preparePromptModel } from '../data/assistant';
 import { parseRecipe, type Recipe } from '../data/recipe';
-import { el, notify, report } from './dom';
+import { editImportWithPrompt, parseImportedSettings, type SlotName } from '../data/import-prompt';
+import type { ImportEdits } from '../imports';
+import { el, escapeHtml, notify, report } from './dom';
 import { icon } from './icons';
 import './dialogs.css';
 
 interface DialogActions {
   recipe: () => Recipe | null;
   apply: (recipe: Recipe) => void;
+  importEdits: () => ImportEdits | null;
+  applyImportEdits: (edits: ImportEdits) => void;
+  paintSlots: () => SlotName[];
+  selectionKey: () => object;
   openLocal: (file: File, signal?: AbortSignal) => Promise<void>;
   exportGlb: () => Promise<void>;
 }
@@ -102,33 +108,43 @@ export function setupDialogs(actions: DialogActions) {
 
   function assistant(showRecipe = false) {
     const recipe = actions.recipe();
-    const tabs = `<div class="dialogtabs" aria-label="Editing method"><button id="promptTab" aria-pressed="${String(!showRecipe)}">${icon('spark', 15)} Prompt</button><button id="recipeTab" aria-pressed="${String(showRecipe)}">${icon('code', 15)} Agent recipe</button></div>`;
+    const imported = actions.importEdits();
+    const selection = actions.selectionKey();
+    const slots = imported ? actions.paintSlots().map(({id, label}) => ({id, label})) : [];
+    const kind = imported ? 'settings' : 'recipe';
+    const tabs = `<div class="dialogtabs" aria-label="Editing method"><button id="promptTab" aria-pressed="${String(!showRecipe)}">${icon('spark', 15)} Prompt</button><button id="recipeTab" aria-pressed="${String(showRecipe)}">${icon('code', 15)} Agent ${kind}</button></div>`;
     const editor = showRecipe
-      ? `<label class="field" for="recipeText">Recipe JSON<textarea id="recipeText" spellcheck="false" rows="10" placeholder="Paste a Form Foundry recipe"></textarea></label>
-        <div class="dialogactions"><button class="btn" id="copyRecipe">Copy JSON</button><button class="btn orange" id="applyRecipe">Apply recipe</button></div><a class="textbutton doclink" href="./llms.txt" target="_blank" rel="noopener">Agent documentation ${icon('diagonal', 14)}</a>`
+      ? `<label class="field" for="recipeText">${imported ? 'Model settings' : 'Recipe'} JSON<textarea id="recipeText" spellcheck="false" rows="10"></textarea></label>
+        <div class="dialogactions"><button class="btn" id="copyRecipe">Copy JSON</button><button class="btn orange" id="applyRecipe">Apply ${kind}</button></div><a class="textbutton doclink" href="./llms.txt" target="_blank" rel="noopener">Agent documentation ${icon('diagonal', 14)}</a>`
       : `<div class="modelstate"><span id="modelState">Checking on-device AI…</span><button class="textbutton" id="enableModel" hidden>Enable on-device AI</button></div>
-        <form id="promptForm" class="dialogstack"><label for="promptText" class="field">Describe your edit<textarea id="promptText" rows="3" maxlength="2000" placeholder="Make it teal with cream accents" ${recipe ? '' : 'disabled'}></textarea></label>
-        ${recipe ? '' : '<p class="dialogcopy">Open a studio starter to edit its recipe, or paste one in the Agent recipe tab.</p>'}
-        <div class="dialogactions"><button class="btn orange" id="applyPrompt" ${recipe ? '' : 'disabled'}>${icon('spark', 15)} Apply edit</button></div></form>`;
-    const signal = open('AI tools', `<div class="dialogstack">${tabs}${editor}${statusLine}</div>`);
+        <form id="promptForm" class="dialogstack"><label for="promptText" class="field">Describe your edit<textarea id="promptText" rows="3" maxlength="2000"></textarea></label>
+        <div class="dialogactions"><button class="btn orange" id="applyPrompt">${icon('spark', 15)} Apply edit</button></div></form>`;
+    const palette = slots.length ? `<details class="dialogcopy"><summary>Model color names and IDs</summary><ul>${slots.map(slot =>
+      `<li>${escapeHtml(slot.label)} · <code>${escapeHtml(slot.id)}</code></li>`).join('')}</ul></details>` : '';
+    const signal = open('AI tools', `<div class="dialogstack">${tabs}${editor}${palette}${statusLine}</div>`);
     button('promptTab').onclick = () => { assistant(); };
     button('recipeTab').onclick = () => { assistant(true); };
     if (showRecipe) {
       const text = el<HTMLTextAreaElement>('recipeText');
-      text.value = recipe ? JSON.stringify(recipe, null, 2) : '';
+      text.value = JSON.stringify(recipe ?? imported, null, 2);
       button('applyRecipe').onclick = () => {
         try {
-          actions.apply(parseRecipe(JSON.parse(text.value) as unknown));
+          if (actions.selectionKey() !== selection) throw new Error('The active model changed. Reopen AI tools for the new model.');
+          const value: unknown = JSON.parse(text.value);
+          // A complete starter recipe can also be pasted while an import is open.
+          if (imported && !(value && typeof value === 'object' && 'template' in value)) {
+            actions.applyImportEdits(parseImportedSettings(value, slots));
+          } else actions.apply(parseRecipe(value));
           close();
-          notify('Recipe applied.');
+          notify('Edits applied.');
         } catch (error) { status(message(error)); }
       };
       button('copyRecipe').onclick = () => {
-        if (!text.value.trim()) { status('Enter a recipe to copy.'); return; }
+        if (!text.value.trim()) { status('Enter JSON to copy.'); return; }
         const clipboard = (navigator as Partial<Navigator>).clipboard;
-        if (!clipboard) { text.focus(); text.select(); status('Recipe selected. Use your copy shortcut.'); return; }
-        void clipboard.writeText(text.value).then(() => { if (!signal.aborted) status('Recipe copied.'); }, () => {
-          if (!signal.aborted) { text.focus(); text.select(); status('Recipe selected. Use your copy shortcut.'); }
+        if (!clipboard) { text.focus(); text.select(); status('JSON selected. Use your copy shortcut.'); return; }
+        void clipboard.writeText(text.value).then(() => { if (!signal.aborted) status('JSON copied.'); }, () => {
+          if (!signal.aborted) { text.focus(); text.select(); status('JSON selected. Use your copy shortcut.'); }
         });
       };
       return;
@@ -152,19 +168,28 @@ export function setupDialogs(actions: DialogActions) {
       });
     };
     const prompt = el<HTMLTextAreaElement>('promptText');
+    prompt.placeholder = imported ? (slots[0] ? `Paint "${slots[0].label}" teal` : 'Set height to 1.1') : 'Make it teal with cream accents';
     el<HTMLFormElement>('promptForm').onsubmit = event => {
       event.preventDefault();
       const original = actions.recipe();
-      if (!original || button('applyPrompt').disabled) return;
-      const snapshot = JSON.stringify(original);
+      const edits = actions.importEdits();
+      if (button('applyPrompt').disabled) return;
+      if (actions.selectionKey() !== selection) { status('The active model changed. Reopen AI tools for the new model.'); return; }
+      const snapshot = JSON.stringify(original ?? edits);
       const input = prompt.value;
+      const edit = original ? editWithPrompt(original, input, signal) : edits ? editImportWithPrompt(edits, slots, input, signal) : null;
+      if (!edit) return;
       const apply = button('applyPrompt');
       apply.disabled = true;
       status('Applying edit…');
-      void editWithPrompt(original, input).then(result => {
+      void edit.then(result => {
         if (signal.aborted) return;
-        if (JSON.stringify(actions.recipe()) !== snapshot || prompt.value !== input) { status('The asset or instruction changed. Apply the edit again.'); return; }
-        actions.apply(result.recipe);
+        if (actions.selectionKey() !== selection || JSON.stringify(actions.recipe() ?? actions.importEdits()) !== snapshot || prompt.value !== input) {
+          status('The asset or instruction changed. Apply the edit again.');
+          return;
+        }
+        if ('recipe' in result) actions.apply(result.recipe);
+        else actions.applyImportEdits(result.edits);
         close();
         notify(`Edit applied · ${result.engine}`);
       }).catch((error: unknown) => { if (!signal.aborted) status(message(error)); }).finally(() => { apply.disabled = false; });

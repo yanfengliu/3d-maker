@@ -1,5 +1,7 @@
 # Devlog
 
+- 2026-11-26 — Extended AI tools to edit imported assets by prompt or JSON and added viewport redraws after changing a stationary model’s paint.
+
 - 2026-11-26 — Added separate remix drafts for originals, catalog assets and local files. Imported models expose editable material and vertex colors in Properties and the agent API. Saved copies and GLB exports retain paint, source credits and animation.
 
 - 2026-11-26 — Animation search shows how many clips match out of the model’s full list. Show all clears the search while the current clip continues playing.

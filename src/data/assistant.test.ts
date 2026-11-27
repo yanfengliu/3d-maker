@@ -56,6 +56,6 @@ it('constrains real model calls, validates each patch, and always releases the s
   }));
   await expect(editWithPrompt(base, 'Fit it to a city')).rejects.toThrow(/scale/);
   await expect(editWithPrompt(base, 'Swap the template')).rejects.toThrow(/invalid edit/);
-  await expect(editWithPrompt(base, 'Add an extra rotor')).rejects.toThrow(/available recipe controls/);
+  await expect(editWithPrompt(base, 'Add an extra rotor')).rejects.toThrow(/available model controls/);
   expect(destroy).toHaveBeenCalledTimes(4);
 });
