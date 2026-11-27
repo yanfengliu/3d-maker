@@ -1,5 +1,7 @@
 # Devlog
 
+- 2026-11-27 — Expanded the original procedural collection by 100 new animated HD/standard assets (106 total originals) across buildings (30), skinned humanoid characters with full 85-clip motion support (16), vehicles (16), animals (10), terrain setpieces (8), props (10), handheld items (6), and attachments (4), complete with self-describing interactive mechanisms, detachable parts, night glow, preview posters, and scaled unit and headless-Chrome checks.
+
 - 2026-11-27 — Optimized studio loading speed by code-splitting the 85-clip character motion library, `GLTFLoader`, `GLTFExporter`, and `three` vendor bundle (cutting initial gzipped JS from 825 KB to 218 KB), firing PolyFork GLB/detail/params requests in parallel with a bounded session GLB LRU cache, parallelizing `Characters`/`Animals` category pagination, adding `polyfork.dev` preconnect, and loading above-the-fold starter cards eagerly.
 
 - 2026-11-26 — Added client-side PolyFork asset parity and AI-discoverable capability manifests: interactive rigged hinges/slides with live preview and opt-in GLB clip baking, detachable part toggles, twilight night glow, decal previews, semantic color zones, curated colorway presets, 3D color eyedropper, `extras.formFoundry` on every exported GLB, `inspectAsset`/`createAssetController` in `studio-sdk.js`, and matching `window.forgeStudio` + AI tools controls.
