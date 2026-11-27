@@ -1,10 +1,20 @@
 import '../ui/style.css';
 import type * as T from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { clone } from 'three/addons/utils/SkeletonUtils.js';
+import { cloneForExport } from './export';
 import { catalog, parseRecipe, type Recipe } from '../data/recipe';
 import { readInventory, saveAsset } from '../data/inventory';
-import { applyImportEdits, listImports, openLocalGlb, openPolyforkGlb, openSavedImport, saveImport, type ImportedAsset, type ImportEdits } from '../imports';
+import {
+  applyImportEdits,
+  listImports,
+  openLocalGlb,
+  openPolyforkGlb,
+  openSavedImport,
+  saveImport,
+  subscribeImportChanges,
+  type ImportedAsset,
+  type ImportEdits,
+} from '../imports';
 import { buildModel } from '../models';
 import { el, notify, report } from '../ui/dom';
 import { icon } from '../ui/icons';
@@ -15,135 +25,323 @@ import { setupShelf } from './shelf';
 import { Viewport, disposeModel, type View } from './viewport';
 
 const params = new URLSearchParams(window.location.search);
-el('app').innerHTML=layout;
+el('app').innerHTML = layout;
+if (params.get('shot') === '1' && params.get('noui') === '1') document.body.classList.add('shot-only');
 const stage = new Viewport(el('viewport'));
-let recipe:Recipe|null=null;
-let imported:ImportedAsset|null=null;
-let savedId:string|undefined;
-let currentPage='studio';
-let tab:'props'|'anim'='props';
-let grid=true, wire=false, openSequence=0;
+let recipe: Recipe | null = null;
+let imported: ImportedAsset | null = null;
+let savedId: string | undefined;
+let currentPage = 'studio';
+let tab: 'props' | 'anim' = 'props';
+let grid = true,
+  wire = false,
+  openSequence = 0;
 const first = catalog[0];
-if(!first)throw new Error('The starter catalog is empty.');
-const initial=first.recipe;
+if (!first) throw new Error('The starter catalog is empty.');
+const initial = first.recipe;
 function category() {
-  if(recipe)return catalog.find(row=>row.id===recipe?.template)?.category??'Object';
-  return imported?.source.kind==='polyfork'?'PolyFork model':'Imported GLB';
+  if (recipe) return catalog.find((row) => row.id === recipe?.template)?.category ?? 'Object';
+  return imported?.source.kind === 'polyfork' ? 'PolyFork model' : 'Imported GLB';
 }
-function name(){return recipe?.name??imported?.edits.name??'Asset';}
+function name() {
+  return recipe?.name ?? imported?.edits.name ?? 'Asset';
+}
 function toolbar() {
-  const row=catalog.find(row=>row.id===recipe?.template);
-  el('sceneName').textContent=name();
-  el('assetCode').textContent=row?`${row.code}  /  ${row.category.toUpperCase()}  /  ${recipe?.quality==='hd'?'HD':'STANDARD'}`:category().toUpperCase();
-  el('save').innerHTML=icon(savedId?'save':'plus',16)+(savedId?' Save changes':' Save to inventory');
+  const row = catalog.find((row) => row.id === recipe?.template);
+  el('sceneName').textContent = name();
+  el('assetCode').textContent = row
+    ? `${row.code}  /  ${row.category.toUpperCase()}  /  ${recipe?.quality === 'hd' ? 'HD' : 'STANDARD'}`
+    : category().toUpperCase();
+  el('save').innerHTML =
+    icon(savedId ? 'save' : 'plus', 16) + (savedId ? ' Save changes' : ' Save to inventory');
 }
 function controls() {
-  el('propertiesTab').classList.toggle('active',tab==='props');
-  el('animationTab').classList.toggle('active',tab==='anim');
-  if(tab==='anim') {
-    showAnimation(stage.model?.animations??[],stage.clipIndex,stage.playing,stage.speed,
-      i=>{stage.setClip(i);controls();},()=>{stage.play(!stage.playing);controls();},n=> { stage.seek(n); },n=>{stage.speed=n;});
-  }else if(recipe) showProperties(recipe,category(),edit);
-  else if(imported)showProperties({...imported.edits,primary:imported.edits.tint},category(),edit);
+  el('propertiesTab').classList.toggle('active', tab === 'props');
+  el('animationTab').classList.toggle('active', tab === 'anim');
+  if (tab === 'anim') {
+    showAnimation(
+      stage.model?.animations ?? [],
+      stage.clipIndex,
+      stage.playing,
+      stage.speed,
+      (i) => {
+        stage.setClip(i);
+        controls();
+      },
+      () => {
+        stage.play(!stage.playing);
+        controls();
+      },
+      (n) => {
+        stage.seek(n);
+      },
+      (n) => {
+        stage.speed = n;
+      },
+    );
+  } else if (recipe) showProperties(recipe, category(), edit);
+  else if (imported) showProperties({ ...imported.edits, primary: imported.edits.tint }, category(), edit);
 }
-function swap(model:T.Group,refit:boolean) {
-  const previous=stage.model;
-  stage.setModel(model,refit);
-  if(previous && previous!==model)disposeModel(previous);
-  if(refit)el<HTMLSelectElement>('view').value='Perspective';
+function swap(model: T.Group, refit: boolean) {
+  const previous = stage.model;
+  stage.setModel(model, refit);
+  if (previous && previous !== model) disposeModel(previous);
+  if (refit) el<HTMLSelectElement>('view').value = 'Perspective';
 }
-function edit(patch:Partial<Recipe & ImportEdits>) {
-  try{
-    if(recipe) {
-      recipe=parseRecipe({...recipe,...patch});
-      swap(buildModel(recipe),false);
-    }else if(imported){
-      applyImportEdits(imported,{...imported.edits,...patch});
+function edit(patch: Partial<Recipe & ImportEdits>) {
+  try {
+    if (recipe) {
+      recipe = parseRecipe({ ...recipe, ...patch });
+      swap(buildModel(recipe), false);
+    } else if (imported) {
+      applyImportEdits(imported, { ...imported.edits, ...patch });
       stage.place(false);
     }
     toolbar();
-  }catch(error){report(error);controls();}
+  } catch (error) {
+    report(error);
+    controls();
+  }
 }
-function showPage(page:'studio'|'inventory') {
-  currentPage=page;
-  el('studioPage').hidden=page!=='studio';el('inventoryPage').hidden=page!=='inventory';
-  el('navStudio').classList.toggle('active',page==='studio');el('navInventory').classList.toggle('active',page==='inventory');
-  el<HTMLButtonElement>('export').disabled=page!=='studio';
-  if(page==='inventory'){stage.play(false);void shelf.refresh().catch(report);}else controls();
+function showPage(page: 'studio' | 'inventory') {
+  currentPage = page;
+  el('studioPage').hidden = page !== 'studio';
+  el('inventoryPage').hidden = page !== 'inventory';
+  el('navStudio').classList.toggle('active', page === 'studio');
+  el('navInventory').classList.toggle('active', page === 'inventory');
+  el<HTMLButtonElement>('export').disabled = page !== 'studio';
+  if (page === 'inventory') {
+    stage.play(false);
+    void shelf.refresh().catch(report);
+  } else controls();
 }
-function choose(next:Recipe,id?:string) {
-  const valid=parseRecipe(next);
-  const model=buildModel(valid);
+function choose(next: Recipe, id?: string) {
+  const valid = parseRecipe(next);
+  const model = buildModel(valid);
   openSequence++;
-  recipe=valid;imported=null;savedId=id;tab='props';
-  swap(model,true);toolbar();showPage('studio');shelf.renderLibrary();
+  recipe = valid;
+  imported = null;
+  savedId = id;
+  tab = 'props';
+  swap(model, true);
+  toolbar();
+  showPage('studio');
+  shelf.renderLibrary();
 }
-async function openImport(load:()=>Promise<ImportedAsset>,id?:string,signal?:AbortSignal) {
-  const seq=++openSequence;
-  const asset=await load();
-  if(seq!==openSequence||signal?.aborted){disposeModel(asset.group);return;}
-  recipe=null;imported=asset;savedId=id;tab='props';swap(asset.group,true);
-  toolbar();showPage('studio');shelf.renderLibrary();
+async function openImport(load: () => Promise<ImportedAsset>, id?: string, signal?: AbortSignal) {
+  const seq = ++openSequence;
+  const asset = await load();
+  if (seq !== openSequence || signal?.aborted) {
+    disposeModel(asset.group);
+    return;
+  }
+  recipe = null;
+  imported = asset;
+  savedId = id;
+  tab = 'props';
+  swap(asset.group, true);
+  toolbar();
+  showPage('studio');
+  shelf.renderLibrary();
 }
-async function save() {
-  const seq=openSequence;
-  const asset=recipe?saveAsset(recipe,savedId):imported?await saveImport(imported,savedId):null;
-  if(!asset)throw new Error('Choose an asset to save.');
-  if(seq===openSequence){savedId=asset.id;toolbar();}
-  notify('Saved to inventory');return asset.id;
+let pendingSave: { selection: number; promise: Promise<string> } | undefined;
+function save(): Promise<string> {
+  const selection = openSequence;
+  if (pendingSave?.selection === selection) return pendingSave.promise;
+  const persist = async () => {
+    const asset = recipe ? saveAsset(recipe, savedId) : imported ? await saveImport(imported, savedId) : null;
+    if (!asset) throw new Error('Choose an asset to save.');
+    if (selection === openSequence) {
+      savedId = asset.id;
+      toolbar();
+    }
+    notify('Saved to inventory');
+    return asset.id;
+  };
+  const promise = persist().finally(() => {
+    if (pendingSave?.selection === selection) pendingSave = undefined;
+  });
+  pendingSave = { selection, promise };
+  return promise;
 }
-async function exportGLB():Promise<ArrayBuffer> {
-  const source=imported?.group;
-  const model=recipe?buildModel(recipe):source?stage.restClone(()=>clone(source)):null;
-  if(!model)throw new Error('Choose an asset to export.');
-  if(imported)model.animations=[...imported.group.animations];
-  const owned=recipe!==null;
+async function exportGLB(): Promise<ArrayBuffer> {
+  const source = imported?.group;
+  const snapshot = source ? stage.restClone(() => cloneForExport(source)) : null;
+  const model = recipe ? buildModel(recipe) : snapshot?.root;
+  if (!model) throw new Error('Choose an asset to export.');
   try {
-    return await new GLTFExporter().parseAsync(model,{binary:true,animations:model.animations,onlyVisible:true}) as ArrayBuffer;
-  }finally {if(owned)disposeModel(model);}
+    return (await new GLTFExporter().parseAsync(model, {
+      binary: true,
+      animations: model.animations,
+      onlyVisible: true,
+    })) as ArrayBuffer;
+  } finally {
+    if (snapshot) snapshot.dispose();
+    else disposeModel(model);
+  }
 }
 async function downloadGlb() {
-  const filename=name().replace(/[^a-z\d -]/gi,'').trim()||'asset';
-  const data=await exportGLB();
-  const url=URL.createObjectURL(new Blob([data],{type:'model/gltf-binary'}));
-  const link=document.createElement('a');link.href=url;link.download=filename+'.glb';link.click();window.setTimeout(()=> { URL.revokeObjectURL(url); },10000);
+  const filename =
+    name()
+      .replace(/[^a-z\d -]/gi, '')
+      .trim() || 'asset';
+  const data = await exportGLB();
+  const url = URL.createObjectURL(new Blob([data], { type: 'model/gltf-binary' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename + '.glb';
+  link.click();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 10000);
 }
-const shelf=setupShelf({choose,active:()=>recipe,openImport:id=>openImport(()=>openSavedImport(id),id),deleted:id=>{if(savedId===id){savedId=undefined;toolbar();}}});
-function applyRecipe(input:unknown) {
-  const next=parseRecipe(input);
-  if(recipe && next.template===recipe.template)choose(next,savedId);else choose(next);
+const shelf = setupShelf({
+  choose,
+  active: () => recipe,
+  openImport: (id) => openImport(() => openSavedImport(id), id),
+  deleted: (id) => {
+    if (savedId === id) {
+      savedId = undefined;
+      toolbar();
+    }
+  },
+});
+function applyRecipe(input: unknown) {
+  const next = parseRecipe(input);
+  if (recipe && next.template === recipe.template) choose(next, savedId);
+  else choose(next);
 }
-const openRemote=(id:string,title:string,signal?:AbortSignal)=>openImport(()=>openPolyforkGlb(id,title,signal),undefined,signal);
-const dialogs=setupDialogs({recipe:()=>recipe?{...recipe}:null, apply:applyRecipe,openRemote,
-  openLocal:(file,signal)=>openImport(()=>openLocalGlb(file),undefined,signal),exportGlb:downloadGlb});
-el('import').onclick=dialogs.imports;el('moreCatalog').onclick=dialogs.catalog;el('assistant').onclick=dialogs.assistant;el('export').onclick=dialogs.exports;
-el('save').onclick=()=>{const btn=el<HTMLButtonElement>('save');btn.disabled=true;void save().catch(report).finally(()=>{btn.disabled=false;});};
-el('navStudio').onclick=el('toStudio').onclick=()=> { showPage('studio'); };el('navInventory').onclick=()=> { showPage('inventory'); };
-el('propertiesTab').onclick=()=>{tab='props';controls();};el('animationTab').onclick=()=>{tab='anim';controls();};
-el('reset').onclick=()=>{
-  if(recipe){const row=catalog.find(v=>v.id===recipe?.template);if(row)choose({...row.recipe},savedId);}
-  else if(imported){applyImportEdits(imported,{name:imported.source.kind==='polyfork'?imported.source.title:imported.source.filename.replace(/\.glb$/i,''),scale:1,proportion:1,tint:'#ffffff'});stage.place(true);toolbar();controls();}
+const openRemote = (id: string, title: string, signal?: AbortSignal) =>
+  openImport(() => openPolyforkGlb(id, title, signal), undefined, signal);
+const dialogs = setupDialogs({
+  recipe: () => (recipe ? { ...recipe } : null),
+  apply: applyRecipe,
+  openRemote,
+  openLocal: (file, signal) => openImport(() => openLocalGlb(file), undefined, signal),
+  exportGlb: downloadGlb,
+});
+el('import').onclick = dialogs.imports;
+el('moreCatalog').onclick = dialogs.catalog;
+el('assistant').onclick = dialogs.assistant;
+el('export').onclick = dialogs.exports;
+el('save').onclick = () => {
+  const btn = el<HTMLButtonElement>('save');
+  btn.disabled = true;
+  void save()
+    .catch(report)
+    .finally(() => {
+      btn.disabled = false;
+    });
 };
-el('grid').setAttribute('aria-pressed','true');el('wire').setAttribute('aria-pressed','false');
-el('grid').onclick=()=>{grid=!grid;stage.showGrid(grid);el('grid').setAttribute('aria-pressed',String(grid));};
-el('wire').onclick=()=>{wire=!wire;stage.wireframe(wire);el('wire').setAttribute('aria-pressed',String(wire));};
-el('fit').onclick=()=>{stage.place(true);el<HTMLSelectElement>('view').value='Perspective';};
-el<HTMLSelectElement>('view').onchange=e=> { stage.view((e.currentTarget as HTMLSelectElement).value as View); };
-el('expand').onclick=()=>{void (document.fullscreenElement?document.exitFullscreen():el('scenePanel').requestFullscreen()).catch(report);};
-stage.onTick=frac=>{const slider=document.querySelector<HTMLInputElement>('#timeline');if(slider){slider.value=String(frac);slider.style.setProperty('--pct',String(frac*100)+'%');}};
-stage.onReady=()=>{window.__shotReady=true;};
+el('navStudio').onclick = el('toStudio').onclick = () => {
+  showPage('studio');
+};
+el('navInventory').onclick = () => {
+  showPage('inventory');
+};
+el('propertiesTab').onclick = () => {
+  tab = 'props';
+  controls();
+};
+el('animationTab').onclick = () => {
+  tab = 'anim';
+  controls();
+};
+el('reset').onclick = () => {
+  if (recipe) {
+    const row = catalog.find((v) => v.id === recipe?.template);
+    if (row) choose({ ...row.recipe }, savedId);
+  } else if (imported) {
+    applyImportEdits(imported, {
+      name:
+        imported.source.kind === 'polyfork'
+          ? imported.source.title
+          : imported.source.filename.replace(/\.glb$/i, ''),
+      scale: 1,
+      proportion: 1,
+      tint: '#ffffff',
+    });
+    stage.place(true);
+    toolbar();
+    controls();
+  }
+};
+el('grid').setAttribute('aria-pressed', 'true');
+el('wire').setAttribute('aria-pressed', 'false');
+el('grid').onclick = () => {
+  grid = !grid;
+  stage.showGrid(grid);
+  el('grid').setAttribute('aria-pressed', String(grid));
+};
+el('wire').onclick = () => {
+  wire = !wire;
+  stage.wireframe(wire);
+  el('wire').setAttribute('aria-pressed', String(wire));
+};
+el('fit').onclick = () => {
+  stage.place(true);
+  el<HTMLSelectElement>('view').value = 'Perspective';
+};
+el<HTMLSelectElement>('view').onchange = (e) => {
+  stage.view((e.currentTarget as HTMLSelectElement).value as View);
+};
+el('expand').onclick = () => {
+  void (document.fullscreenElement ? document.exitFullscreen() : el('scenePanel').requestFullscreen()).catch(
+    report,
+  );
+};
+stage.onTick = (frac) => {
+  const slider = document.querySelector<HTMLInputElement>('#timeline');
+  if (slider) {
+    slider.value = String(frac);
+    slider.style.setProperty('--pct', String(frac * 100) + '%');
+  }
+};
+stage.onReady = () => {
+  window.__shotReady = true;
+};
 const api = {
-  listTemplates:()=>structuredClone(catalog),getRecipe:()=>recipe?{...recipe}:null,applyRecipe,save,
-  listInventory:async()=>[...readInventory(),...await listImports()],
-  exportGLB,openPolyfork:openRemote,
-  getImportEdits:()=>imported?{...imported.edits}:null,
-  setImportEdits:(edits:ImportEdits)=>{if(!imported)throw new Error('Open an imported GLB first.');applyImportEdits(imported,edits);stage.place(false);toolbar();controls();},
-  listClips:()=>stage.model?.animations.map(({name,duration})=>({name,duration}))??[],
-  playClip:(index:number)=>{if(!stage.model?.animations[index])throw new Error('Unknown animation clip.');stage.setClip(index);stage.play(true);controls();},
+  listTemplates: () => structuredClone(catalog),
+  getRecipe: () => (recipe ? { ...recipe } : null),
+  applyRecipe,
+  save,
+  listInventory: async () => [...readInventory(), ...(await listImports())],
+  exportGLB,
+  openPolyfork: openRemote,
+  getImportEdits: () => (imported ? { ...imported.edits } : null),
+  setImportEdits: (edits: ImportEdits) => {
+    if (!imported) throw new Error('Open an imported GLB first.');
+    applyImportEdits(imported, edits);
+    stage.place(false);
+    toolbar();
+    controls();
+  },
+  listClips: () => stage.model?.animations.map(({ name, duration }) => ({ name, duration })) ?? [],
+  playClip: (index: number) => {
+    if (!stage.model?.animations[index]) throw new Error('Unknown animation clip.');
+    stage.setClip(index);
+    stage.play(true);
+    controls();
+  },
 };
-declare global {interface Window {forgeStudio:typeof api;__shotReady:boolean}}
-window.forgeStudio=api;window.__shotReady=false;
-choose(catalog.find(row=>row.id===params.get('asset'))?.recipe??initial);
-const shotView=params.get('view');
-if(params.get('shot')==='1'&&shotView&&['Front','Top','Side'].includes(shotView)){stage.view(shotView as View);el<HTMLSelectElement>('view').value=shotView;}
-window.addEventListener('storage',()=>{if(currentPage==='inventory')void shelf.refresh().catch(report);});
+declare global {
+  interface Window {
+    forgeStudio: typeof api;
+    __shotReady: boolean;
+  }
+}
+window.forgeStudio = api;
+window.__shotReady = false;
+choose(catalog.find((row) => row.id === params.get('asset'))?.recipe ?? initial);
+const shotView = params.get('view');
+if (params.get('shot') === '1' && shotView && ['Front', 'Top', 'Side'].includes(shotView)) {
+  stage.view(shotView as View);
+  el<HTMLSelectElement>('view').value = shotView;
+}
+window.addEventListener('storage', () => {
+  if (currentPage === 'inventory') void shelf.refresh().catch(report);
+});
+
+subscribeImportChanges(() => {
+  if (currentPage === 'inventory') void shelf.refresh().catch(report);
+});

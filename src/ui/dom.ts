@@ -6,7 +6,10 @@ export function el<T extends HTMLElement = HTMLElement>(id: string): T {
   return found as T;
 }
 export function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char] ?? char);
+  return value.replace(
+    /[&<>"']/g,
+    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char,
+  );
 }
 let timer = 0;
 export function notify(message: string) {
@@ -14,7 +17,9 @@ export function notify(message: string) {
   toast.textContent = message;
   toast.hidden = false;
   window.clearTimeout(timer);
-  timer = window.setTimeout(() => { toast.hidden = true; }, 3800);
+  timer = window.setTimeout(() => {
+    toast.hidden = true;
+  }, 3800);
 }
 export function report(error: unknown) {
   notify(error instanceof Error ? error.message : 'The operation could not be completed.');

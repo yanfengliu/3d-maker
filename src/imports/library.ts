@@ -1,5 +1,6 @@
 import { applyImportEdits, openPolyforkGlb, openStoredFile, validateEdits } from './asset';
 import type { ImportEdits, ImportedAsset, ImportSource } from './asset';
+import { publishImportChange } from './changes';
 
 export interface ImportEntry {
   id: string;
@@ -42,17 +43,36 @@ async function transact<T>(stores: string[], mode: IDBTransactionMode, work: (tx
   }
 }
 
-export async function saveImport(asset: ImportedAsset, id: string = crypto.randomUUID()): Promise<ImportEntry> {
+export async function saveImport(asset: ImportedAsset, id?: string): Promise<ImportEntry> {
   const edits = validateEdits(asset.edits);
-  const entry: ImportEntry = { id, name: edits.name, edits, source: { ...asset.source }, updatedAt: new Date().toISOString() };
+  const entry: ImportEntry = { id: id ?? crypto.randomUUID(), name: edits.name, edits, source: { ...asset.source }, updatedAt: new Date().toISOString() };
   if (asset.source.kind === 'local' && !asset.originalFile) throw new Error('The original file is missing.');
-  return transact(['entries', 'files'], 'readwrite', tx => {
-    tx.objectStore('entries').put(entry);
-    const files = tx.objectStore('files');
-    if (asset.source.kind === 'local') files.put(asset.originalFile, id);
-    else files.delete(id);
-    return () => entry;
+  const saved = await transact(['entries', 'files'], 'readwrite', tx => {
+    const entries = tx.objectStore('entries');
+    function storeFile() {
+      const files = tx.objectStore('files');
+      if (asset.source.kind === 'local') files.put(asset.originalFile, entry.id);
+      else files.delete(entry.id);
+    }
+    if (id === undefined) {
+      entries.add(entry);
+      storeFile();
+      return () => true;
+    }
+    // A cursor updates only an existing record in this transaction. An older tab cannot recreate a deleted item.
+    const existing = entries.openCursor(id);
+    existing.onsuccess = () => {
+      const cursor = existing.result;
+      if (cursor) {
+        cursor.update(entry);
+        storeFile();
+      }
+    };
+    return () => existing.result !== null;
   });
+  if (!saved) throw new Error('This imported asset is no longer in your inventory.');
+  publishImportChange({ kind: 'saved', id: entry.id });
+  return entry;
 }
 
 export async function listImports(): Promise<ImportEntry[]> {
@@ -82,10 +102,11 @@ export async function openSavedImport(id: string, signal?: AbortSignal): Promise
   return asset;
 }
 
-export function deleteImport(id: string): Promise<void> {
-  return transact(['entries', 'files'], 'readwrite', tx => {
+export async function deleteImport(id: string): Promise<void> {
+  await transact(['entries', 'files'], 'readwrite', tx => {
     tx.objectStore('entries').delete(id);
     tx.objectStore('files').delete(id);
     return () => undefined;
   });
+  publishImportChange({ kind: 'removed', id });
 }

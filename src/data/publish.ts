@@ -1,5 +1,5 @@
 import type { Plugin } from 'vite';
-import { catalog } from './recipe';
+import { catalog } from './recipe.ts';
 
 /** Publish the in-app catalog for CLI and agent discovery at the same URL in dev and production. */
 export function starterCatalog(): Plugin {
