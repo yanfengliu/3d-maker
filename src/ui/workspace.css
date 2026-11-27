@@ -98,3 +98,7 @@
 #clipList .clip{text-align:left}
 #motionName{display:block;margin-bottom:8px;font-size:14px;overflow-wrap:anywhere}
 #noMotionMatches{font-size:12px;color:var(--muted);padding:6px 0}
+.motion-transport,.motion-transport label{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.motion-transport label{font-size:12px;gap:3px;cursor:pointer}
+.motion-transport input{accent-color:#59674f}
+#play kbd{font:9px var(--mono);color:#646e5a;border:1px solid var(--line);border-radius:3px;padding:1px 3px;margin-left:1px}

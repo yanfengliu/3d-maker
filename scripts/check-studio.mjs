@@ -66,6 +66,10 @@ try {
   await page.goto(origin + site + '?shot=1');
   await page.waitForFunction(() => window.__shotReady);
   await verifyInitialInventory(page);
+  await page.click('#animationTab');
+  assert.match(await page.locator('#play').innerText(), /Play clip/);
+  assert.equal(await page.locator('#timeline').inputValue(), '0');
+  await page.click('#propertiesTab');
   // Compare actual rendered pixels and check that meaningful model features are on screen.
   const pixels = () =>
     page.evaluate(() => {
@@ -125,7 +129,7 @@ try {
   await page.locator('[data-clip]:visible').click();
   assert.equal(await page.locator('#motionName').innerText(), 'Swimming');
   assert.equal(await page.locator('#motionSearch').inputValue(), 'swimm');
-  await page.click('#play');
+  assert.match(await page.locator('#play').innerText(), /Pause/);
   await page.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > 0.03);
   await page.click('#play');
   const pausedAt = Number(await page.locator('#timeline').inputValue());
@@ -194,6 +198,30 @@ try {
   await page.waitForFunction(async () => (await window.forgeStudio.listInventory()).length === 1);
   const staleError=await stale.evaluate(async()=>{try{await window.forgeStudio.save();return '';}catch(error){return error.message;}});
   assert.match(staleError,/removed|no longer|deleted/i);await stale.close();
+  const playback = await context.newPage();
+  await playback.goto(origin + site + '?asset=field-pilot');
+  await playback.click('#animationTab');
+  assert.match(await playback.locator('#play').innerText(), /Pause/);
+  await playback.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > .03);
+  await playback.keyboard.press('Space');
+  assert.match(await playback.locator('#play').innerText(), /Play clip/);
+  const search = playback.getByRole('searchbox', {name:'Search animations'});
+  await search.fill('Zombie');
+  await search.press('End');
+  await search.press('Space');
+  assert.equal(await search.inputValue(), 'Zombie ');
+  assert.match(await playback.locator('#play').innerText(), /Play clip/);
+  await playback.getByRole('searchbox', {name:'Search animations'}).fill('Zombie walk');
+  await playback.locator('[data-clip]:visible').click();
+  assert.match(await playback.locator('#play').innerText(), /Pause/);
+  await playback.keyboard.press('Space');
+  assert.match(await playback.locator('#play').innerText(), /Play clip/);
+  await playback.keyboard.press('Space');
+  assert.match(await playback.locator('#play').innerText(), /Pause/);
+  await playback.check('#playAllClips');
+  await playback.locator('#timeline').press('End');
+  await playback.waitForFunction(() => document.querySelector('#motionName').textContent === 'Idle');
+  await playback.close();
   const sdk = await browser.newPage();
   await sdk.goto(origin + '/sdk-check');
   const result = await sdk.evaluate(async () => {

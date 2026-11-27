@@ -93,11 +93,17 @@ export function showProperties(
       changed({ detail: (e.currentTarget as HTMLInputElement).checked });
     };
 }
+export function showPlayback(on: boolean) {
+  const button = document.getElementById('play');
+  if (button) button.innerHTML = icon(on ? 'pause' : 'play', 15) + (on ? ' Pause' : ' Play clip') + '<kbd aria-hidden="true">Space</kbd>';
+}
 export function showAnimation(
   clips: { name: string; duration: number }[],
   index: number,
   playing: boolean,
   speed: number,
+  playAll: boolean,
+  cycle: (on: boolean) => boolean,
   select: (i: number) => void,
   toggle: () => boolean,
   seek: (n: number) => void,
@@ -107,14 +113,14 @@ export function showAnimation(
   const canSearch = clips.length > 8;
   if (!clips.length) {
     panel.innerHTML = '<p class="empty-mini">This asset has no playable clips.</p>';
-    return;
+    return undefined;
   }
   const rows = clips.map((clip, i) => `<button type="button" data-clip="${String(i)}" class="clip" aria-pressed="false">${icon('film', 15)}<span>${escapeHtml(clip.name)}</span><small>${clip.duration.toFixed(1)}s</small></button>`).join('');
   panel.innerHTML = `<section class="propgroup anim motion-picker"><h3 class="micro">ANIMATION CLIPS <span id="motionCount"></span></h3>
     ${canSearch ? '<input type="search" class="namefield" aria-label="Search animations" id="motionSearch" placeholder="Search animations…" autocomplete="off"/>' : ''}
     <div class="cliplist" id="clipList">${rows}<p id="noMotionMatches" hidden>No matching animations.</p></div></section>
     <section class="propgroup anim"><h3 class="micro">PLAYBACK</h3><strong id="motionName"></strong>
-    <button class="btn" id="play"></button><label class="rangelabel" for="timeline">Timeline</label><input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/>
+    <div class="motion-transport"><button class="btn" id="play" aria-keyshortcuts="Space" title="Play or pause (Space)"></button>${clips.length > 1 ? `<label><input id="playAllClips" type="checkbox" ${playAll ? 'checked' : ''}/> Play all clips</label>` : ''}</div><label class="rangelabel" for="timeline">Timeline</label><input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/>
     <label class="accentrow" for="speed">Speed<select id="speed">${[0.5, 1, 1.5, 2].map(n => `<option value="${String(n)}" ${n === speed ? 'selected' : ''}>${String(n)}×</option>`).join('')}</select></label></section>`;
   const buttons = [...el('clipList').querySelectorAll<HTMLButtonElement>('[data-clip]')];
   function currentClip(selected: number) {
@@ -124,11 +130,8 @@ export function showAnimation(
       button.classList.toggle('selected', i === selected);
     }
   }
-  function transport(on: boolean) {
-    el('play').innerHTML = icon(on ? 'pause' : 'play', 15) + (on ? ' Pause' : ' Play clip');
-  }
   currentClip(index);
-  transport(playing);
+  showPlayback(playing);
   el('motionCount').textContent = String(clips.length);
   el('clipList').onclick = event => {
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-clip]') : null;
@@ -136,6 +139,7 @@ export function showAnimation(
     const next = Number(button.dataset.clip);
     select(next);
     currentClip(next);
+    showPlayback(true);
   };
   if (canSearch) {
     const search = el<HTMLInputElement>('motionSearch');
@@ -151,7 +155,10 @@ export function showAnimation(
       el('clipList').scrollTop = 0;
     };
   }
-  el('play').onclick = () => { transport(toggle()); };
+  const sequence = panel.querySelector<HTMLInputElement>('#playAllClips');
+  if (sequence) sequence.onchange = () => { showPlayback(cycle(sequence.checked)); };
+  el('play').onclick = () => { showPlayback(toggle()); };
   el<HTMLInputElement>('timeline').oninput = e => { seek(Number((e.currentTarget as HTMLInputElement).value)); };
   el<HTMLSelectElement>('speed').onchange = e => { setSpeed(Number((e.currentTarget as HTMLSelectElement).value)); };
+  return currentClip;
 }

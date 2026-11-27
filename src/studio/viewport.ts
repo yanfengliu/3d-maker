@@ -72,6 +72,8 @@ export class Viewport {
   private gridSize = 1;
   model: T.Group | null = null;
   playing = false;
+  playAll = false;
+  onAdvance: ((index: number) => void) | undefined;
   speed = 1;
   clipIndex = 0;
   onTick?: (fraction: number) => void;
@@ -262,8 +264,18 @@ export class Viewport {
   }
   private draw = (now: number) => {
     this.frame = 0;
-    if (this.playing && this.mixer && this.lastTime)
-      this.mixer.update(Math.min(0.12, (now - this.lastTime) / 1000) * this.speed);
+    if (this.playing && this.mixer && this.lastTime) {
+      const delta = Math.min(0.12, (now - this.lastTime) / 1000) * this.speed;
+      const clips = this.model?.animations;
+      const advance = this.playAll && clips && clips.length > 1 && this.action &&
+        this.action.time + delta >= this.action.getClip().duration;
+      this.mixer.update(delta);
+      if (advance) {
+        this.setClip((this.clipIndex + 1) % clips.length);
+        this.mixer.update(0);
+        this.onAdvance?.(this.clipIndex);
+      }
+    }
     this.lastTime = now;
     this.renderer.render(this.scene, this.camera);
     if (this.action) this.onTick?.(this.action.time / this.action.getClip().duration);

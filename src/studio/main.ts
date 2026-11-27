@@ -21,7 +21,7 @@ import { buildModel } from '../models';
 import { el, notify, report } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { layout } from '../ui/layout';
-import { showProperties, showAnimation } from '../ui/inspector';
+import { showProperties, showAnimation, showPlayback } from '../ui/inspector';
 import { setupDialogs } from '../ui/dialogs';
 import { setupShelf } from './shelf';
 import { Viewport, disposeModel, type View } from './viewport';
@@ -30,6 +30,7 @@ const params = new URLSearchParams(window.location.search);
 el('app').innerHTML = layout;
 if (params.get('shot') === '1' && params.get('noui') === '1') document.body.classList.add('shot-only');
 const stage = new Viewport(el('viewport'));
+const autoplay = params.get('shot') !== '1';
 let recipe: Recipe | null = null;
 let imported: ImportedAsset | null = null;
 function newSelection(id?:string) {
@@ -69,26 +70,52 @@ function availableClips() {
   if (!model) return [];
   const hadClips = model.animations.length > 0;
   addCharacterAnimations(model);
-  if (!hadClips && model.animations.length) stage.setClip(0);
+  if (!hadClips && model.animations.length) {
+    stage.setClip(0);
+    stage.play(autoplay);
+  }
   return model.animations;
 }
+function togglePlayback() {
+  stage.play(!stage.playing);
+  return stage.playing;
+}
+document.addEventListener('keydown', event => {
+  if (event.code !== 'Space' || event.defaultPrevented || event.isComposing ||
+      event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || target.isContentEditable || document.querySelector('dialog[open]')) return;
+  if (target.closest('input:not(#timeline),textarea,select,a,summary')) return;
+  // A selected result or tab keeps focus after a mouse click. Space can operate the
+  // preview there, while other focused buttons keep their native keyboard activation.
+  const button = target.closest('button');
+  if (button && !button.matches('#play,.clip[aria-pressed="true"],.inv-card[aria-pressed="true"],.tabs .active')) return;
+  if (!availableClips().length) return;
+  event.preventDefault();
+  if (!event.repeat) showPlayback(togglePlayback());
+});
 function controls() {
   el('propertiesTab').classList.toggle('active', tab === 'props');
   el('animationTab').classList.toggle('active', tab === 'anim');
+  stage.onAdvance = undefined;
   if (tab === 'anim') {
-    showAnimation(
+    stage.onAdvance = showAnimation(
       availableClips(),
       stage.clipIndex,
       stage.playing,
       stage.speed,
+      stage.playAll,
+      (on) => {
+        stage.playAll = on;
+        if (on) stage.play(true);
+        return stage.playing;
+      },
       (i) => {
         stage.setClip(i);
         stage.seek(0);
+        stage.play(true);
       },
-      () => {
-        stage.play(!stage.playing);
-        return stage.playing;
-      },
+      togglePlayback,
       (n) => {
         stage.seek(n);
       },
@@ -104,7 +131,12 @@ function swap(model: T.Group, refit: boolean) {
   const clip = refit ? undefined : previous?.animations[stage.clipIndex];
   const playing = stage.playing, fraction = stage.clipFraction;
   if (clip && !model.animations.some(candidate => candidate.name === clip.name)) addCharacterAnimations(model);
+  if (refit) {
+    stage.playAll = false;
+    if (autoplay && !model.animations.length) addCharacterAnimations(model);
+  }
   stage.setModel(model, refit);
+  if (refit) stage.play(autoplay);
   if (clip) {
     const next = model.animations.findIndex(candidate => candidate.name === clip.name);
     if (next >= 0) {
