@@ -1,6 +1,9 @@
 import * as T from 'three'
 import { describe, expect, it } from 'vitest'
+import { characterRig } from '../animation/rig'
+import { inspectAsset } from '../capabilities/runtime'
 import { catalog } from '../data/recipe'
+import { extraAssets } from './collections'
 import { buildModel } from './index'
 
 type PaintedMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>
@@ -73,9 +76,29 @@ describe.each(catalog)('$recipe.name', ({ recipe, category }) => {
       mixer.stopAllAction()
     }
   })
+  it('exposes valid capabilities whose rigged and detachable nodes exist at both detail levels', () => {
+    const detailed = buildModel(recipe)
+    const simple = buildModel({ ...recipe, detail: false })
+    const caps = inspectAsset(detailed)
+    const def = extraAssets.find(asset => asset.id === recipe.template)
+    if (def) {
+      expect(caps.riggedParts.map(p => p.name)).toEqual(def.riggedParts.map(p => p.name))
+      expect(caps.detachableParts.map(p => p.name)).toEqual((def.detachableParts ?? []).map(p => p.name))
+      expect(caps.physics?.body).toBe(def.physicsBody)
+    }
+    for (const part of caps.riggedParts) {
+      expect(detailed.getObjectByName(part.name)).toBeDefined()
+      expect(simple.getObjectByName(part.name)).toBeDefined()
+    }
+    for (const part of caps.detachableParts) {
+      expect(detailed.getObjectByName(part.name)).toBeDefined()
+      expect(simple.getObjectByName(part.name)).toBeDefined()
+    }
+  })
   if (category === 'Character') {
     it('deforms weighted suit vertices when the upper arm moves', () => {
       const scene = buildModel(recipe)
+      expect(characterRig(scene)).not.toBeNull()
       const skin = scene.getObjectByName('Suit')
       if (!(skin instanceof T.SkinnedMesh)) throw new Error('Missing skinned suit')
       const armIndex = skin.skeleton.bones.findIndex(bone => bone.name === 'LeftArm')

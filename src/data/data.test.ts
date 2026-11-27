@@ -28,6 +28,9 @@ describe('recipes', () => {
       expect(parseRecipe(entry.recipe)).toEqual(entry.recipe);
       expect(entry.recipe.quality).toBe('hd');
     }
+    expect(new Set(catalog.map(row => row.id)).size).toBe(catalog.length);
+    expect(new Set(catalog.map(row => row.code)).size).toBe(catalog.length);
+    expect(new Set(catalog.map(row => row.recipe.name)).size).toBe(catalog.length);
     for (const key of ['scale', 'proportion'] as const) {
       const { minimum, maximum } = schema.properties[key];
       for (const value of [minimum, maximum]) expect(parseRecipe({ ...starter(), [key]: value })[key]).toBe(value);

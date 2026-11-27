@@ -81,6 +81,23 @@ export function createInspectorBridge(host: WorkspaceBridge) {
     const imported = host.getImported();
     if (recipe) {
       showProperties(recipe, host.edit);
+      const ctrl = host.getController();
+      if (ctrl) {
+        showModelPartsProperties(ctrl.capabilities, {
+          isVisible: part => ctrl.isVisible(part),
+          setVisible: (part, visible) => {
+            ctrl.setVisible(part, visible);
+            host.stage.invalidate();
+          },
+          decalText: ctrl.getState().decalText ?? {},
+          setDecalText: (slot, text) => {
+            const nextText = { ...(ctrl.getState().decalText ?? {}), [slot]: text };
+            ctrl.setDecalsVisible(true, nextText);
+            syncViewportTools();
+            host.stage.invalidate();
+          },
+        });
+      }
       return;
     }
     if (!imported) return;

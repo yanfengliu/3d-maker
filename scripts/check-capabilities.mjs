@@ -171,6 +171,7 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     await page.goto(originUrl + site);
     await page.waitForFunction(() => window.__shotReady);
 
+    await page.locator('[data-source-filter="polyfork"]').click();
     await page.getByRole('button', { name: 'Open Shopfront Fixture', exact: true }).click();
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Shopfront Fixture');
     await waitFrames(page, 4);
@@ -305,9 +306,10 @@ export async function verifyCapabilities(browser, originUrl, site, out) {
     assert.ok(Math.abs(doorRot[1]) < 1e-4 && Math.abs(Math.abs(doorRot[3]) - 1) < 1e-4, 'Exported closed door had non-zero rotation: ' + JSON.stringify(doorRot));
 
     // 6b. Switch from 0-clip PolyFork model to original Cargo Pod: no leaked click handler, actual lid stays open in WebGL after swatch edit, Reset clears pose, and AI tools omits rigged parts.
-    await page.locator('[data-source-filter="all"]').click();
+    await page.locator('[data-source-filter="polyfork"]').click();
     await page.locator(`[data-key="polyfork:${assetId}"]`).click();
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Shopfront Fixture');
+    await page.locator('[data-source-filter="original"]').click();
     await page.getByRole('button', { name: 'Open Cargo Pod', exact: true }).click();
     await page.waitForFunction(() => document.getElementById('sceneName')?.textContent === 'Cargo Pod');
     await page.click('.parts-drawer summary');

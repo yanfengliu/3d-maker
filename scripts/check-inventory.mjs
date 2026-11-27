@@ -121,15 +121,23 @@ async function visibleWorkspace(page) {
 
 export async function verifyInitialInventory(page) {
   await visibleWorkspace(page);
-  await open(page, 'Survey Rover 01').waitFor();
+  const originalCount = await page.evaluate(() => window.forgeStudio.listTemplates().length);
+  const totalAssets = originalCount + rows.length;
+  const firstPageOriginals = Math.min(12, originalCount);
+  const firstPageRemote = 12 - firstPageOriginals;
+  await page.waitForFunction(
+    expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
+    String(totalAssets),
+  );
+  if (firstPageRemote > 0) await open(page, 'Survey Rover 01').waitFor();
   await waitGrid(page, 12);
-  assert.equal(await page.locator(grid + '[data-source=original]').count(), 6);
-  assert.equal(await page.locator(grid + '[data-source=polyfork]').count(), 6);
-  assert.match(await page.locator('#inventoryTotal').textContent(), /\b33\b/);
-  await page.waitForFunction(() => {
+  assert.equal(await page.locator(grid + '[data-source=original]').count(), firstPageOriginals);
+  assert.equal(await page.locator(grid + '[data-source=polyfork]').count(), firstPageRemote);
+  assert.match(await page.locator('#inventoryTotal').textContent(), new RegExp('\\b' + totalAssets + '\\b'));
+  await page.waitForFunction(expected => {
     const posters = [...document.querySelectorAll('#assetGrid [data-source="original"] img')];
-    return posters.length === 6 && posters.every(img => img.complete && img.naturalWidth > 0);
-  });
+    return posters.length === expected && posters.every(img => img.complete && img.naturalWidth > 0);
+  }, firstPageOriginals);
 }
 
 export async function showSaved(page) {
@@ -180,35 +188,52 @@ export async function verifyBrowsing(page, fixture, out) {
     assert.ok(await category(page, value).isVisible(), 'Missing visible category ' + value);
   }
 
-  // Exercise the page boundary where the originals end in the middle of the first catalog page.
+  // Exercise every paginated page across originals and remote hits, including the original/remote boundary.
+  const templates = await page.evaluate(() => window.forgeStudio.listTemplates());
+  const originalCount = templates.length;
+  const totalAssets = originalCount + rows.length;
+  const totalPages = Math.ceil(totalAssets / 12);
+  const firstTitleOnPage = p => {
+    const idx = (p - 1) * 12;
+    return idx < originalCount ? templates[idx].recipe.name : rows[idx - originalCount].title;
+  };
   const names = new Set();
-  for (let i = 0; i < 3; i++) {
-    const firstRemote = i === 0 ? rows[0] : rows[i * 12 - 6];
-    await open(page, firstRemote.title).waitFor();
+  for (let p = 1; p <= totalPages; p++) {
+    const start = (p - 1) * 12;
+    await open(page, firstTitleOnPage(p)).waitFor();
+    if (start < originalCount && start + 12 > originalCount) await open(page, rows[0].title).waitFor();
+    const expectedCount = Math.min(12, totalAssets - start);
+    await waitGrid(page, expectedCount);
     const labels = await page.locator(grid).evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')));
-    assert.equal(labels.length, i === 2 ? 9 : 12);
+    assert.equal(labels.length, expectedCount);
     for (const label of labels) {
       assert.ok(!names.has(label), 'Duplicate paginated card ' + label);
       names.add(label);
     }
-    if (i !== 2) await page.locator('#inventoryNext').click();
+    if (p !== totalPages) await page.locator('#inventoryNext').click();
   }
-  assert.equal(names.size, 33);
+  assert.equal(names.size, totalAssets);
   assert.ok(await page.locator('#inventoryNext').isDisabled());
-  // An expired catalog count can temporarily leave only one local page available.
+  // An expired catalog count can temporarily leave only local pages available; Retry restores the requested page.
+  const prevPage = totalPages - 1;
   await page.clock.setFixedTime(new Date(Date.now() + 180_000));
   fixture.failNext();
   await page.locator('#inventoryPrev').click();
   await page.locator('#inventoryRetry').waitFor();
   await page.locator('#inventoryRetry').click();
-  await open(page, rows[6].title).waitFor();
-  assert.equal(await page.locator('#inventoryPageNumber').inputValue(), '2');
+  await open(page, firstTitleOnPage(prevPage)).waitFor();
+  assert.equal(await page.locator('#inventoryPageNumber').inputValue(), String(prevPage));
   await page.locator('#inventoryNext').click();
-  await open(page, rows[18].title).waitFor();
-  await page.locator('#inventoryPageNumber').fill('2');
+  await open(page, firstTitleOnPage(totalPages)).waitFor();
+  await page.locator('#inventoryPageNumber').fill(String(prevPage));
   await page.locator('#inventoryPageNumber').press('Enter');
-  await open(page, rows[6].title).waitFor();
+  await open(page, firstTitleOnPage(prevPage)).waitFor();
   await page.locator('#inventoryPrev').click();
+  await open(page, firstTitleOnPage(prevPage - 1)).waitFor();
+  if (prevPage - 1 > 1) {
+    await page.locator('#inventoryPageNumber').fill('1');
+    await page.locator('#inventoryPageNumber').press('Enter');
+  }
   await open(page, 'Relay Drone').waitFor();
 
   await source(page, 'polyfork').click();
@@ -229,17 +254,24 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.waitForFunction(() => document.querySelector('#save').textContent.includes('Save changes'));
 
   // Draw the category view with a known original character after checking the remote import path.
+  const origChars = templates.filter(row => row.category === 'Character').length;
+  const totalChars = origChars + 3;
   await page.locator('#inventorySearch').fill('');
   await source(page, 'all').click();
   await category(page, 'character').click();
   await open(page, 'Field Pilot').click();
   await page.waitForFunction(() => window.forgeStudio.getRecipe()?.template === 'field-pilot');
   assert.ok(await page.locator('#assetSource').isHidden());
-  await open(page, 'Field Operator 03').waitFor();
-  await waitGrid(page, 5);
+  await page.waitForFunction(
+    expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
+    String(totalChars),
+  );
+  if (totalChars <= 12) await open(page, 'Field Operator 03').waitFor();
+  await waitGrid(page, Math.min(12, totalChars));
   await page.screenshot({ path: join(out, 'inventory-category.png') });
 
   // A failed remote search leaves the current model intact and the page can recover in place.
+  const fieldOrigChars = templates.filter(row => row.category === 'Character' && row.recipe.name.toLowerCase().includes('field')).length;
   fixture.failNext();
   await page.locator('#inventorySearch').fill('Field');
   await page.locator('#inventoryRetry').waitFor();
@@ -247,7 +279,7 @@ export async function verifyBrowsing(page, fixture, out) {
   assert.equal(await page.evaluate(() => window.forgeStudio.getRecipe()?.template), 'field-pilot');
   await page.locator('#inventoryRetry').click();
   await open(page, 'Field Operator 03').waitFor();
-  await waitGrid(page, 4);
+  await waitGrid(page, Math.min(12, fieldOrigChars + 3));
 
   await deleteDuringOpen(page);
 
@@ -259,8 +291,20 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.locator('#inventoryNotice').waitFor({ state: 'visible' });
   await open(page, 'Signal Tower').waitFor();
   assert.match(await page.locator('#inventoryNoticeText').textContent(), /limiting catalog requests/i);
+  const localBuildingText = await page.locator('#inventoryTotal').textContent();
+  const origBuildings = Number((localBuildingText ?? '').replaceAll(',', '').match(/\d+/)?.[0] ?? 1);
+  const totalBuildings = origBuildings + 3;
+  await page.locator('#inventoryNotice').waitFor({ state: 'hidden', timeout: 6000 });
+  await page.waitForFunction(
+    expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
+    String(totalBuildings),
+  );
+  if (totalBuildings > 12) {
+    await page.locator('#inventoryPageNumber').fill(String(Math.ceil(totalBuildings / 12)));
+    await page.locator('#inventoryPageNumber').press('Enter');
+  }
   await open(page, 'Relay Station 01').waitFor({ timeout: 6000 });
-  await waitGrid(page, 4);
+  await waitGrid(page, totalBuildings > 12 ? totalBuildings - Math.floor((totalBuildings - 1) / 12) * 12 : totalBuildings);
   assert.ok(await page.locator('#inventoryNotice').isHidden());
   // Opening a PolyFork GLB recovers automatically from a transient 429 download error.
   fixture.failNextGlb(429);
@@ -270,6 +314,6 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.locator('#inventorySearch').fill('');
   await source(page, 'original').click();
   await category(page, 'character').click();
-  await waitGrid(page, 2);
+  await waitGrid(page, Math.min(12, origChars));
   await open(page, 'Field Pilot').click();
 }

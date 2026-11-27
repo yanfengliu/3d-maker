@@ -72,7 +72,7 @@ export function characterRig(root: Object3D): CharacterRig | null {
   root.traverse(node => {
     nameCounts.set(node.name, (nameCounts.get(node.name) ?? 0) + 1);
     const recipe: unknown = node.userData.recipe;
-    if (record(recipe) && (recipe.template === 'field-pilot' || recipe.template === 'survey-bot')) matches.studio = true;
+    if (node.userData.studioRig === true || (record(recipe) && (recipe.template === 'field-pilot' || recipe.template === 'survey-bot'))) matches.studio = true;
     if (!(node instanceof SkinnedMesh)) return;
     skins.push(node as SkinnedMesh);
     for (const bone of node.skeleton.bones) {

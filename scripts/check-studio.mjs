@@ -253,16 +253,19 @@ try {
   const result = await sdk.evaluate(async () => {
     const { createAsset, catalog } = await import('/3d-maker/studio-sdk.js');
     const { Group, AnimationMixer } = await import('three');
-    return catalog.map((row) => {
-      const group = createAsset(row.recipe);
-      const mixer = new AnimationMixer(group);
-      mixer.clipAction(group.animations[0]).play();
-      mixer.update(0.1);
-      return { id: row.id, group: group instanceof Group, clips: group.animations.length };
-    });
+    return {
+      expected: catalog.length,
+      rows: catalog.map((row) => {
+        const group = createAsset(row.recipe);
+        const mixer = new AnimationMixer(group);
+        mixer.clipAction(group.animations[0]).play();
+        mixer.update(0.1);
+        return { id: row.id, group: group instanceof Group, clips: group.animations.length };
+      }),
+    };
   });
-  assert.equal(result.length, 6);
-  assert.ok(result.every((r) => r.group && r.clips > 0));
+  assert.ok(result.expected >= 6 && result.rows.length === result.expected);
+  assert.ok(result.rows.every((r) => r.group && r.clips > 0));
   assert.deepEqual(failures, []);
   await verifyClipFraming(browser, origin, site, out);
   await verifyCapabilities(browser, origin, site, out);

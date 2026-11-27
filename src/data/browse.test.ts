@@ -72,36 +72,44 @@ describe('unified asset browsing', () => {
   });
 
   it('paginates originals, saved variants and all remote hits without duplicate or skipped rows', async () => {
-    const requests = stubCatalog(32);
+    const remoteCount = 32;
+    const requests = stubCatalog(remoteCount);
     const locals = { recipes: [savedRecipe()], imports: [] };
+    const localCount = catalog.length + 1;
+    const total = localCount + remoteCount;
+    const pageCount = Math.ceil(total / 12);
+    const expectedLengths = Array.from({ length: pageCount }, (_, i) => Math.min(12, total - i * 12));
     const pages = [];
-    for (let page = 1; page <= 4; page++) pages.push(await browseAssets({ ...all, page }, locals));
-    expect(pages.map(p => p.items.length)).toEqual([12, 12, 12, 3]);
-    expect(pages.every(p => p.total === 39 && !p.remoteError)).toBe(true);
+    for (let page = 1; page <= pageCount; page++) pages.push(await browseAssets({ ...all, page }, locals));
+    expect(pages.map(p => p.items.length)).toEqual(expectedLengths);
+    expect(pages.every(p => p.total === total && !p.remoteError)).toBe(true);
     const items = pages.flatMap(p => p.items);
-    expect(items.slice(0, 6).map(item => item.key)).toEqual(catalog.map(row => 'original:' + row.id));
-    expect(items[6]?.key).toBe('saved:rover-copy');
-    expect(items.slice(7).map(item => item.key)).toEqual(
-      Array.from({ length: 32 }, (_, n) => 'polyfork:test-asset-' + String(n)),
+    expect(items.slice(0, catalog.length).map(item => item.key)).toEqual(catalog.map(row => 'original:' + row.id));
+    expect(items[catalog.length]?.key).toBe('saved:rover-copy');
+    expect(items.slice(localCount).map(item => item.key)).toEqual(
+      Array.from({ length: remoteCount }, (_, n) => 'polyfork:test-asset-' + String(n)),
     );
-    expect(requests).toHaveBeenCalledTimes(3);
+    const expectedRemoteCalls = Math.ceil(remoteCount / 12);
+    expect(requests).toHaveBeenCalledTimes(expectedRemoteCalls);
     const pastLast = await browseAssets({ ...all, page: 999 }, locals);
-    expect(pastLast).toEqual(pages[3]);
-    expect(requests).toHaveBeenCalledTimes(3);
+    expect(pastLast).toEqual(pages[pageCount - 1]);
+    expect(requests).toHaveBeenCalledTimes(expectedRemoteCalls);
   });
 
   it('combines search and category upstream and for both locally available sources', async () => {
     const requests = stubCatalog(14);
     const query: BrowseQuery = { ...all, category: 'vehicle', query: '  rover ' };
     const locals = { recipes: [savedRecipe()], imports: [] };
+    const localMatches = localBrowseItems(query, locals);
     const result = await browseAssets(query, locals);
     const url = requests.mock.calls[0]?.[0];
     if (!(url instanceof URL)) throw new Error('Expected a catalog URL.');
     expect(url.searchParams.get('class')).toBe('vehicle');
     expect(url.searchParams.get('q')).toBe('rover');
     expect(url.searchParams.get('free')).toBe('1');
-    expect(result.total).toBe(16);
-    expect(result.items.slice(0, 2).map(item => item.title)).toEqual(['Field Rover', 'Blue Rover']);
+    expect(result.total).toBe(localMatches.length + 14);
+    expect(result.items.slice(0, localMatches.length).map(item => item.title)).toEqual(localMatches.map(item => item.title));
+    expect(localMatches.map(item => item.title)).toEqual(expect.arrayContaining(['Field Rover', 'Blue Rover']));
     const publisherOnly = await browseAssets({ ...query, source: 'polyfork' }, locals);
     expect(publisherOnly.items.every(item => item.source === 'polyfork')).toBe(true);
     expect(publisherOnly.total).toBe(14);
@@ -115,7 +123,8 @@ describe('unified asset browsing', () => {
     const older = savedFile('Old import', { kind: 'polyfork', assetId: 'old', title: 'Old source' });
     const local = savedFile('Own import', { kind: 'local', filename: 'custom.glb' });
     const locals = { recipes: [savedRecipe()], imports: [remote, older, local] };
-    expect((await browseAssets({ ...all, source: 'original', category: 'character' }, locals)).total).toBe(2);
+    const characterCount = catalog.filter(row => row.category === 'Character').length;
+    expect((await browseAssets({ ...all, source: 'original', category: 'character' }, locals)).total).toBe(characterCount);
     expect((await browseAssets({ ...all, source: 'saved' }, locals)).total).toBe(4);
     const files = await browseAssets({ ...all, category: 'import' }, locals);
     expect(files.items.map(i => i.title)).toEqual(['Old import', 'Own import']);
@@ -249,9 +258,11 @@ describe('unified asset browsing', () => {
     );
     vi.stubGlobal('fetch', request);
     const filters = { ...all, query: 'pilot' };
+    const localPilotMatches = localBrowseItems(filters, empty).map(i => i.title);
     const offline = await browseAssets(filters, empty);
     expect(offline.remoteError).toBe('offline');
-    expect(offline.items.map(i => i.title)).toEqual(['Field Pilot']);
+    expect(offline.items.map(i => i.title)).toEqual(localPilotMatches);
+    expect(localPilotMatches).toContain('Field Pilot');
     expect((await browseAssets(filters, empty)).remoteError).toBeNull();
     const cancelled = new AbortController();
     cancelled.abort();
@@ -277,19 +288,23 @@ describe('unified asset browsing', () => {
       });
     });
     vi.stubGlobal('fetch', fetcher);
-    const query: BrowseQuery = { ...all, category: 'building', query: 'building' };
+    const localBuildings = localBrowseItems({ ...all, source: 'original', category: 'building', query: '' }, empty);
+    const lastPage = Math.ceil((localBuildings.length + 1) / 12);
+    const query: BrowseQuery = { ...all, category: 'building', query: 'building', page: lastPage };
     const first = browseAssets(query, empty);
     const second = browseAssets(query, empty);
     release?.();
     const [a, b] = await Promise.all([first, second]);
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(a.total).toBe(2);
-    expect(b.items.map(i => i.title)).toEqual(['Signal Tower', 'Village Shopfront']);
+    expect(a.total).toBe(localBuildings.length + 1);
+    const expectedTail = [...localBuildings.slice((lastPage - 1) * 12).map(i => i.title), 'Village Shopfront'];
+    expect(b.items.map(i => i.title)).toEqual(expectedTail);
 
     // A 429 without Retry-After exposes a short retryAfterMs instead of a 60s lockout.
     vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(null, { status: 429 })));
     const limited = await browseAssets({ ...all, category: 'building', query: 'buildings' }, empty);
-    expect(limited.items.map(i => i.title)).toEqual(['Signal Tower']);
+    expect(limited.total).toBe(localBuildings.length);
+    expect(limited.items.map(i => i.title)).toEqual(localBuildings.slice(0, 12).map(i => i.title));
     expect(limited.remoteError).toMatch(/^PolyFork is limiting/);
     expect(limited.retryAfterMs).toBe(2000);
   });

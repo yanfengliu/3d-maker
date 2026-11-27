@@ -166,6 +166,7 @@ export function character(root: T.Group, p: Finish, pilot: boolean, detail: bool
   }
   for (const side of [-1, 1]) limbs(hips, chest, side, p, pilot, detail)
   bindSuit(root, frame, hips)
+  root.userData.studioRig = true
   const walk: T.KeyframeTrack[] = []
   const beats = [0, 0.32, 0.64, 0.96, 1.28]
   for (const [side, direction] of [['Left', 1], ['Right', -1]] as const) {

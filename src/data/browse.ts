@@ -1,6 +1,7 @@
 import { catalog, type Recipe, type TemplateId } from './recipe';
 import type { SavedAsset } from './inventory';
 import type { ImportEntry } from '../imports/library';
+import { extraAssets } from '../models/collections';
 import {
   PolyforkRateLimitError,
   searchPolyfork,
@@ -59,7 +60,7 @@ export interface BrowsePage {
   retryAfterMs?: number;
 }
 
-const originalCategories: Record<TemplateId, BrowseCategory> = {
+const starterCategories: Record<string, BrowseCategory> = {
   'relay-drone': 'vehicle',
   'field-rover': 'vehicle',
   'survey-bot': 'character',
@@ -67,6 +68,15 @@ const originalCategories: Record<TemplateId, BrowseCategory> = {
   'signal-tower': 'building',
   'field-pilot': 'character',
 };
+
+const originalCategories = new Map<string, BrowseCategory>([
+  ...Object.entries(starterCategories),
+  ...extraAssets.map(asset => [asset.id, asset.browseCategory] as const),
+]);
+
+function originalCategory(id: TemplateId): BrowseCategory {
+  return originalCategories.get(id) ?? 'prop';
+}
 
 export function categoryLabel(category: BrowseCategory): string {
   return categories.find(row => row.id === category)?.label ?? category;
@@ -80,7 +90,7 @@ function savedCard(entry: SavedAsset | ImportEntry): BrowseItem {
   if ('recipe' in entry) {
     return {
       key: 'saved:' + entry.id, source: 'saved', entry, title: entry.recipe.name,
-      category: originalCategories[entry.recipe.template], thumbnailUrl: './previews/' + entry.recipe.template + '.webp',
+      category: originalCategory(entry.recipe.template), thumbnailUrl: './previews/' + entry.recipe.template + '.webp',
     };
   }
   const { source } = entry;
@@ -99,7 +109,7 @@ export function localBrowseItems(filters: BrowseQuery, locals: BrowseLocals): Br
     for (const row of catalog) {
       items.push({
         key: 'original:' + row.id, source: 'original', recipe: row.recipe, title: row.recipe.name,
-        category: originalCategories[row.id], thumbnailUrl: './previews/' + row.id + '.webp',
+        category: originalCategory(row.id), thumbnailUrl: './previews/' + row.id + '.webp',
       });
     }
   }

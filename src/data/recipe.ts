@@ -1,6 +1,6 @@
-const templates = ['relay-drone', 'field-rover', 'survey-bot', 'cargo-pod', 'signal-tower', 'field-pilot'] as const;
+import { extraAssets } from '../models/collections/index.ts';
 
-export type TemplateId = typeof templates[number];
+export type TemplateId = string;
 
 export interface Recipe {
   version: 1;
@@ -29,7 +29,7 @@ function starter(id: TemplateId, code: string, category: CatalogEntry['category'
   };
 }
 
-export const catalog: readonly CatalogEntry[] = [
+const starterCatalog: readonly CatalogEntry[] = [
   starter('relay-drone', 'RD-01', 'Object', 'Relay Drone', '#efb634', '#e8e4cf', 'A field quadcopter built around a compact sensor pod.'),
   starter('field-rover', 'FR-02', 'Object', 'Field Rover', '#d67c43', '#e9ddc6', 'An all-terrain rover for ground surveys.'),
   starter('survey-bot', 'SB-03', 'Character', 'Survey Bot', '#a6bfc2', '#e9d58b', 'An articulated field robot built for inspection work.'),
@@ -38,8 +38,17 @@ export const catalog: readonly CatalogEntry[] = [
   starter('field-pilot', 'FP-06', 'Character', 'Field Pilot', '#cf8361', '#e7d7bb', 'A suited pilot equipped for field operations.'),
 ];
 
+export const catalog: readonly CatalogEntry[] = [
+  ...starterCatalog,
+  ...extraAssets.map(asset =>
+    starter(asset.id, asset.code, asset.category, asset.name, asset.primary, asset.accent, asset.description),
+  ),
+];
+
+const templateIds = new Set<string>(catalog.map(entry => entry.id));
+
 function isTemplate(value: unknown): value is TemplateId {
-  return templates.some(id => id === value);
+  return typeof value === 'string' && templateIds.has(value);
 }
 
 function color(value: unknown, field: string): string {

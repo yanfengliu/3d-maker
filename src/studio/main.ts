@@ -160,26 +160,33 @@ function swap(model: T.Group, refit: boolean) {
   if (refit) el<HTMLSelectElement>('view').value = 'Perspective';
 }
 
-function reapplyOriginalPose(ctrl: AssetController, pose?: Record<string, number>) {
-  if (!pose || !Object.keys(pose).length) return;
-  // Unbind the clip BEFORE posing so Three.js PropertyMixer restoration does not overwrite the restored pose.
-  if (!stage.playing) stage.syncExternalPose();
-  for (const [part, value] of Object.entries(pose)) {
-    if (ctrl.capabilities.riggedParts.some(p => p.name === part)) ctrl.setPart(part, value);
+function reapplyOriginalState(ctrl: AssetController, state?: ReturnType<AssetController['getState']>) {
+  if (!state) return;
+  if (state.pose && Object.keys(state.pose).length) {
+    // Unbind the clip BEFORE posing so Three.js PropertyMixer restoration does not overwrite the restored pose.
+    if (!stage.playing) stage.syncExternalPose();
+    for (const [part, value] of Object.entries(state.pose)) {
+      if (ctrl.capabilities.riggedParts.some(p => p.name === part)) ctrl.setPart(part, value);
+    }
   }
+  for (const part of state.hiddenParts ?? []) {
+    if (ctrl.capabilities.detachableParts.some(p => p.name === part)) ctrl.setVisible(part, false);
+  }
+  if (state.night && ctrl.capabilities.nightZones.length) ctrl.setNight(true);
+  if (state.decalText && ctrl.capabilities.decals.length) ctrl.setDecalsVisible(true, state.decalText);
   stage.invalidate();
 }
 
 function edit(patch: Partial<Recipe & ImportEdits>) {
   try {
     if (recipe) {
-      const prevPose = originalController?.getState().pose;
+      const prevState = originalController?.getState();
       recipe = parseRecipe({ ...recipe, ...patch });
       const built = buildModel(recipe);
       originalController?.dispose();
       originalController = createAssetController(built);
       swap(built, false);
-      reapplyOriginalPose(originalController, prevPose);
+      reapplyOriginalState(originalController, prevState);
       ui.refreshRig();
     } else if (imported) {
       applyImportEdits(imported, { ...imported.edits, ...patch });
@@ -284,11 +291,12 @@ async function exportGLB(options?: ExportOptions): Promise<ArrayBuffer> {
   const builtOriginal = recipe ? buildModel(recipe) : null;
   let exportCtrl: AssetController | null = null;
   if (builtOriginal) {
-    const origPose = originalController?.getState().pose;
+    const origState = originalController?.getState();
     exportCtrl = createAssetController(builtOriginal);
-    if (origPose) {
-      for (const [part, val] of Object.entries(origPose)) exportCtrl.setPart(part, val);
-    }
+    for (const [part, val] of Object.entries(origState?.pose ?? {})) exportCtrl.setPart(part, val);
+    for (const part of origState?.hiddenParts ?? []) exportCtrl.setVisible(part, false);
+    if (origState?.night && exportCtrl.capabilities.nightZones.length) exportCtrl.setNight(true);
+    if (origState?.decalText && exportCtrl.capabilities.decals.length) exportCtrl.setDecalsVisible(true, origState.decalText);
     await ensureCharacterAnimations(builtOriginal);
   }
   const originalSnap = builtOriginal ? cloneForExport(builtOriginal, options, exportCtrl) : null;
@@ -345,13 +353,13 @@ function applyRecipe(input: unknown, carryPose = true) {
   const next = parseRecipe(input);
   if (!recipe || next.template !== recipe.template) { choose(next); return; }
   openSequence++;
-  const prevPose = carryPose ? originalController?.getState().pose : undefined;
+  const prevState = carryPose ? originalController?.getState() : undefined;
   const model = buildModel(next);
   originalController?.dispose();
   originalController = createAssetController(model);
   recipe = next;
   swap(model, false);
-  reapplyOriginalPose(originalController, prevPose);
+  reapplyOriginalState(originalController, prevState);
   toolbar();
   ui.renderControls();
 }

@@ -1,8 +1,9 @@
 import * as T from 'three';
-import type { Recipe, TemplateId } from '../data/recipe';
+import type { Recipe } from '../data/recipe';
 import { writeCapabilities, type AssetCapabilities, type RiggedPartSpec } from '../capabilities/schema';
+import { extraAssets } from './collections';
 
-const templateDescriptions: Record<TemplateId, string> = {
+const starterDescriptions: Record<string, string> = {
   'relay-drone': 'Quad-rotor autonomous survey drone with articulated rotors and dual-axis camera gimbal.',
   'field-rover': 'Six-wheeled planetary survey rover with rotating optical turret.',
   'survey-bot': 'Rigged humanoid survey robot compatible with the 85-motion humanoid repertoire.',
@@ -11,7 +12,7 @@ const templateDescriptions: Record<TemplateId, string> = {
   'field-pilot': 'Rigged humanoid field pilot compatible with the 85-motion humanoid repertoire.',
 };
 
-const templateParts: Record<TemplateId, RiggedPartSpec[]> = {
+const starterParts: Record<string, readonly RiggedPartSpec[]> = {
   'relay-drone': [
     { name: 'CameraYaw', label: 'Camera yaw', type: 'rotate', axis: 'y', range: [-45, 45], describe: 'Pans the front optical gimbal left and right' },
     { name: 'CameraPitch', label: 'Camera pitch', type: 'rotate', axis: 'x', range: [-30, 30], describe: 'Tilts the optical lens up and down' },
@@ -40,29 +41,35 @@ const templateParts: Record<TemplateId, RiggedPartSpec[]> = {
   'field-pilot': [],
 };
 
-/** Attach self-describing Form Foundry capabilities to a built procedural starter Group. */
+const extraById = new Map(extraAssets.map(asset => [asset.id, asset]));
+
+/** Attach self-describing Form Foundry capabilities to a built procedural original Group. */
 export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): AssetCapabilities {
   root.updateMatrixWorld(true);
   const box = new T.Box3().setFromObject(root);
   const size = box.isEmpty() ? new T.Vector3(1, 1, 1) : box.getSize(new T.Vector3());
   const round = (n: number) => Math.round(n * 1000) / 1000;
-  const riggedParts = templateParts[recipe.template].filter(part => Boolean(root.getObjectByName(part.name)));
+  const extra = extraById.get(recipe.template);
+  const description = extra?.description ?? starterDescriptions[recipe.template];
+  const riggedSource = extra?.riggedParts ?? starterParts[recipe.template] ?? [];
+  const riggedParts = riggedSource.filter(part => Boolean(root.getObjectByName(part.name)));
+  const detachableParts = (extra?.detachableParts ?? []).filter(part => Boolean(root.getObjectByName(part.name)));
   const capabilities: AssetCapabilities = {
     version: 1,
     name: recipe.name,
-    description: templateDescriptions[recipe.template],
+    ...(description ? { description } : {}),
     source: { kind: 'original', id: recipe.template },
     riggedParts,
-    detachableParts: [],
-    nightZones: [],
-    decals: [],
+    detachableParts,
+    nightZones: [...(extra?.nightZones ?? [])],
+    decals: [...(extra?.decals ?? [])],
     dimensions: {
       sizeM: { x: round(size.x), y: round(size.y), z: round(size.z) },
       originY: round(box.isEmpty() ? 0 : box.min.y),
       origin: 'ground level (minY = 0): the model sits on y=0 as-is',
     },
     physics: {
-      body: recipe.template === 'signal-tower' ? 'static' : 'dynamic',
+      body: extra?.physicsBody ?? (recipe.template === 'signal-tower' ? 'static' : 'dynamic'),
     },
     ...(root.animations.length ? { clips: root.animations.map(c => ({ name: c.name, duration: Math.round(c.duration * 1000) / 1000 })) } : {}),
   };
