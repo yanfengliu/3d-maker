@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { CompositeChildSpec } from './compose-schema';
-import { findOwnNodeByName, surfaceBasis, traverseOwnSubtree } from './compose-tree';
+import { findOwnNodeByName, surfaceBasis, traverseAssetGeometry } from './compose-tree';
 import {
   buildOrientedBox,
   colliderHalfExtents,
@@ -73,20 +73,9 @@ function flattenCompositeChildren(
   }
 }
 
-function makeLeafCapabilities(caps: AssetCapabilities, prefix: string): AssetCapabilities {
+function makeLeafCapabilities(caps: AssetCapabilities): AssetCapabilities {
   const leaf: AssetCapabilities = structuredClone(caps);
   delete leaf.children;
-  if (prefix) {
-    for (const col of leaf.colliders ?? []) {
-      if (col.node && !col.node.startsWith(prefix)) col.node = `${prefix}${col.node}`;
-    }
-    for (const p of leaf.riggedParts) {
-      if (!p.name.startsWith(prefix)) p.name = `${prefix}${p.name}`;
-    }
-    for (const z of leaf.clearanceZones ?? []) {
-      if (z.part && !z.part.startsWith(prefix)) z.part = `${prefix}${z.part}`;
-    }
-  }
   return leaf;
 }
 
@@ -152,6 +141,18 @@ export function validateComposite(
   flattenCompositeChildren(root, topChildren, '', entries);
   const entryById = new Map(entries.map(e => [e.id, e]));
 
+  // Map each entry to the set of sibling/dependent slots mounted ONTO it via `mount.parent` (excluded when measuring the entry itself).
+  const dependentSlotsByParent = new Map<string, Set<T.Object3D>>();
+  for (const entry of entries) {
+    if (!entry.parentId) continue;
+    let set = dependentSlotsByParent.get(entry.parentId);
+    if (!set) {
+      set = new Set();
+      dependentSlotsByParent.set(entry.parentId, set);
+    }
+    set.add(entry.slot);
+  }
+
   // 1. Validate surface seating in the real orthonormal surface frame (footprint, penetration, and clearanceY headroom).
   for (const entry of entries) {
     const { mount } = entry.spec;
@@ -179,27 +180,32 @@ export function validateComposite(
     let minN = Infinity, maxN = -Infinity;
     let minV = Infinity, maxV = -Infinity;
 
-    traverseOwnSubtree(entry.inner, node => {
-      if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
-      const geo = node.geometry as T.BufferGeometry;
-      const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
-      if (!pos) return;
-      rel.multiplyMatrices(invHost, node.matrixWorld);
-      for (let i = 0; i < pos.count; i++) {
-        pt.fromBufferAttribute(pos, i).applyMatrix4(rel);
-        if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y) || !Number.isFinite(pt.z)) continue;
-        pt.sub(surfOrigin);
-        const pu = pt.dot(u);
-        const pn = pt.dot(n);
-        const pv = pt.dot(v);
-        if (pu < minU) minU = pu;
-        if (pu > maxU) maxU = pu;
-        if (pn < minN) minN = pn;
-        if (pn > maxN) maxN = pn;
-        if (pv < minV) minV = pv;
-        if (pv > maxV) maxV = pv;
-      }
-    });
+    traverseAssetGeometry(
+      entry.inner,
+      Boolean(entry.spec.capabilities.children?.length),
+      dependentSlotsByParent.get(entry.id),
+      node => {
+        if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
+        const geo = node.geometry as T.BufferGeometry;
+        const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
+        if (!pos) return;
+        rel.multiplyMatrices(invHost, node.matrixWorld);
+        for (let i = 0; i < pos.count; i++) {
+          pt.fromBufferAttribute(pos, i).applyMatrix4(rel);
+          if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y) || !Number.isFinite(pt.z)) continue;
+          pt.sub(surfOrigin);
+          const pu = pt.dot(u);
+          const pn = pt.dot(n);
+          const pv = pt.dot(v);
+          if (pu < minU) minU = pu;
+          if (pu > maxU) maxU = pu;
+          if (pn < minN) minN = pn;
+          if (pn > maxN) maxN = pn;
+          if (pv < minV) minV = pv;
+          if (pv > maxV) maxV = pv;
+        }
+      },
+    );
     if (!Number.isFinite(minU)) continue;
 
     const halfW = surf.size[0] * 0.5 + margin;
@@ -233,13 +239,15 @@ export function validateComposite(
     }
   }
 
-  // 2. Build scene placement items with leaf-only scoped capabilities for live OBB overlap checks.
+  // 2. Build scene placement items keeping original unprefixed part/hidden names plus `nodePrefix` for exact OBB resolution.
   const items: ScenePlacementItem[] = [];
-  const leafCapsById = new Map<string, AssetCapabilities>();
   for (const entry of entries) {
-    const leafCaps = makeLeafCapabilities(entry.spec.capabilities, entry.spec.nodePrefix ?? '');
-    leafCapsById.set(entry.id, leafCaps);
-    items.push({ id: entry.id, object: entry.inner, capabilities: leafCaps });
+    items.push({
+      id: entry.id,
+      object: entry.inner,
+      capabilities: makeLeafCapabilities(entry.spec.capabilities),
+      ...(entry.spec.nodePrefix ? { nodePrefix: entry.spec.nodePrefix } : {}),
+    });
   }
 
   const findDirectMountEdge = (idA: string, idB: string): { child: FlatChildEntry; host: FlatChildEntry } | undefined => {
@@ -251,22 +259,30 @@ export function validateComposite(
     return undefined;
   };
 
+  const isCarriedByClearancePart = (zoneOwner: FlatChildEntry, zoneName: string, other: FlatChildEntry): boolean => {
+    const zone = zoneOwner.spec.capabilities.clearanceZones?.find(z => z.name === zoneName);
+    if (!zone?.part) return false;
+    const partNode = findOwnNodeByName(zoneOwner.inner, zone.part, zoneOwner.spec.nodePrefix);
+    return Boolean(partNode && isDescendantOrSelf(other.slot, partNode));
+  };
+
   const rawPlacement = validateScenePlacement(items, { tolerance: margin });
   const overlaps = rawPlacement.overlaps.filter(overlap => {
+    if (overlap.kind === 'clearance-blocked') {
+      // Any descendant (child bracket, grandchild bolt, etc.) mounted inside a moving rigged part moves WITH that part.
+      const a = entryById.get(overlap.itemA);
+      const b = entryById.get(overlap.itemB);
+      if (a && b) {
+        if (isCarriedByClearancePart(a, overlap.volumeA, b)) return false;
+        if (isCarriedByClearancePart(b, overlap.volumeB, a)) return false;
+      }
+      return true;
+    }
     const edge = findDirectMountEdge(overlap.itemA, overlap.itemB);
     if (!edge) return true;
     if (overlap.kind === 'collision') {
       // Only welded/joined seams legitimately touch or interpenetrate their direct host; surface-mounted penetration is a real defect.
       return edge.child.spec.mount.coupling === 'surface';
-    }
-    if (overlap.kind === 'clearance-blocked') {
-      // A child physically mounted onto a host's moving rigged part moves WITH that part and does not block its own clearance zone.
-      const hostVolName = overlap.itemA === edge.host.id ? overlap.volumeA : overlap.volumeB;
-      const zone = edge.host.spec.capabilities.clearanceZones?.find(z => z.name === hostVolName);
-      if (zone?.part) {
-        const partNode = findOwnNodeByName(edge.host.inner, zone.part, edge.host.spec.nodePrefix);
-        if (partNode && isDescendantOrSelf(edge.child.slot, partNode)) return false;
-      }
     }
     return true;
   });
@@ -292,9 +308,10 @@ export function validateComposite(
         const result: OrientedBox[] = [];
         for (const other of entries) {
           if (other.id === entry.id) continue;
+          // Exclude carried loads (they sweep WITH movingNode via getCarriedBoxes).
           if (isDescendantOrSelf(other.slot, movingNode)) continue;
-          const edge = findDirectMountEdge(entry.id, other.id);
-          if (edge && edge.child.spec.mount.coupling !== 'surface') continue;
+          // Exclude only the direct welded/joined host that `entry` itself is bolted onto; fixed welded stops on a stationary frame remain obstacles!
+          if (entry.parentId === other.id && entry.spec.mount.coupling !== 'surface') continue;
           const vols = volumesById.get(other.id);
           if (vols) result.push(...vols);
         }

@@ -1,5 +1,10 @@
 import * as T from 'three';
-import { findOwnNodeByName, registerLiveController, unregisterLiveController } from './compose-tree';
+import {
+  findOwnNodeByName,
+  registerLiveController,
+  registerRiggedRestPose,
+  unregisterLiveController,
+} from './compose-tree';
 import { buildDecalMesh, buildNightOverlays, type DecalOverlay } from './overlays';
 import {
   readCapabilities,
@@ -135,6 +140,7 @@ export function synthesizeRigClips(
   root: T.Object3D,
   capabilities?: AssetCapabilities,
   nodePrefix?: string,
+  exportRoot?: T.Object3D,
 ): T.AnimationClip[] {
   const caps = capabilities ?? inspectAsset(root);
   const prefix = nodePrefix ?? '';
@@ -142,7 +148,11 @@ export function synthesizeRigClips(
   for (const part of caps.riggedParts) {
     const node = findOwnNodeByName(root, part.name, prefix);
     if (!node) continue;
-    const trackNode = node.name || (prefix ? `${prefix}${part.name}` : part.name);
+    const candidateName = node.name || (prefix ? `${prefix}${part.name}` : part.name);
+    // When unscoped duplicate node names exist in an export graph, bind by UUID so GLTFExporter targets this exact sibling.
+    const trackNode = exportRoot && exportRoot.getObjectByName(candidateName) !== node
+      ? node.uuid
+      : candidateName;
     const current = caps.state?.pose?.[part.name] ?? 0;
     const far = farRangeEnd(part.range);
     if (part.type === 'slide') {
@@ -215,6 +225,7 @@ export function createAssetController(
     } else {
       restQuaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVector(spec.axis), -T.MathUtils.degToRad(initialVal))).normalize();
     }
+    registerRiggedRestPose(node, restPosition, restQuaternion);
     bindings.set(spec.name, { spec, node, restQuaternion, restPosition, value: initialVal });
   }
   const detachables = new Map<string, T.Object3D>();

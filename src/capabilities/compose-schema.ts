@@ -47,7 +47,7 @@ export interface CompositeChildSpec {
 
 export const COMPOSITE_CHILD_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,59}$/;
 export const MAX_COMPOSITE_CHILDREN = 64;
-export const MAX_SCOPED_NAME_LEN = 160;
+export const MAX_SCOPED_NAME_LEN = 256;
 
 const maxLabelLen = MAX_SCOPED_NAME_LEN;
 const couplings = new Set<PhysicsCoupling>(['weld', 'surface', 'joint']);

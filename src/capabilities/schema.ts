@@ -136,7 +136,7 @@ const maxNightZones = 32;
 const maxDecals = 32;
 const maxPresets = 32;
 const maxClips = 256;
-const maxNameLen = 160;
+const maxNameLen = 256;
 const maxDescLen = 280;
 
 /** Canonical identifier pattern shared by colorZones, presets, and `zone-<name>` paint slots. */
@@ -465,25 +465,18 @@ export function readEmbeddedDecals(root: Object3D): DecalSlotSpec[] {
 
 /** Write a clean JSON snapshot of capabilities onto the canonical manifest host node without duplicating extras. */
 export function writeCapabilities(root: Object3D, capabilities: AssetCapabilities): void {
-  const singleChild = root.children.length === 1 ? root.children[0] : undefined;
-  const host =
-    !('formFoundry' in root.userData)
-    && singleChild
-    && 'formFoundry' in singleChild.userData
-    && !singleChild.userData.compositeSlot
-    && !singleChild.userData.compositeChild
-      ? singleChild
-      : root;
-  if (host !== root && 'formFoundry' in root.userData) delete root.userData.formFoundry;
-  for (const child of host.children) {
-    if (!child.userData.compositeChild && !child.userData.compositeSlot && 'formFoundry' in child.userData) {
-      delete child.userData.formFoundry;
-    }
-    for (const grand of child.children) {
-      if (!grand.userData.compositeChild && !grand.userData.compositeSlot && 'formFoundry' in grand.userData) {
-        delete grand.userData.formFoundry;
-      }
-    }
+  // Follow single-child GLTFLoader scene wrappers (up to depth 2) to update the canonical manifest host in place.
+  let host: Object3D = root;
+  for (let depth = 0; depth < 2; depth++) {
+    if ('formFoundry' in host.userData) break;
+    const only = host.children.length === 1 ? host.children[0] : undefined;
+    if (!only || only.userData.compositeSlot || only.userData.compositeChild) break;
+    if ('formFoundry' in only.userData || (only.children.length === 1 && only.children[0] && 'formFoundry' in only.children[0].userData && !only.children[0].userData.compositeSlot && !only.children[0].userData.compositeChild)) {
+      host = only;
+    } else break;
   }
+  root.traverse(node => {
+    if (node !== host && 'formFoundry' in node.userData) delete node.userData.formFoundry;
+  });
   host.userData.formFoundry = structuredClone(capabilities);
 }

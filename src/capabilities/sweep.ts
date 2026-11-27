@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { findOwnNodeByName, traverseOwnSubtree } from './compose-tree';
+import { findOwnNodeByName, getRiggedRestPose, traverseOwnSubtree } from './compose-tree';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -117,14 +117,17 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     const origPos = node.position.clone();
     const origQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
-    const currentPose = poseMap[part.name] ?? poseMap[localName] ?? 0;
-    const restPos = origPos.clone();
-    const restQuat = origQuat.clone();
-    if (Math.abs(currentPose) > 1e-9) {
-      if (part.type === 'slide') {
-        restPos.addScaledVector(axis, -currentPose);
-      } else {
-        restQuat.multiply(new T.Quaternion().setFromAxisAngle(axis, -T.MathUtils.degToRad(currentPose))).normalize();
+    const registeredRest = getRiggedRestPose(node);
+    const restPos = registeredRest ? registeredRest.pos.clone() : origPos.clone();
+    const restQuat = registeredRest ? registeredRest.quat.clone() : origQuat.clone();
+    if (!registeredRest) {
+      const currentPose = poseMap[part.name] ?? poseMap[localName] ?? 0;
+      if (Math.abs(currentPose) > 1e-9) {
+        if (part.type === 'slide') {
+          restPos.addScaledVector(axis, -currentPose);
+        } else {
+          restQuat.multiply(new T.Quaternion().setFromAxisAngle(axis, -T.MathUtils.degToRad(currentPose))).normalize();
+        }
       }
     }
     const authoredColliders = colliderByNode.get(part.name) ?? colliderByNode.get(localName);

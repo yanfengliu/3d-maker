@@ -42,8 +42,8 @@ const yard = composeAsset({
   name: 'Harbor Market Yard',
   parts: [
     { id: 'pavilion', recipe: resolveVariationRecipe('market-pavilion', 'harbor-timber-kit') },
-    { id: 'pod-left', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [-3.2, 0, 0.4], coupling: 'surface' } },
-    { id: 'pod-right', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [3.2, 0, 0.4], coupling: 'surface' } },
+    { id: 'pod-left', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [-3.6, 0, 0.4], coupling: 'surface' } },
+    { id: 'pod-right', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [3.6, 0, 0.4], coupling: 'surface' } },
     { id: 'mill', recipe: resolveVariationRecipe('stone-watermill'), mount: { at: [0, 0, -3.4], coupling: 'surface' } },
   ],
 });

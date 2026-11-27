@@ -135,8 +135,7 @@ describe('composite GLB clips, track scoping, nesting, export rest poses, and st
     expect(midAngle).toBeGreaterThan(0.2);
 
     const [a2] = ctrl.playClips([{ childId: 'pod', clip: 0 }]);
-    expect(a2).toBeDefined();
-    expect(a1?.isRunning()).toBe(false);
+    expect(a2).toBe(a1);
     ctrl.update(0.01);
     const restartedAngle = lid ? new T.Quaternion().angleTo(lid.quaternion) : 99;
     expect(restartedAngle).toBeLessThan(midAngle * 0.5);
@@ -220,10 +219,10 @@ describe('composite GLB clips, track scoping, nesting, export rest poses, and st
     expect(ctrl.openPart('room/pod/Door')).toBe(90);
     ctrl.setVisible('room/pod/Rack', false);
 
-    // Export with includePartClips: true to verify nested child clips are synthesized too (F16).
+    // Export with includePartClips: true to verify nested child clips are synthesized and playable after GLB reload (F2, F16).
     const { scene, animations, gltfJson } = await roundTripGlb(house, { includePartClips: true }, ctrl);
     ctrl.dispose();
-    expect(gltfJson.animations?.some(a => a.name === 'room/pod: Open door')).toBe(true);
+    expect(gltfJson.animations?.some(a => a.name === 'room: pod: Open door')).toBe(true);
     expect(gltfJson.animations?.some(a => a.name === 'shed: Open door')).toBe(true);
 
     const reloaded = createCompositeController(scene, undefined, animations);
@@ -232,6 +231,12 @@ describe('composite GLB clips, track scoping, nesting, export rest poses, and st
     reloaded.setVisible('room/pod/Rack', true);
     expect(reloaded.isVisible('room/pod/Rack')).toBe(true);
     expect(reloaded.closePart('room/pod/Door')).toBe(0);
+    // Play reloaded nested synthesized clip directly on room/pod!
+    const nestedDoor = scene.getObjectByName('room__pod__Door');
+    const beforeNested = nestedDoor?.quaternion.clone();
+    reloaded.playClips([{ childId: 'room/pod', clip: 'Open door' }]);
+    reloaded.update(0.5);
+    expect(beforeNested && nestedDoor ? beforeNested.angleTo(nestedDoor.quaternion) : 0).toBeGreaterThan(0.2);
     reloaded.dispose();
   });
 
@@ -249,6 +254,8 @@ describe('composite GLB clips, track scoping, nesting, export rest poses, and st
     ctrl.playClips([{ childId: 'pod-a', clip: 'Open case' }]);
     ctrl.update(0.65);
     ctrl.child('pod-b').openPart('CaseLid');
+    // Immediate sync: composite manifest reflects direct ctrl.child() edit BEFORE any export/syncManifest call (F3).
+    expect(readCapabilities(comp)?.children?.[1]?.capabilities.state?.pose?.CaseLid).toBe(-72);
 
     // Export WITHOUT manually calling syncManifest() and WITHOUT passing ctrl!
     const { scene, animations, gltfJson } = await roundTripGlb(comp);
@@ -426,22 +433,23 @@ describe('composite GLB clips, track scoping, nesting, export rest poses, and st
     expect(spyExTex).toHaveBeenCalledTimes(1);
     dispCtrl.dispose();
 
-    // 3. Worked example from docs/design/composition.md passes validateComposite & updates root dimensions via public createAsset (F11, F17).
+    // 3. Worked example from docs/design/composition.md passes validateComposite BOTH before and after 4-bay rebuild (F11, F17).
     const yard = composeAsset({
       name: 'Harbor Market Yard',
       buildRecipe: createAsset,
       parts: [
         { id: 'pavilion', recipe: resolveVariationRecipe('market-pavilion', 'harbor-timber-kit') },
-        { id: 'pod-left', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [-3.2, 0, 0.4], coupling: 'surface' } },
-        { id: 'pod-right', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [3.2, 0, 0.4], coupling: 'surface' } },
+        { id: 'pod-left', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [-3.6, 0, 0.4], coupling: 'surface' } },
+        { id: 'pod-right', recipe: resolveVariationRecipe('cargo-pod'), mount: { at: [3.6, 0, 0.4], coupling: 'surface' } },
         { id: 'mill', recipe: resolveVariationRecipe('stone-watermill'), mount: { at: [0, 0, -3.4], coupling: 'surface' } },
       ],
     });
     expect(validateComposite(yard).valid).toBe(true);
     const yardCtrl = createCompositeController(yard);
-    const beforeW = yardCtrl.capabilities.dimensions?.sizeM.x ?? 0;
+    const beforePavX = yardCtrl.getChildSpec('pavilion')?.capabilities.dimensions?.sizeM.x ?? 0;
     const afterCaps = yardCtrl.setChildParams('pavilion', { bays: 4 }, createAsset);
-    expect(afterCaps.dimensions?.sizeM.x ?? 0).toBeGreaterThanOrEqual(beforeW);
+    expect(afterCaps.children?.[0]?.capabilities.dimensions?.sizeM.x ?? 0).toBeGreaterThan(beforePavX + 0.5);
+    expect(validateComposite(yard).valid).toBe(true);
     expect(parseCapabilities(JSON.parse(JSON.stringify(afterCaps)))?.children?.length).toBe(4);
     yardCtrl.dispose();
   });

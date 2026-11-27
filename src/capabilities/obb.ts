@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { findOwnNodeByName } from './compose-tree';
+import { findOwnNodeByName, mountLocalMatrix } from './compose-tree';
 import {
   readCapabilities,
   type AssetCapabilities,
@@ -39,6 +39,8 @@ export interface ScenePlacementItem {
   scale?: Vec3Tuple | number;
   /** Hidden detachable part names to exclude in headless JSON mode. */
   hiddenParts?: readonly string[];
+  /** Optional node name prefix when resolving scoped composite child objects. */
+  nodePrefix?: string;
 }
 
 export interface ResolveVolumeOptions {
@@ -141,7 +143,7 @@ export function buildOrientedBox(
   const ay: Vec3Tuple = [col1[0] / sy, col1[1] / sy, col1[2] / sy];
   const az: Vec3Tuple = [col2[0] / sz, col2[1] / sz, col2[2] / sz];
   const sheared =
-    Math.abs(dot(ax, ay)) > 1e-4 || Math.abs(dot(ay, az)) > 1e-4 || Math.abs(dot(az, ax)) > 1e-4;
+    Math.abs(dot(ax, ay)) > 1e-9 || Math.abs(dot(ay, az)) > 1e-9 || Math.abs(dot(az, ax)) > 1e-9;
   if (sheared) {
     const c0: Vec3Tuple = [col0[0] * Math.abs(halfExtents[0]), col0[1] * Math.abs(halfExtents[0]), col0[2] * Math.abs(halfExtents[0])];
     const c1: Vec3Tuple = [col1[0] * Math.abs(halfExtents[1]), col1[1] * Math.abs(halfExtents[1]), col1[2] * Math.abs(halfExtents[1])];
@@ -316,25 +318,35 @@ function appendResolvedVolumes(
   includeClearanceZones: boolean,
   includeNoneLayer: boolean,
 ): void {
-  if (caps.children?.length && object) {
-    for (const child of caps.children) {
-      const slot = object.getObjectByName(child.slotNode);
-      if (!slot || !isVisibleInTree(slot)) continue;
-      const inner = slot.children[0] ?? slot;
-      if (!isVisibleInTree(inner)) continue;
-      appendResolvedVolumes(
-        volumes,
-        ownerId,
-        `${namePrefix}${child.id}/`,
-        inner,
-        child.capabilities,
-        inner.matrixWorld,
-        undefined,
-        child.nodePrefix ?? '',
-        includeColliders,
-        includeClearanceZones,
-        includeNoneLayer,
-      );
+  if (caps.children?.length) {
+    if (object) {
+      for (const child of caps.children) {
+        const slot = object.getObjectByName(child.slotNode);
+        if (!slot || !isVisibleInTree(slot)) continue;
+        const inner = slot.children[0] ?? slot;
+        if (!isVisibleInTree(inner)) continue;
+        appendResolvedVolumes(
+          volumes, ownerId, `${namePrefix}${child.id}/`, inner, child.capabilities,
+          inner.matrixWorld, undefined, child.nodePrefix ?? '',
+          includeColliders, includeClearanceZones, includeNoneLayer,
+        );
+      }
+    } else {
+      const childWorldById = new Map<string, T.Matrix4>();
+      const childCapsById = new Map<string, AssetCapabilities>();
+      for (const child of caps.children) {
+        const parentWorld = child.mount.parent ? (childWorldById.get(child.mount.parent) ?? rootWorld) : rootWorld;
+        const parentCaps = child.mount.parent ? childCapsById.get(child.mount.parent) : undefined;
+        const hostSurface = child.mount.surface ? parentCaps?.surfaces?.find(s => s.name === child.mount.surface) : undefined;
+        const childWorld = parentWorld.clone().multiply(mountLocalMatrix(child.mount, hostSurface));
+        childWorldById.set(child.id, childWorld);
+        childCapsById.set(child.id, child.capabilities);
+        appendResolvedVolumes(
+          volumes, ownerId, `${namePrefix}${child.id}/`, undefined, child.capabilities,
+          childWorld, undefined, child.nodePrefix ?? '',
+          includeColliders, includeClearanceZones, includeNoneLayer,
+        );
+      }
     }
   }
 
@@ -432,7 +444,7 @@ export function resolveAssetVolumes(
     caps,
     rootWorld,
     item.hiddenParts,
-    '',
+    item.nodePrefix ?? '',
     includeColliders,
     includeClearanceZones,
     includeNoneLayer,

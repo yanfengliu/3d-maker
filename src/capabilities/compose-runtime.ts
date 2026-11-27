@@ -1,13 +1,17 @@
 import * as T from 'three';
 import { parseRecipe, type Recipe } from '../data/recipe';
-import { reseatCompositeSlot, scopeChildSubtree } from './compose';
+import { pickUniquePrefix, reseatCompositeSlot, scopeChildSubtree } from './compose';
 import type { CompositeChildSpec } from './compose-schema';
 import {
+  collectClipsForChild,
+  collectNodeNamesExcluding,
   computeCompositePhysics,
   disposeUnusedResources,
   findOwnNodeByName,
   measureCompositeLocalBox,
   registerLiveController,
+  resolveAnimationPool,
+  splitFirstSegment,
   unregisterLiveController,
 } from './compose-tree';
 import type { ModelParamValues } from './param-schema';
@@ -36,7 +40,7 @@ export interface CompositeAssetController {
   isVisible(scopedPath: string): boolean;
   setVisible(scopedPath: string, visible: boolean): void;
   setNight(on: boolean, childId?: string): void;
-  /** Rebuild one recipe-backed child with updated structural params while keeping sibling poses and re-seating dependent children. */
+  /** Rebuild one recipe-backed child atomically with updated structural params, keeping siblings intact and re-seating dependents. */
   setChildParams(
     childId: string,
     params: ModelParamValues,
@@ -47,6 +51,8 @@ export interface CompositeAssetController {
   stopClips(childId?: string): void;
   /** Advance all active concurrent child AnimationMixers by `deltaSeconds`. */
   update(deltaSeconds: number): void;
+  /** Return a cloned snapshot of this composite's current animation pool (used by GLB re-export). */
+  getAnimations(): T.AnimationClip[];
   /** Re-apply authoritative rigged part poses onto a cloned export graph so live mixers never bake stale frames as rest pose. */
   applyPoseToClone(cloneRoot: T.Object3D): void;
   syncManifest(): AssetCapabilities;
@@ -59,53 +65,19 @@ interface ChildRuntime {
   inner: T.Object3D;
   controller: AssetController;
   subComposite?: CompositeAssetController | undefined;
+  clips: T.AnimationClip[];
   mixer: T.AnimationMixer;
-  actionsByClip: Map<string, T.AnimationAction>;
+  actionsByClip: Map<T.AnimationClip, T.AnimationAction>;
 }
 
 interface InternalCompositeOptions {
   skipRootWrite?: boolean;
   onChange?: () => void;
+  retentionRoot?: T.Object3D;
 }
 
 function r3(n: number): number {
   return Math.round((n + 1e-9) * 1000) / 1000 || 0;
-}
-
-function splitFirstSegment(scopedPath: string): [string, string] {
-  const slash = scopedPath.indexOf('/');
-  if (slash <= 0 || slash === scopedPath.length - 1) {
-    throw new Error(`Expected scoped part path "<childId>/<partName>", got "${scopedPath}".`);
-  }
-  return [scopedPath.slice(0, slash), scopedPath.slice(slash + 1)];
-}
-
-function resolveAnimationPool(
-  root: T.Object3D,
-  externalAnimations?: readonly T.AnimationClip[],
-): readonly T.AnimationClip[] {
-  if (externalAnimations?.length) return externalAnimations;
-  if (root.animations.length) return root.animations;
-  if (root.children.length === 1 && root.children[0]?.animations.length) {
-    return root.children[0].animations;
-  }
-  return [];
-}
-
-function collectClipsForChild(
-  pool: readonly T.AnimationClip[],
-  childId: string,
-  inner: T.Object3D,
-): T.AnimationClip[] {
-  if (inner.animations.length) return inner.animations;
-  const clipPrefix = `${childId}: `;
-  return pool
-    .filter(clip => clip.name.startsWith(clipPrefix))
-    .map(clip => {
-      const copy = clip.clone();
-      copy.name = clip.name.slice(clipPrefix.length);
-      return copy;
-    });
 }
 
 function createCompositeControllerInternal(
@@ -114,6 +86,7 @@ function createCompositeControllerInternal(
   externalAnimations: readonly T.AnimationClip[] | undefined,
   internalOptions?: InternalCompositeOptions,
 ): CompositeAssetController {
+  const retentionRoot = internalOptions?.retentionRoot ?? root;
   let currentAnimPool: T.AnimationClip[] = [...resolveAnimationPool(root, externalAnimations)];
   const capabilities = structuredClone(
     initialCapabilities ?? readCapabilities(root) ?? inspectAsset(root, currentAnimPool),
@@ -122,6 +95,16 @@ function createCompositeControllerInternal(
   if (!children.length) {
     throw new Error('Composite controller requires an asset with capabilities.children.');
   }
+
+  // Pin explicit physicsBody override if declared on root or differing from derived default.
+  const derivedBody = computeCompositePhysics(children).body;
+  const rawOverride: unknown = root.userData.physicsBodyOverride;
+  const explicitPhysicsBody: 'static' | 'dynamic' | undefined =
+    rawOverride === 'static' || rawOverride === 'dynamic'
+      ? rawOverride
+      : capabilities.physics?.body && capabilities.physics.body !== derivedBody
+        ? capabilities.physics.body
+        : undefined;
 
   let syncing = false;
   let initializing = true;
@@ -145,6 +128,7 @@ function createCompositeControllerInternal(
       ? createCompositeControllerInternal(inner, spec.capabilities, childClips, {
         skipRootWrite: true,
         onChange: onChildChange,
+        retentionRoot,
       })
       : undefined;
     const mixer = new T.AnimationMixer(inner);
@@ -154,6 +138,7 @@ function createCompositeControllerInternal(
       inner,
       controller,
       ...(subComposite ? { subComposite } : {}),
+      clips: childClips,
       mixer,
       actionsByClip: new Map(),
     });
@@ -206,6 +191,20 @@ function createCompositeControllerInternal(
     }
   }
 
+  function replaceChildClipsInPool(childId: string, nextChildClips: readonly T.AnimationClip[]): void {
+    const colonPrefix = `${childId}: `;
+    const slashPrefix = `${childId}/`;
+    currentAnimPool = [
+      ...currentAnimPool.filter(c => !c.name.startsWith(colonPrefix) && !c.name.startsWith(slashPrefix)),
+      ...nextChildClips.map(c => {
+        const copy = c.clone();
+        copy.name = `${colonPrefix}${c.name}`;
+        return copy;
+      }),
+    ];
+    root.animations = currentAnimPool;
+  }
+
   function refreshAggregateMetadata(): void {
     const overall = measureCompositeLocalBox(root);
     const size = overall.isEmpty() ? new T.Vector3(1, 1, 1) : overall.getSize(new T.Vector3());
@@ -215,7 +214,7 @@ function createCompositeControllerInternal(
       origin: capabilities.dimensions?.origin ?? 'composite root frame',
     };
     const updatedChildren = [...runtimes.values()].map(rt => rt.spec);
-    capabilities.physics = computeCompositePhysics(updatedChildren);
+    capabilities.physics = computeCompositePhysics(updatedChildren, explicitPhysicsBody);
     if (currentAnimPool.length) {
       capabilities.clips = currentAnimPool.map(c => ({ name: c.name, duration: r3(c.duration) }));
     } else {
@@ -283,7 +282,11 @@ function createCompositeControllerInternal(
     setChildParams(childId, nextParams, buildRecipe) {
       if (childId.includes('/')) {
         const [head, rest] = splitFirstSegment(childId);
-        requireNested(head).setChildParams(rest, nextParams, buildRecipe);
+        const sub = requireNested(head);
+        sub.setChildParams(rest, nextParams, buildRecipe);
+        const headRt = requireChild(head);
+        headRt.clips = sub.getAnimations();
+        replaceChildClipsInPool(head, headRt.clips);
         refreshAggregateMetadata();
         return syncManifest();
       }
@@ -299,7 +302,8 @@ function createCompositeControllerInternal(
         params: { ...((rt.spec.recipe.params as ModelParamValues | undefined) ?? {}), ...nextParams },
       });
 
-      // Build and validate replacement FIRST before detaching grandchildren or mutating the live scene!
+      // Stage 1 (pure preparation): build, scope without collisions, validate all dependent attachNodes & surfaces,
+      // and pre-construct replacement controllers BEFORE mutating the live scene!
       const dependentChildren: ChildRuntime[] = [];
       for (const other of runtimes.values()) {
         if (other.spec.mount.parent === childId) dependentChildren.push(other);
@@ -307,25 +311,43 @@ function createCompositeControllerInternal(
 
       const rebuilt = buildRecipe(mergedRecipe);
       const freshCaps = inspectAsset(rebuilt);
-      scopeChildSubtree(rebuilt, childId, rt.spec.nodePrefix ?? '', freshCaps);
-
-      const resolvedHosts = new Map<string, T.Object3D>();
-      for (const dep of dependentChildren) {
-        if (dep.spec.mount.attachNode) {
-          const hostNode = findOwnNodeByName(rebuilt, dep.spec.mount.attachNode, rt.spec.nodePrefix);
-          if (!hostNode) {
-            disposeUnusedResources(rebuilt, root);
-            throw new Error(
-              `Rebuild of "${childId}" removed attachNode "${dep.spec.mount.attachNode}" required by child "${dep.spec.id}".`,
-            );
-          }
-          resolvedHosts.set(dep.spec.id, hostNode);
-        } else {
-          resolvedHosts.set(dep.spec.id, rebuilt);
+      const otherNames = collectNodeNamesExcluding(retentionRoot, rt.inner);
+      let nextPrefix = rt.spec.nodePrefix;
+      if (nextPrefix) {
+        const rebuiltNames: string[] = [];
+        rebuilt.traverse(node => { if (node.name) rebuiltNames.push(node.name); });
+        if (rebuiltNames.some(name => otherNames.has(`${nextPrefix ?? ''}${name}`))) {
+          nextPrefix = pickUniquePrefix(rebuilt, childId, otherNames);
         }
       }
+      scopeChildSubtree(rebuilt, childId, nextPrefix ?? '', freshCaps, otherNames);
 
-      // Commit atomic swap: detach dependents, replace old inner, re-attach & re-seat, then dispose only unshared resources.
+      const resolvedHosts = new Map<string, T.Object3D>();
+      let nextController: AssetController | undefined;
+      let nextSubComposite: CompositeAssetController | undefined;
+      try {
+        for (const dep of dependentChildren) {
+          if (dep.spec.mount.surface && !freshCaps.surfaces?.some(s => s.name === dep.spec.mount.surface)) {
+            throw new Error(`Rebuild of "${childId}" removed surface "${dep.spec.mount.surface}" required by child "${dep.spec.id}".`);
+          }
+          if (dep.spec.mount.attachNode) {
+            const hostNode = findOwnNodeByName(rebuilt, dep.spec.mount.attachNode, nextPrefix);
+            if (!hostNode) throw new Error(`Rebuild of "${childId}" removed attachNode "${dep.spec.mount.attachNode}" required by child "${dep.spec.id}".`);
+            resolvedHosts.set(dep.spec.id, hostNode);
+          } else resolvedHosts.set(dep.spec.id, rebuilt);
+        }
+        nextController = createAssetController(rebuilt, freshCaps, nextPrefix, { skipRootWrite: true, onChange: onChildChange });
+        if (freshCaps.children?.length) {
+          nextSubComposite = createCompositeControllerInternal(rebuilt, freshCaps, rebuilt.animations, { skipRootWrite: true, onChange: onChildChange, retentionRoot });
+        }
+      } catch (err) {
+        nextSubComposite?.dispose();
+        nextController?.dispose();
+        disposeUnusedResources(rebuilt, retentionRoot);
+        throw err;
+      }
+
+      // Stage 2 (atomic commit): detach dependents, swap old inner -> rebuilt, re-attach & re-seat, then dispose unused resources.
       for (const dep of dependentChildren) dep.slot.removeFromParent();
       const oldInner = rt.inner;
       rt.mixer.stopAllAction();
@@ -336,25 +358,18 @@ function createCompositeControllerInternal(
 
       rt.slot.add(rebuilt);
       const hostRt = rt.spec.mount.parent ? runtimes.get(rt.spec.mount.parent) : undefined;
-      reseatCompositeSlot(rt.slot, rebuilt, rt.spec.mount, hostRt?.spec.capabilities, hostRt?.inner);
+      reseatCompositeSlot(rt.slot, rebuilt, rt.spec.mount, hostRt?.spec.capabilities, hostRt?.inner, Boolean(freshCaps.children?.length));
 
       rt.inner = rebuilt;
+      if (nextPrefix) rt.spec.nodePrefix = nextPrefix;
       rt.spec.recipe = structuredClone(mergedRecipe) as unknown as Record<string, unknown>;
       rt.spec.capabilities = freshCaps;
-      rt.controller = createAssetController(rebuilt, freshCaps, rt.spec.nodePrefix, {
-        skipRootWrite: true,
-        onChange: onChildChange,
-      });
-      rt.subComposite = freshCaps.children?.length
-        ? createCompositeControllerInternal(rebuilt, freshCaps, rebuilt.animations, {
-          skipRootWrite: true,
-          onChange: onChildChange,
-        })
-        : undefined;
+      rt.controller = nextController;
+      rt.subComposite = nextSubComposite;
+      rt.clips = [...rebuilt.animations];
       rt.mixer = new T.AnimationMixer(rebuilt);
       rt.actionsByClip.clear();
 
-      // Restore compatible interactive state on the rebuilt child (poses, hidden detachables, night, and decalText).
       for (const [part, val] of Object.entries(prevState.pose ?? {})) {
         if (freshCaps.riggedParts.some(p => p.name === part)) rt.controller.setPart(part, val);
       }
@@ -366,29 +381,14 @@ function createCompositeControllerInternal(
         rt.controller.setDecalsVisible(prevDecalsVisible, prevState.decalText);
       }
 
-      // Re-attach and re-seat every dependent child onto the rebuilt parent.
       for (const dep of dependentChildren) {
         const hostNode = resolvedHosts.get(dep.spec.id) ?? rebuilt;
         hostNode.add(dep.slot);
-        reseatCompositeSlot(dep.slot, dep.inner, dep.spec.mount, freshCaps, rebuilt);
+        reseatCompositeSlot(dep.slot, dep.inner, dep.spec.mount, freshCaps, rebuilt, Boolean(dep.spec.capabilities.children?.length));
       }
 
-      // Dispose only resources exclusively owned by oldInner (never resources shared with siblings or rebuilt geometry).
-      disposeUnusedResources(oldInner, root);
-
-      // Refresh root animations list and aggregate dimensions/physics/clips metadata.
-      const clipPrefix = `${childId}: `;
-      const updatedClips = [
-        ...currentAnimPool.filter(c => !c.name.startsWith(clipPrefix)),
-        ...rebuilt.animations.map(c => {
-          const copy = c.clone();
-          copy.name = `${clipPrefix}${c.name}`;
-          return copy;
-        }),
-      ];
-      currentAnimPool = updatedClips;
-      root.animations = updatedClips;
-
+      disposeUnusedResources(oldInner, retentionRoot);
+      replaceChildClipsInPool(childId, rebuilt.animations);
       refreshAggregateMetadata();
       return syncManifest();
     },
@@ -401,17 +401,15 @@ function createCompositeControllerInternal(
           continue;
         }
         const rt = requireChild(item.childId);
-        const clips = collectClipsForChild(currentAnimPool, item.childId, rt.inner);
         const clipQuery = item.clip;
         const clip = typeof clipQuery === 'number'
-          ? clips[clipQuery]
-          : clips.find(c => c.name === clipQuery || c.name.toLowerCase() === clipQuery.toLowerCase());
+          ? rt.clips[clipQuery]
+          : rt.clips.find(c => c.name === clipQuery || c.name.toLowerCase() === clipQuery.toLowerCase());
         if (!clip) throw new Error(`Child "${item.childId}" has no animation clip matching "${String(item.clip)}".`);
-        const prev = rt.actionsByClip.get(clip.name);
+        const prev = rt.actionsByClip.get(clip);
         if (prev) {
           prev.stop();
-          rt.mixer.uncacheAction(prev.getClip(), rt.inner);
-          rt.actionsByClip.delete(clip.name);
+          rt.actionsByClip.delete(clip);
         }
         const action = rt.mixer.clipAction(clip);
         action.reset();
@@ -419,7 +417,7 @@ function createCompositeControllerInternal(
         if (item.loop === false) action.clampWhenFinished = true;
         if (item.timeScale !== undefined) action.timeScale = item.timeScale;
         action.play();
-        rt.actionsByClip.set(clip.name, action);
+        rt.actionsByClip.set(clip, action);
         started.push(action);
       }
       return started;
@@ -448,6 +446,9 @@ function createCompositeControllerInternal(
         if (rt.actionsByClip.size) rt.mixer.update(deltaSeconds);
         rt.subComposite?.update(deltaSeconds);
       }
+    },
+    getAnimations() {
+      return currentAnimPool.map(clip => clip.clone());
     },
     applyPoseToClone(cloneRoot) {
       for (const rt of runtimes.values()) {

@@ -59,7 +59,10 @@ export function cloneForExport(
   root.animations = source.animations.map((clip) => clip.clone());
 
   const activeController = controller === undefined ? getLiveController(source) : controller;
-  const capabilities = activeController ? activeController.syncManifest() : inspectAsset(source);
+  if (!root.animations.length && activeController && 'getAnimations' in activeController) {
+    root.animations = activeController.getAnimations().map(clip => clip.clone());
+  }
+  const capabilities = activeController ? activeController.syncManifest() : inspectAsset(source, root.animations);
   // Re-apply authoritative rigged part poses onto the clone so animation mixer resets never bake stale transforms.
   activeController?.applyPoseToClone(root);
 
@@ -112,8 +115,9 @@ export function cloneForExport(
     if (capabilities.children?.length) {
       walkChildren(capabilities.children, root, '', (child, inner, childPath) => {
         if (!child.capabilities.riggedParts.length) return;
-        for (const clip of synthesizeRigClips(inner, child.capabilities, child.nodePrefix)) {
-          clip.name = `${childPath}: ${clip.name}`;
+        const clipPrefix = childPath.split('/').join(': ');
+        for (const clip of synthesizeRigClips(inner, child.capabilities, child.nodePrefix, root)) {
+          clip.name = `${clipPrefix}: ${clip.name}`;
           if (!existing.has(clip.name)) {
             root.animations.push(clip);
             existing.add(clip.name);

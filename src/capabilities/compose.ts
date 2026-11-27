@@ -3,6 +3,7 @@ import type { Recipe } from '../data/recipe';
 import {
   COMPOSITE_CHILD_ID_PATTERN,
   MAX_COMPOSITE_CHILDREN,
+  MAX_SCOPED_NAME_LEN,
   type CompositeChildSpec,
   type CompositeMountSpec,
   type PhysicsCoupling,
@@ -13,7 +14,7 @@ import {
   findOwnNodeByName,
   measureCompositeLocalBox,
   surfaceBasis,
-  traverseOwnSubtree,
+  traverseAssetGeometry,
   type CompositeRigidBodySpec,
 } from './compose-tree';
 import { inspectAsset } from './runtime';
@@ -61,6 +62,8 @@ function rewriteTrackName(
   prefix: string,
   renamedNames: ReadonlySet<string>,
   uuids: ReadonlySet<string>,
+  nameToUuid: ReadonlyMap<string, string>,
+  existingGlobalNames?: ReadonlySet<string>,
 ): string {
   const parsed = T.PropertyBinding.parseTrackName(trackName) as { nodeName?: string };
   const nodeName = parsed.nodeName ?? '';
@@ -73,28 +76,48 @@ function rewriteTrackName(
     // Preserve anonymous UUID bindings intact so GLTFExporter resolves them to the unnamed mesh.
     return trackName;
   }
-  if (renamedNames.has(nodeName) && !nodeName.startsWith(prefix)) {
-    const idx = trackName.indexOf(nodeName);
-    if (idx >= 0) {
-      return `${trackName.slice(0, idx)}${prefix}${nodeName}${trackName.slice(idx + nodeName.length)}`;
+  const dot = trackName.indexOf('.');
+  if (dot <= 0) return trackName;
+  const pathPart = trackName.slice(0, dot);
+  const propPart = trackName.slice(dot);
+
+  if (!prefix) {
+    // Unscoped mode (`scopeNames: false`): if the target name already exists elsewhere in the composite, bind by UUID.
+    if (existingGlobalNames?.has(nodeName)) {
+      const uuid = nameToUuid.get(nodeName);
+      if (uuid) return `${uuid}${propPart}`;
     }
+    return trackName;
   }
-  return trackName;
+
+  // Rewrite path segments split on `/` so `Armature/Arm.position` prefixes each matching segment without substring corruption.
+  const rewritten = pathPart.split('/').map(seg => (renamedNames.has(seg) ? `${prefix}${seg}` : seg));
+  return `${rewritten.join('/')}${propPart}`;
+}
+
+function assertScopedLength(value: string, label: string): void {
+  if (value.length > MAX_SCOPED_NAME_LEN) {
+    throw new Error(
+      `Scoped ${label} "${value}" (${String(value.length)} chars) exceeds maximum length of ${String(MAX_SCOPED_NAME_LEN)}.`,
+    );
+  }
 }
 
 function scopeNestedChildSpecs(children: CompositeChildSpec[], prefix: string): void {
   for (const sub of children) {
-    if (!sub.slotNode.startsWith(prefix)) sub.slotNode = `${prefix}${sub.slotNode}`;
-    sub.nodePrefix = sub.nodePrefix
-      ? (sub.nodePrefix.startsWith(prefix) ? sub.nodePrefix : `${prefix}${sub.nodePrefix}`)
-      : prefix;
+    sub.slotNode = `${prefix}${sub.slotNode}`;
+    assertScopedLength(sub.slotNode, 'slotNode');
+    sub.nodePrefix = sub.nodePrefix ? `${prefix}${sub.nodePrefix}` : prefix;
+    assertScopedLength(sub.nodePrefix, 'nodePrefix');
+    for (const p of sub.capabilities.riggedParts) assertScopedLength(`${sub.nodePrefix}${p.name}`, 'rigged part');
+    for (const d of sub.capabilities.detachableParts) assertScopedLength(`${sub.nodePrefix}${d.name}`, 'detachable part');
     if (sub.capabilities.children?.length) {
       scopeNestedChildSpecs(sub.capabilities.children, prefix);
     }
   }
 }
 
-function pickUniquePrefix(childRoot: T.Object3D, id: string, usedNames: ReadonlySet<string>): string {
+export function pickUniquePrefix(childRoot: T.Object3D, id: string, usedNames: ReadonlySet<string>): string {
   const candidateNames: string[] = [];
   childRoot.traverse(node => {
     if (node.name) candidateNames.push(node.name);
@@ -102,28 +125,34 @@ function pickUniquePrefix(childRoot: T.Object3D, id: string, usedNames: Readonly
   let attempt = 0;
   for (;;) {
     const prefix = attempt === 0 ? `${id}__` : `${id}__${String(attempt)}__`;
-    const collides = candidateNames.some(name => usedNames.has(name.startsWith(prefix) ? name : `${prefix}${name}`));
+    const collides = candidateNames.some(name => usedNames.has(`${prefix}${name}`));
     if (!collides) return prefix;
     attempt++;
   }
 }
 
 /**
- * Strip embedded manifests from a child subtree, clone its animation clips so shared clones never cross-mutate,
- * and optionally prefix named nodes and non-UUID track bindings with `prefix`.
+ * Strip embedded manifests from a child subtree, clone all animation clips across the subtree so shared clones never
+ * cross-mutate, and rewrite named nodes and non-UUID track bindings with `prefix` (or UUID when unscoped names collide).
  */
 export function scopeChildSubtree(
   childRoot: T.Object3D,
   childId: string,
   prefix: string,
   childCaps?: AssetCapabilities,
+  existingGlobalNames?: ReadonlySet<string>,
 ): void {
-  // Always clone clips first because Object3D.clone() shares AnimationClip references across siblings.
-  childRoot.animations = childRoot.animations.map(clip => clip.clone());
-
   const originalNames = new Set<string>();
   const uuids = new Set<string>();
+  const nameToUuid = new Map<string, string>();
   let needsRootName = false;
+
+  // Clone every clip anywhere in the subtree FIRST (Object3D.clone shares clip refs, and nested composites keep clips on inner nodes).
+  childRoot.traverse(node => {
+    if (node.animations.length) {
+      node.animations = node.animations.map(clip => clip.clone());
+    }
+  });
   for (const clip of childRoot.animations) {
     for (const track of clip.tracks) {
       const parsed = T.PropertyBinding.parseTrackName(track.name) as { nodeName?: string };
@@ -138,20 +167,34 @@ export function scopeChildSubtree(
     uuids.add(node.uuid);
     if (!node.name) return;
     originalNames.add(node.name);
+    if (!nameToUuid.has(node.name)) nameToUuid.set(node.name, node.uuid);
     if (node.userData.localName === undefined) node.userData.localName = node.name;
-    if (prefix && !node.name.startsWith(prefix)) {
-      node.name = `${prefix}${node.name}`;
+    if (prefix) node.name = `${prefix}${node.name}`;
+    assertScopedLength(node.name, 'node name');
+  });
+
+  childRoot.traverse(node => {
+    for (const clip of node.animations) {
+      for (const track of clip.tracks) {
+        track.name = rewriteTrackName(
+          track.name,
+          childRoot.name,
+          prefix,
+          originalNames,
+          uuids,
+          nameToUuid,
+          existingGlobalNames,
+        );
+      }
     }
   });
 
-  for (const clip of childRoot.animations) {
-    for (const track of clip.tracks) {
-      track.name = rewriteTrackName(track.name, childRoot.name, prefix, originalNames, uuids);
+  if (prefix && childCaps) {
+    for (const p of childCaps.riggedParts) assertScopedLength(`${prefix}${p.name}`, 'rigged part');
+    for (const d of childCaps.detachableParts) assertScopedLength(`${prefix}${d.name}`, 'detachable part');
+    if (childCaps.children?.length) {
+      scopeNestedChildSpecs(childCaps.children, prefix);
     }
-  }
-
-  if (prefix && childCaps?.children?.length) {
-    scopeNestedChildSpecs(childCaps.children, prefix);
   }
 }
 
@@ -159,11 +202,13 @@ function measureMinAlongNormalInHost(
   childRoot: T.Object3D,
   hostRootWorldInv: T.Matrix4,
   normalInHost: T.Vector3,
+  includeNestedSlots: boolean,
+  skipSlots?: ReadonlySet<T.Object3D>,
 ): number {
   const v = new T.Vector3();
   const rel = new T.Matrix4();
   let minProj = Infinity;
-  traverseOwnSubtree(childRoot, node => {
+  traverseAssetGeometry(childRoot, includeNestedSlots, skipSlots, node => {
     if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
     const geo = node.geometry as T.BufferGeometry;
     const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
@@ -185,6 +230,8 @@ function applySlotTransform(
   childRoot: T.Object3D,
   hostRoot?: T.Object3D,
   hostSurface?: SurfaceSpec,
+  includeNestedSlots = false,
+  skipSlots?: ReadonlySet<T.Object3D>,
 ): void {
   const scale = mount.scale ?? 1;
   if (typeof scale === 'number') slot.scale.set(scale, scale, scale);
@@ -207,9 +254,9 @@ function applySlotTransform(
     slot.position.copy(desiredWorld.applyMatrix4(parentInv));
     hostRoot.updateMatrixWorld(true);
 
-    // Measure the ALREADY-rotated and scaled child vertices in host root space and shift along surface normal so it sits flush.
+    // Measure the rotated and scaled child vertices in host root space and shift along surface normal so it sits flush.
     const hostInv = hostRoot.matrixWorld.clone().invert();
-    const minProj = measureMinAlongNormalInHost(childRoot, hostInv, n);
+    const minProj = measureMinAlongNormalInHost(childRoot, hostInv, n, includeNestedSlots, skipSlots);
     const targetProj = desiredInHost.dot(n);
     const deltaN = targetProj - minProj;
     if (Number.isFinite(deltaN) && Math.abs(deltaN) > 1e-7) {
@@ -240,6 +287,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
 
   const root = new T.Group();
   root.name = options.name.trim();
+  if (options.physicsBody) root.userData.physicsBodyOverride = options.physicsBody;
   const scopeNames = options.scopeNames !== false;
   const slotById = new Map<string, T.Group>();
   const childRootById = new Map<string, T.Object3D>();
@@ -288,6 +336,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     };
 
     const slotName = `Slot_${id}`;
+    assertScopedLength(slotName, 'slotNode');
     const slot = new T.Group();
     slot.name = slotName;
     slot.userData.compositeSlot = id;
@@ -318,14 +367,14 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     }
 
     const prefix = scopeNames ? pickUniquePrefix(childRoot, id, usedNodeNames) : undefined;
-    scopeChildSubtree(childRoot, id, prefix ?? '', childCaps);
+    scopeChildSubtree(childRoot, id, prefix ?? '', childCaps, usedNodeNames);
     childRoot.traverse(node => {
       if (node.name) usedNodeNames.add(node.name);
     });
 
     slot.add(childRoot);
     hostParent.add(slot);
-    applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface);
+    applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface, Boolean(childCaps.children?.length));
 
     // Collect scoped composite-level clips so a single GLB export preserves every child's animations without collisions.
     for (const clip of childRoot.animations) {
@@ -385,7 +434,9 @@ export function reseatCompositeSlot(
   mount: CompositeMountSpec,
   hostCaps?: AssetCapabilities,
   hostRoot?: T.Object3D,
+  includeNestedSlots = false,
+  skipSlots?: ReadonlySet<T.Object3D>,
 ): void {
   const hostSurface = mount.surface ? hostCaps?.surfaces?.find(s => s.name === mount.surface) : undefined;
-  applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface);
+  applySlotTransform(slot, mount, childRoot, hostRoot, hostSurface, includeNestedSlots, skipSlots);
 }
