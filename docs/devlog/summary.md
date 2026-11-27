@@ -1,5 +1,7 @@
 # Devlog
 
+- 2026-11-26 — Kept low-pose animation previews (such as Swimming, Treading water and Slide) centered above the floor grid without altering user orbit or exported motion, and added browser regressions for clip framing, settled static rotor repainting and AI tools editing on imported models.
+
 - 2026-11-26 — Extended AI tools to edit imported assets by prompt or JSON and added viewport redraws after changing a stationary model’s paint.
 
 - 2026-11-26 — Added separate remix drafts for originals, catalog assets and local files. Imported models expose editable material and vertex colors in Properties and the agent API. Saved copies and GLB exports retain paint, source credits and animation.

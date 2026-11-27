@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { inventoryFixture, showSaved } from './check-inventory.mjs';
@@ -43,6 +44,107 @@ async function download(page) {
   return { bytes, doc };
 }
 
+async function settleRenderer(page) {
+  await page.evaluate(
+    () =>
+      new Promise(resolve => {
+        let left = 14;
+        const tick = () => {
+          if (--left <= 0) setTimeout(resolve, 220);
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+}
+
+async function waitFrames(page, count = 3) {
+  await page.evaluate(
+    n =>
+      new Promise(resolve => {
+        const tick = left => {
+          if (left <= 0) resolve();
+          else requestAnimationFrame(() => tick(left - 1));
+        };
+        tick(n);
+      }),
+    count,
+  );
+}
+
+async function viewportColors(page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector('#viewport canvas');
+    const temp = document.createElement('canvas');
+    temp.width = 240;
+    temp.height = 160;
+    const ctx = temp.getContext('2d');
+    ctx.drawImage(canvas, 0, 0, 240, 160);
+    const { data } = ctx.getImageData(0, 0, 240, 160);
+    let red = 0, green = 0, blue = 0, signature = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      if (r - g > 45 && r - b > 45) red++;
+      if (g - r > 35 && g - b > 35) green++;
+      if (b - r > 40 && b - g > 20) blue++;
+      signature = (Math.imul(signature, 31) + r + g * 3 + b * 7) | 0;
+    }
+    return { red, green, blue, signature };
+  });
+}
+
+function staticRotorGlb() {
+  const hullPos = new Float32Array([
+    -1, 0, -0.6, 1, 0.5, 0.6, 1, 0, -0.6,
+    -1, 0, -0.6, -1, 0.5, 0.6, 1, 0.5, 0.6,
+  ]);
+  const hullCol = new Uint8Array([
+    95, 101, 112, 255, 95, 101, 112, 255, 95, 101, 112, 255,
+    95, 101, 112, 255, 95, 101, 112, 255, 95, 101, 112, 255,
+  ]);
+  const rotorPos = new Float32Array([
+    0.1, 0.55, 0.1, 1.3, 0.65, 1.1, 1.3, 0.55, 0.1,
+    0.1, 0.55, 0.1, 0.1, 0.65, 1.1, 1.3, 0.65, 1.1,
+  ]);
+  const rotorCol = new Uint8Array([
+    61, 63, 71, 255, 61, 63, 71, 255, 61, 63, 71, 255,
+    61, 63, 71, 255, 61, 63, 71, 255, 61, 63, 71, 255,
+  ]);
+  const parts = [hullPos, hullCol, rotorPos, rotorCol];
+  let byteLength = 0;
+  const bufferViews = parts.map(part => {
+    const view = { buffer: 0, byteOffset: byteLength, byteLength: part.byteLength };
+    byteLength += part.byteLength;
+    return view;
+  });
+  const doc = {
+    asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0, 1] }],
+    nodes: [{ name: 'survey-drone', mesh: 0 }, { name: 'rotor-fr', mesh: 1 }],
+    meshes: [
+      { primitives: [{ attributes: { POSITION: 0, COLOR_0: 1 }, material: 0 }] },
+      { primitives: [{ attributes: { POSITION: 2, COLOR_0: 3 }, material: 0 }] },
+    ],
+    materials: [{ name: 'Hull finish', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1] } }],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 6, type: 'VEC3', min: [-1, 0, -0.6], max: [1, 0.5, 0.6] },
+      { bufferView: 1, componentType: 5121, normalized: true, count: 6, type: 'VEC4' },
+      { bufferView: 2, componentType: 5126, count: 6, type: 'VEC3', min: [0.1, 0.55, 0.1], max: [1.3, 0.65, 1.1] },
+      { bufferView: 3, componentType: 5121, normalized: true, count: 6, type: 'VEC4' },
+    ],
+    buffers: [{ byteLength }], bufferViews,
+  };
+  const json = Buffer.from(JSON.stringify(doc));
+  const padded = Buffer.alloc(Math.ceil(json.length / 4) * 4, 0x20);
+  json.copy(padded);
+  const head = Buffer.alloc(20);
+  head.write('glTF'); head.writeUInt32LE(2, 4);
+  head.writeUInt32LE(28 + padded.length + byteLength, 8);
+  head.writeUInt32LE(padded.length, 12); head.write('JSON', 16);
+  const binHead = Buffer.alloc(8);
+  binHead.writeUInt32LE(byteLength, 0); binHead.write('BIN\0', 4);
+  return Buffer.concat([head, padded, binHead, ...parts.map(p => Buffer.from(p.buffer))]);
+}
+
 async function originalRemix(page, project) {
   await page.locator('[data-source-filter=original]').click();
   const sourceRecipe = await page.evaluate(() => window.forgeStudio.getRecipe());
@@ -52,6 +154,7 @@ async function originalRemix(page, project) {
   await page.locator('[data-clip]:visible').click();
   await page.click('#clearMotionSearch');
   assert.equal(await page.locator('[data-clip]:visible').count(), 87);
+  await waitFrames(page, 4);
   await page.screenshot({ path: join(project, 'output/studio/available-animations.png') });
   await startRemix(page, 'Lagoon pilot');
   assert.equal(await page.locator('#motionName').innerText(), 'Swimming');
@@ -133,6 +236,100 @@ async function paintedRemix(page, source, name, slot) {
   return (await download(page)).doc;
 }
 
+async function verifyStaticRepaintAndAiDialog(page, glbName, glbBuffer, outDir, shotPrefix) {
+  await page.click('#import');
+  await page.locator('input[type=file]').setInputFiles({
+    name: glbName, mimeType: 'model/gltf-binary', buffer: glbBuffer,
+  });
+  const baseName = glbName.replace(/\.glb$/i, '');
+  await page.waitForFunction(expected => window.forgeStudio.getImportEdits()?.name === expected, baseName);
+  assert.equal(await page.evaluate(() => window.forgeStudio.listClips().length), 0, 'Expected a static model');
+  const slots = await page.evaluate(() => window.forgeStudio.listPaintSlots());
+  const rotor = slots.find(slot => /rotor fr/i.test(slot.label)) ?? slots[0];
+  const secondary = slots.find(slot => slot.id !== rotor.id && slot.id.startsWith('vertex-')) ?? slots.find(slot => slot.id !== rotor.id);
+  assert.ok(rotor && secondary, 'Expected at least two paint slots on the static drone');
+
+  // Let the on-demand renderer fully settle, then repaint one rotor via Properties without moving the camera.
+  await settleRenderer(page);
+  if (shotPrefix) await page.screenshot({ path: join(outDir, shotPrefix + '-before.png') });
+  const beforeUi = await viewportColors(page);
+  await page.selectOption('#paintSlot', rotor.id);
+  await setPaint(page, '#ff1133');
+  await waitFrames(page, 3);
+  const afterUi = await viewportColors(page);
+  if (shotPrefix) await page.screenshot({ path: join(outDir, shotPrefix + '-ui-repainted.png') });
+  assert.notEqual(afterUi.signature, beforeUi.signature, 'Properties repaint did not redraw settled static model');
+  assert.ok(afterUi.red > beforeUi.red + 15, 'Repainted rotor did not show red pixels: ' + JSON.stringify({ beforeUi, afterUi }));
+
+  // Settle again, then repaint via the agent API without moving the camera.
+  await settleRenderer(page);
+  const beforeApi = await viewportColors(page);
+  await page.evaluate(id => {
+    const studio = window.forgeStudio;
+    const edits = studio.getImportEdits();
+    studio.setImportEdits({ ...edits, paint: { ...edits.paint, [id]: '#00ee44' } });
+  }, rotor.id);
+  await waitFrames(page, 3);
+  const afterApi = await viewportColors(page);
+  if (shotPrefix) await page.screenshot({ path: join(outDir, shotPrefix + '-api-repainted.png') });
+  assert.notEqual(afterApi.signature, beforeApi.signature, 'Agent API repaint did not redraw settled static model');
+  assert.ok(afterApi.green > beforeApi.green + 15, 'API rotor repaint did not show green pixels: ' + JSON.stringify({ beforeApi, afterApi }));
+
+  // Save the source model, remix it, and exercise AI tools (named-region prompt + JSON edit) through the real dialog.
+  await save(page);
+  const sourceSnapshot = (await inventory(page)).find(entry => entry.name === baseName);
+  assert.equal(sourceSnapshot.edits.paint[rotor.id], '#00ee44');
+  const remixName = baseName + ' AI remix';
+  await startRemix(page, remixName);
+
+  await settleRenderer(page);
+  const beforePrompt = await viewportColors(page);
+  await page.click('#assistant');
+  await page.locator('#promptText').waitFor({ state: 'visible' });
+  await page.locator('dialog details summary').click();
+  const paletteList = await page.locator('dialog details ul').innerText();
+  assert.ok(paletteList.includes(rotor.label) && paletteList.includes(rotor.id), 'AI tools dialog did not list paint slots');
+  await page.locator('#promptText').fill(`Paint "${rotor.label}" #ee2244`);
+  await page.click('#applyPrompt');
+  await page.waitForFunction(() => !document.querySelector('dialog').open);
+  await waitFrames(page, 3);
+  const afterPrompt = await viewportColors(page);
+  assert.equal(await page.evaluate(id => window.forgeStudio.getImportEdits().paint?.[id], rotor.id), '#ee2244');
+  assert.notEqual(afterPrompt.signature, beforePrompt.signature, 'Prompt repaint did not redraw settled static model');
+
+  await page.click('#assistant');
+  await page.click('#recipeTab');
+  await page.locator('#recipeText').waitFor({ state: 'visible' });
+  const currentJson = JSON.parse(await page.locator('#recipeText').inputValue());
+  assert.equal(currentJson.paint[rotor.id], '#ee2244');
+  currentJson.proportion = 1.12;
+  currentJson.paint = { ...currentJson.paint, [secondary.id]: '#1166ff' };
+  await page.locator('#recipeText').fill(JSON.stringify(currentJson, null, 2));
+  await page.click('#applyRecipe');
+  await page.waitForFunction(() => !document.querySelector('dialog').open);
+  await waitFrames(page, 3);
+  const editsAfterJson = await page.evaluate(() => window.forgeStudio.getImportEdits());
+  assert.equal(editsAfterJson.paint[rotor.id], '#ee2244');
+  assert.equal(editsAfterJson.paint[secondary.id], '#1166ff');
+  assert.equal(editsAfterJson.proportion, 1.12);
+
+  await save(page);
+  await page.reload();
+  await page.waitForFunction(() => window.__shotReady);
+  await showSaved(page);
+  await openCard(page, remixName);
+  const reopenedRemix = await page.evaluate(() => window.forgeStudio.getImportEdits());
+  assert.equal(reopenedRemix.paint[rotor.id], '#ee2244');
+  assert.equal(reopenedRemix.paint[secondary.id], '#1166ff');
+  assert.equal(reopenedRemix.proportion, 1.12);
+  await page.selectOption('#paintSlot', rotor.id);
+  assert.equal(await page.locator('#slotColor').inputValue(), '#ee2244');
+
+  await openCard(page, baseName);
+  const reopenedSource = await page.evaluate(() => window.forgeStudio.getImportEdits());
+  assert.deepEqual(reopenedSource, sourceSnapshot.edits, 'AI tools remix mutated the saved source model');
+}
+
 export async function verifyRemixes(browser, origin, site, project) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, acceptDownloads: true });
   try {
@@ -174,6 +371,14 @@ export async function verifyRemixes(browser, origin, site, project) {
     assert.equal(credit.url, 'https://polyfork.dev/asset/survey-rover-01');
     assert.equal(credit.license, 'CC BY 4.0');
     assert.equal(credit.title, 'Survey Rover 01');
+
+    // Deterministic static-model settled repaint (Properties + API) and AI tools dialog check.
+    const outDir = join(project, 'output/studio');
+    await verifyStaticRepaintAndAiDialog(page, 'Static Drone Fixture.glb', staticRotorGlb(), outDir);
+    const realDrone = join(project, 'dataset/polyfork/survey-drone-7c71f9.glb');
+    if (existsSync(realDrone)) {
+      await verifyStaticRepaintAndAiDialog(page, 'Survey Drone.glb', await readFile(realDrone), outDir, 'survey-drone');
+    }
     assert.deepEqual(errors, []);
   } finally {
     await context.close();

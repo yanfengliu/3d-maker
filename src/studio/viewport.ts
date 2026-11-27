@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { clipFocusShift, expandedFrame, projectedBoxSize, sampleClipBounds } from './framing';
 
 export type View = 'Perspective' | 'Front' | 'Top' | 'Side';
 const directions: Record<View, [number, number, number]> = {
@@ -57,10 +58,17 @@ export class Viewport {
   private host: HTMLElement;
   private renderSize = new T.Vector2();
   private radius = 1;
+  private baseFrameHeight = 4;
+  private baseFrameWidth = 4;
   private frameHeight = 4;
   private frameWidth = 4;
+  private restBounds = new T.Box3();
+  private restCenter = new T.Vector3();
   private bounds = new T.Box3();
   private center = new T.Vector3();
+  private appliedShift = new T.Vector3();
+  private clipBounds = new Map<T.AnimationClip, T.Box3>();
+  private framedClip: T.AnimationClip | null = null;
   private mixer: T.AnimationMixer | null = null;
   private action: T.AnimationAction | null = null;
   private wireMaterials = new Map<T.MeshStandardMaterial, boolean>();
@@ -164,69 +172,158 @@ export class Viewport {
     this.mixer = new T.AnimationMixer(model);
     this.playing = false;
     this.action = null;
-    this.setClip(0);
+    this.clipBounds.clear();
+    this.framedClip = null;
+    if (refit) this.appliedShift.set(0, 0, 0);
     this.place(refit);
+    this.bindClip(0);
     this.settled = 0;
     this.invalidate();
   }
-  place(refit: boolean) {
+  private atRest<R>(work: () => R): R {
+    if (!this.action) return work();
+    const time = this.action.time;
+    const paused = this.action.paused;
+    this.action.stop();
+    try {
+      return work();
+    } finally {
+      this.action.play();
+      this.action.time = time;
+      this.action.paused = paused;
+      this.mixer?.update(0);
+    }
+  }
+  private measureRest() {
     if (!this.model) return;
-    this.model.updateMatrixWorld(true);
-    const box = new T.Box3().setFromObject(this.model, true);
-    if (box.isEmpty()) box.set(new T.Vector3(-1, 0, -1), new T.Vector3(1, 2, 1));
+    const model = this.model;
+    const box = this.atRest(() => {
+      model.updateMatrixWorld(true);
+      model.traverse((node) => {
+        if (node instanceof T.SkinnedMesh) node.skeleton.update();
+      });
+      const measured = new T.Box3().setFromObject(model, true);
+      if (measured.isEmpty()) measured.set(new T.Vector3(-1, 0, -1), new T.Vector3(1, 2, 1));
+      return measured;
+    });
+    this.restBounds.copy(box);
+  }
+  private clipBox(clip: T.AnimationClip) {
+    const cached = this.clipBounds.get(clip);
+    if (cached) return cached;
+    if (!this.model) return this.restBounds;
+    const model = this.model;
+    const sampled = this.atRest(() => sampleClipBounds(model, clip, this.restBounds));
+    this.clipBounds.set(clip, sampled);
+    return sampled;
+  }
+  private stageProps(box: T.Box3) {
     const size = box.getSize(new T.Vector3());
     const center = box.getCenter(new T.Vector3());
+    const reachRadius = Math.max(this.radius, size.length() / 2);
     this.shadow.position.set(center.x, box.min.y - 0.012, center.z);
     this.shadow.scale.set(Math.max(size.x, size.y * 0.45) * 1.42, Math.max(size.z, size.y * 0.45) * 1.42, 1);
-    if (refit) {
-      this.radius = Math.max(0.01, size.length() / 2);
-      this.center.copy(center);
-      this.bounds.copy(box);
-      this.frameHeight =
-        Math.max(size.y * 1.15, Math.max(size.x, size.z) * 0.91, this.radius * 1.12) *
-        (this.thumbnailMode ? 1.18 : 1.24);
-      this.gridSize = this.radius / 2;
-      this.grid.scale.setScalar(this.gridSize);
-      this.ground.scale.setScalar(this.gridSize);
-      this.view('Perspective');
-    }
     this.grid.position.set(center.x, box.min.y - 0.022 * this.gridSize, center.z);
     this.ground.position.set(center.x, box.min.y - 0.027 * this.gridSize, center.z);
-    this.key.position.copy(center).addScaledVector(new T.Vector3(-2, 4, 2.5), this.radius);
+    this.key.position.copy(center).addScaledVector(new T.Vector3(-2, 4, 2.5), reachRadius);
     this.key.target.position.copy(center);
-    const lightCamera = this.key.shadow.camera,
-      reach = this.radius * 1.45;
+    const lightCamera = this.key.shadow.camera;
+    const reach = reachRadius * 1.45;
     Object.assign(lightCamera, {
       left: -reach,
       right: reach,
       top: reach,
       bottom: -reach,
       near: 0.005,
-      far: this.radius * 12,
+      far: reachRadius * 12,
     });
     lightCamera.updateProjectionMatrix();
-    if (this.scene.fog instanceof T.FogExp2) this.scene.fog.density = 0.034 / this.radius;
-    this.invalidate();
+  }
+  private applyFraming(clip: T.AnimationClip | null, refit: boolean) {
+    if (!this.model) return;
+    const sampled = clip ? this.clipBox(clip) : this.restBounds;
+    const shift = clip ? clipFocusShift(this.restBounds, sampled, this.radius) : new T.Vector3();
+    const active = clip ? sampled : this.restBounds;
+    this.framedClip = clip;
+    this.bounds.copy(active);
+    this.stageProps(active);
+    const delta = shift.clone().sub(this.appliedShift);
+    this.appliedShift.copy(shift);
+    this.center.copy(this.restCenter).add(this.appliedShift);
+    if (refit) {
+      this.view('Perspective');
+      return;
+    }
+    if (delta.lengthSq() > 0) {
+      this.controls.target.add(delta);
+      this.camera.position.add(delta);
+      this.controls.update();
+    }
+    const reachRadius = Math.max(this.radius, active.getSize(new T.Vector3()).length() / 2);
+    this.camera.near = reachRadius * 0.005;
+    this.camera.far = reachRadius * 120;
+    this.camera.updateMatrixWorld();
+    const padW = this.thumbnailMode ? 1.07 : 1.18;
+    const padH = this.thumbnailMode ? 1.03 : 1.15;
+    const frame = expandedFrame(
+      this.baseFrameWidth,
+      this.baseFrameHeight,
+      this.restBounds,
+      this.bounds,
+      this.camera.matrixWorldInverse,
+      this.radius,
+      padW,
+      padH,
+    );
+    this.frameWidth = frame.width;
+    this.frameHeight = frame.height;
+    this.resize();
+  }
+  place(refit: boolean) {
+    if (!this.model) return;
+    this.clipBounds.clear();
+    this.measureRest();
+    const size = this.restBounds.getSize(new T.Vector3());
+    const center = this.restBounds.getCenter(new T.Vector3());
+    if (refit) {
+      this.radius = Math.max(0.01, size.length() / 2);
+      this.restCenter.copy(center);
+      this.gridSize = this.radius / 2;
+      this.grid.scale.setScalar(this.gridSize);
+      this.ground.scale.setScalar(this.gridSize);
+      if (this.scene.fog instanceof T.FogExp2) this.scene.fog.density = 0.034 / this.radius;
+    }
+    const activeClip = !this.thumbnailMode ? this.framedClip : null;
+    this.applyFraming(activeClip, refit);
   }
   view(view: View) {
     this.camera.zoom = 1;
+    const reachRadius = Math.max(this.radius, this.bounds.getSize(new T.Vector3()).length() / 2);
     this.controls.target.copy(this.center);
     this.camera.position
       .copy(this.center)
-      .addScaledVector(new T.Vector3(...directions[view]).normalize(), this.radius * 5.2);
-    this.camera.near = this.radius * 0.005;
-    this.camera.far = this.radius * 120;
+      .addScaledVector(new T.Vector3(...directions[view]).normalize(), reachRadius * 5.2);
+    this.camera.near = reachRadius * 0.005;
+    this.camera.far = reachRadius * 120;
     this.camera.lookAt(this.center);
     this.camera.updateMatrixWorld();
-    const projected = new T.Box3();
-    for (const x of [this.bounds.min.x, this.bounds.max.x])
-      for (const y of [this.bounds.min.y, this.bounds.max.y])
-        for (const z of [this.bounds.min.z, this.bounds.max.z]) {
-          projected.expandByPoint(new T.Vector3(x, y, z).applyMatrix4(this.camera.matrixWorldInverse));
-        }
-    const projectedSize = projected.getSize(new T.Vector3());
-    this.frameWidth = Math.max(0.001, projectedSize.x) * (this.thumbnailMode ? 1.07 : 1.18);
-    this.frameHeight = Math.max(0.001, projectedSize.y) * (this.thumbnailMode ? 1.03 : 1.15);
+    const padW = this.thumbnailMode ? 1.07 : 1.18;
+    const padH = this.thumbnailMode ? 1.03 : 1.15;
+    const restSize = projectedBoxSize(this.restBounds, this.camera.matrixWorldInverse);
+    this.baseFrameWidth = Math.max(0.001, restSize.x) * padW;
+    this.baseFrameHeight = Math.max(0.001, restSize.y) * padH;
+    const frame = expandedFrame(
+      this.baseFrameWidth,
+      this.baseFrameHeight,
+      this.restBounds,
+      this.bounds,
+      this.camera.matrixWorldInverse,
+      this.radius,
+      padW,
+      padH,
+    );
+    this.frameWidth = frame.width;
+    this.frameHeight = frame.height;
     this.controls.update();
     this.resize();
   }
@@ -243,23 +340,34 @@ export class Viewport {
     const duration = this.action?.getClip().duration;
     return this.action && duration ? this.action.time / duration : 0;
   }
-  setClip(index: number) {
+  private bindClip(index: number) {
     this.action?.stop();
     this.action = null;
     this.clipIndex = index;
     const clip = this.model?.animations[index];
     if (clip && this.mixer) this.action = this.mixer.clipAction(clip).reset().play();
     if (this.action) this.action.paused = !this.playing;
-    this.invalidate();
+  }
+  setClip(index: number) {
+    this.bindClip(index);
+    if (!this.thumbnailMode) this.applyFraming(this.action?.getClip() ?? null, false);
+    else this.invalidate();
   }
   play(on: boolean) {
     this.playing = on && this.action !== null;
     if (this.action) this.action.paused = !this.playing;
     this.lastTime = 0;
+    if (this.playing && !this.thumbnailMode && this.action && this.framedClip !== this.action.getClip()) {
+      this.applyFraming(this.action.getClip(), false);
+      return;
+    }
     this.invalidate();
   }
   seek(frac: number) {
     if (!this.action || !this.mixer) return;
+    if (!this.thumbnailMode && this.framedClip !== this.action.getClip()) {
+      this.applyFraming(this.action.getClip(), false);
+    }
     this.action.time = this.action.getClip().duration * Math.min(frac, 0.99999);
     this.mixer.update(0);
     this.invalidate();
@@ -288,23 +396,16 @@ export class Viewport {
     if (this.model && ++this.settled === 5) this.onReady?.();
     if (--this.pendingFrames > 0 || this.playing) this.frame = requestAnimationFrame(this.draw);
   };
-  restClone<T>(take: () => T): T {
-    const time = this.action?.time ?? 0,
-      paused = this.action?.paused ?? true,
-      wire = this.isWire;
-    this.action?.stop();
-    this.wireframe(false);
-    try {
-      return take();
-    } finally {
-      if (this.action) {
-        this.action.play();
-        this.action.time = time;
-        this.action.paused = paused;
-        this.mixer?.update(0);
+  restClone<R>(take: () => R): R {
+    const wire = this.isWire;
+    return this.atRest(() => {
+      this.wireframe(false);
+      try {
+        return take();
+      } finally {
+        this.wireframe(wire);
       }
-      this.wireframe(wire);
-    }
+    });
   }
   snapshot() {
     this.renderer.render(this.scene, this.camera);

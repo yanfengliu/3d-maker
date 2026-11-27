@@ -5,6 +5,7 @@ import { resolve, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studioBrowser } from './browser.mjs';
 import { inventoryFixture, showSaved, verifyBrowsing, verifyInitialInventory } from './check-inventory.mjs';
+import { verifyClipFraming } from './check-framing.mjs';
 import { verifyRemixes } from './check-remixes.mjs';
 
 const project = fileURLToPath(new URL('../', import.meta.url));
@@ -262,6 +263,7 @@ try {
   assert.equal(result.length, 6);
   assert.ok(result.every((r) => r.group && r.clips > 0));
   assert.deepEqual(failures, []);
+  await verifyClipFraming(browser, origin, site, out);
   await verifyRemixes(browser, origin, site, project);
   console.log(
     'Verified unified browsing, categories, search, pagination, catalog recovery and same-page selection alongside the editor, inventory round-trips, animation, GLB and SDK checks.',
