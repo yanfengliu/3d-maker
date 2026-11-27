@@ -1,6 +1,72 @@
 import * as T from 'three';
 import { MAX_SCOPED_NAME_LEN, type CompositeChildSpec, type CompositeRestTransform } from './compose-schema';
+import { isHiddenPartName, traverseOwnSubtree } from './compose-tree';
 import type { AssetCapabilities } from './schema';
+
+export type NodeTransformSnapshot = Map<T.Object3D, { pos: T.Vector3; quat: T.Quaternion; scale: T.Vector3 }>;
+
+export function captureOwnNodeTransforms(root: T.Object3D): NodeTransformSnapshot {
+  const snap: NodeTransformSnapshot = new Map();
+  traverseOwnSubtree(root, node => {
+    snap.set(node, { pos: node.position.clone(), quat: node.quaternion.clone(), scale: node.scale.clone() });
+  });
+  return snap;
+}
+
+export function restoreOwnNodeTransforms(snap: NodeTransformSnapshot): void {
+  for (const [node, t] of snap) {
+    node.position.copy(t.pos);
+    node.quaternion.copy(t.quat);
+    node.scale.copy(t.scale);
+  }
+}
+
+/** Capture rest transforms of `root`'s own nodes by temporarily backing out any manual posed parts. */
+export function captureRestNodeTransforms(
+  root: T.Object3D,
+  controller: { getState(): { pose?: Record<string, number> }; resetParts(): void; setPart(name: string, value: number): number },
+): NodeTransformSnapshot {
+  const entries = Object.entries(controller.getState().pose ?? {});
+  if (entries.length) controller.resetParts();
+  const snap = captureOwnNodeTransforms(root);
+  for (const [p, v] of entries) controller.setPart(p, v);
+  return snap;
+}
+
+function unprefixedNodeName(node: T.Object3D, prefix: string): string {
+  if (typeof node.userData.localName === 'string') return node.userData.localName;
+  return prefix && node.name.startsWith(prefix) ? node.name.slice(prefix.length) : node.name;
+}
+
+function isSyntheticSceneWrapper(node: T.Object3D, prefix: string): boolean {
+  const base = unprefixedNodeName(node, prefix);
+  return base === '' || base === 'Scene' || base === 'AuxScene';
+}
+
+/**
+ * Determine whether an asset's root is hidden in `hiddenSet` (both manifest-only by `caps.name` and live across
+ * synthetic GLTFLoader `Scene`/`AuxScene` wrappers) without descending past real roots into detachable sub-parts.
+ */
+export function isAssetRootHidden(
+  caps: AssetCapabilities,
+  hiddenSet: ReadonlySet<string>,
+  object: T.Object3D | undefined,
+  prefix = '',
+): boolean {
+  if (!hiddenSet.size) return false;
+  if (caps.name && isHiddenPartName(hiddenSet, caps.name, prefix)) return true;
+  if (!object) return false;
+  let cur: T.Object3D = object;
+  for (;;) {
+    if (cur.name && isHiddenPartName(hiddenSet, cur.name, prefix)) return true;
+    if (typeof cur.userData.localName === 'string' && hiddenSet.has(cur.userData.localName)) return true;
+    if (!isSyntheticSceneWrapper(cur, prefix)) break;
+    const only = cur.children.length === 1 ? cur.children[0] : undefined;
+    if (!only || only.userData.compositeSlot) break;
+    cur = only;
+  }
+  return false;
+}
 
 function r3(n: number): number {
   return Math.round((n + 1e-9) * 1000) / 1000 || 0;
@@ -67,7 +133,7 @@ export function assertScopedLength(value: string, label: string): void {
   }
 }
 
-/** Pure pre-flight length check run BEFORE mutating caller input objects so rejected calls leave inputs intact. */
+/** Pure pre-flight length & track-binding check run BEFORE mutating caller input objects so rejected calls leave inputs intact. */
 export function validateScopedLengths(
   childRoot: T.Object3D,
   childId: string,
@@ -76,17 +142,27 @@ export function validateScopedLengths(
   outerClipPrefix = '',
 ): void {
   assertScopedLength(`Slot_${childId}`, 'slotNode');
+  const originalNames = new Set<string>();
   childRoot.traverse(node => {
-    if (node.name) assertScopedLength(prefix ? `${prefix}${node.name}` : node.name, 'node name');
+    if (node.name) {
+      originalNames.add(node.name);
+      assertScopedLength(prefix ? `${prefix}${node.name}` : node.name, 'node name');
+    }
   });
   for (const clip of childRoot.animations) {
     assertScopedLength(`${outerClipPrefix}${childId}: ${clip.name}`, 'clip name');
-    for (const track of clip.tracks) {
-      if (track.name.startsWith('.') && !childRoot.name) {
-        assertScopedLength(prefix ? `${prefix}Root` : 'Root', 'node name');
+  }
+  childRoot.traverse(node => {
+    for (const clip of node.animations) {
+      for (const track of clip.tracks) {
+        if (track.name.startsWith('.') && !childRoot.name) {
+          assertScopedLength(prefix ? `${prefix}Root` : 'Root', 'node name');
+        }
+        // Fail fast on unparseable track bindings (e.g. a node name with no `.property`) before mutating any part.
+        splitTrackTargetAndProperty(track.name, originalNames);
       }
     }
-  }
+  });
   if (!prefix || !childCaps) return;
   for (const p of childCaps.riggedParts) assertScopedLength(`${prefix}${p.name}`, 'rigged part');
   for (const d of childCaps.detachableParts) assertScopedLength(`${prefix}${d.name}`, 'detachable part');

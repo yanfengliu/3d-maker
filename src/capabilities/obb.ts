@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { isAssetRootHidden } from './compose-scope';
 import { findOwnNodeByName, hasHiddenAncestor, isHiddenPartName, mountLocalMatrix } from './compose-tree';
 import {
   readCapabilities,
@@ -312,6 +313,10 @@ function appendResolvedVolumes(
   includeClearanceZones: boolean,
   includeNoneLayer: boolean,
 ): void {
+  const hiddenSet = new Set(hiddenOverride ?? caps.state?.hiddenParts ?? []);
+  // If the asset root itself is listed in hiddenParts (live across wrappers OR manifest-only), suppress all of its colliders.
+  if (isAssetRootHidden(caps, hiddenSet, object, nodePrefix)) return;
+
   if (caps.children?.length) {
     if (object) {
       for (const child of caps.children) {
@@ -343,10 +348,6 @@ function appendResolvedVolumes(
       }
     }
   }
-
-  const hiddenSet = new Set(hiddenOverride ?? caps.state?.hiddenParts ?? []);
-  // If the asset root itself is listed in hiddenParts, suppress all of its colliders (including root-bound Body colliders).
-  if (object && hasHiddenAncestor(object, object, hiddenSet, nodePrefix)) return;
 
   if (includeColliders && caps.colliders) {
     for (const spec of caps.colliders) {

@@ -90,6 +90,30 @@ describe('Round 3 review regression suite (load rebuild rest, sheared slot matri
     expect(validateScenePlacement([{ id: 'rig', capabilities: capsAfter }, { id: 'wall', capabilities: wallCaps, position: [10, 0, 0] }]).valid).toBe(true);
     ctrl.dispose();
 
+    // 1b. Rebuilding the LOAD while Boom is moved by `playClips` (not manual setPart) STILL records rest x=7, not animated x=10!
+    const makeAnimCrane = () => {
+      const crane = makeCrane();
+      crane.animations = [new T.AnimationClip('OpenBoom', 1, [new T.VectorKeyframeTrack('Boom.position', [0, 1], [5, 0, 0, 8, 0, 0])])];
+      return crane;
+    };
+    const animRig = composeAsset({
+      name: 'Animated Crane With Load',
+      buildRecipe: r => (r.name === 'crane' ? makeAnimCrane() : makeLoad()),
+      parts: [
+        { id: 'crane', recipe: { ...baseRecipe, name: 'crane' } },
+        { id: 'load', recipe: { ...baseRecipe, name: 'load' }, mount: { parent: 'crane', attachNode: 'Boom', at: [1, 0, 0], coupling: 'weld' } },
+      ],
+    });
+    const animCtrl = createCompositeController(animRig);
+    animCtrl.playClips([{ childId: 'crane', clip: 'OpenBoom', loop: false }]);
+    animCtrl.update(1);
+    animCtrl.setChildParams('load', {}, makeLoad);
+    animCtrl.stopClips();
+    const animCapsAfter = animCtrl.syncManifest();
+    expect(validateScenePlacement([{ id: 'rig', capabilities: animCapsAfter }, { id: 'wall', capabilities: wallCaps, position: [7, 0, 0] }]).valid).toBe(false);
+    expect(validateScenePlacement([{ id: 'rig', capabilities: animCapsAfter }, { id: 'wall', capabilities: wallCaps, position: [10, 0, 0] }]).valid).toBe(true);
+    animCtrl.dispose();
+
     // 2. Combined attachNode (scale [2,1,1]) + surface + 45 deg rotation preserves exact sheared matrix in headless mode!
     const shearedRig = composeAsset({
       name: 'Sheared Surface Load',
@@ -99,9 +123,9 @@ describe('Round 3 review regression suite (load rebuild rest, sheared slot matri
       ],
     });
     const probe = makeBox('Probe', [0.05, 0.05, 0.05]);
-    probe.position.set(5 + 0.424, 1.5, 0.424);
+    probe.position.set(6.2, 1.5, 0);
     expect(validateScenePlacement([{ id: 'rig', object: shearedRig }, { id: 'p', object: probe }]).valid).toBe(false);
-    expect(validateScenePlacement([{ id: 'rig', capabilities: inspectAsset(shearedRig) }, { id: 'p', capabilities: inspectAsset(probe), position: [5 + 0.424, 1.5, 0.424] }]).valid).toBe(false);
+    expect(validateScenePlacement([{ id: 'rig', capabilities: inspectAsset(shearedRig) }, { id: 'p', capabilities: inspectAsset(probe), position: [6.2, 1.5, 0] }]).valid).toBe(false);
 
     // 3. 480fc1ae manifest without slotRestPose (attachRestPose y=2 + surface y=2) does NOT double-apply y=2 -> y=4.2!
     const hostWithSocket = makeBox('Host', [2, 2, 1], {
@@ -161,6 +185,28 @@ describe('Round 3 review regression suite (load rebuild rest, sheared slot matri
     const worldPos = new T.Vector3();
     innerNode?.getWorldPosition(worldPos);
     expect(worldPos.x).toBeCloseTo(4.5, 2);
+
+    // Unanimated Scene wrapping an authored AuxScene that owns ShiftScene (.position) must NOT drop the clip!
+    const outerWrapper = new T.Group(); outerWrapper.name = 'Scene';
+    const auxOwner = new T.Group(); auxOwner.name = 'AuxScene';
+    const nestedInner = composeAsset({ name: 'Inner', parts: [{ id: 'b', object: makeBox('B', [0.3, 0.3, 0.3]) }] });
+    nestedInner.position.set(4, 0, 0);
+    auxOwner.add(nestedInner);
+    auxOwner.animations = [
+      new T.AnimationClip('ShiftScene', 1, [new T.VectorKeyframeTrack('.position', [0, 1], [0, 0, 0, 1, 0, 0])]),
+    ];
+    outerWrapper.add(auxOwner);
+    const savedNested = await roundTripGlb(outerWrapper);
+    expect(savedNested.animations.length).toBe(1);
+    const mixer2 = new T.AnimationMixer(savedNested.scene);
+    const clip2 = savedNested.animations[0];
+    if (!clip2) throw new Error('Expected nested ShiftScene clip');
+    mixer2.clipAction(clip2).play();
+    mixer2.update(0.5);
+    savedNested.scene.updateMatrixWorld(true);
+    const worldPos2 = new T.Vector3();
+    savedNested.scene.getObjectByName('Inner')?.getWorldPosition(worldPos2);
+    expect(worldPos2.x).toBeCloseTo(4.5, 2);
   });
 
   it('suppresses hidden carried colliders & hidden root Body before init, rebinds slash clips, keeps nested legacy static lock, and rejects duplicate object reuse cleanly (F7, F9, F11, F15)', async () => {
@@ -201,6 +247,31 @@ describe('Round 3 review regression suite (load rebuild rest, sheared slot matri
     cCtrl.dispose();
     // BEFORE controller creation on reloaded GLB, hidden root Body AND hidden carried Brace must NOT block sweep or placement!
     expect(validateComposite(cGlb.scene).valid).toBe(true);
+    // Manifest-only (headless) volume resolution of the hidden Rack must ALSO suppress load/Body and load/BraceCol!
+    const headlessVols = resolveAssetVolumes({ id: 'h', capabilities: inspectAsset(cGlb.scene) });
+    expect(headlessVols.some(v => v.name.startsWith('load/'))).toBe(false);
+    // Standalone hidden Rack saved to GLB (wrapped in AuxScene) and mounted fresh in a composite must ALSO stay suppressed!
+    const standaloneRack = makeBox('Rack', [0.2, 0.2, 0.2], {
+      detachableParts: [{ name: 'Rack', label: 'Rack' }],
+      colliders: [{ name: 'Body', shape: 'box', at: [0, 0.1, 0], size: [0.2, 0.2, 0.2], layer: 'solid' }],
+      state: { hiddenParts: ['Rack'] },
+    });
+    const rackGlb = await roundTripGlb(standaloneRack);
+    const cab2 = makeBox('Cab', [1, 0.8, 0.6], {
+      riggedParts: [{ name: 'Boom', label: 'Boom', type: 'slide', axis: 'z', range: [0, 0.6] }],
+      colliders: [{ name: 'Body', shape: 'box', at: [0, 0.4, 0], size: [1, 0.8, 0.6], layer: 'solid' }],
+    });
+    const boom2 = new T.Group(); boom2.name = 'Boom'; boom2.position.set(0, 0.4, 0.31);
+    cab2.add(boom2);
+    const wrappedHiddenComp = composeAsset({
+      name: 'Wrapped Hidden Rack',
+      parts: [
+        { id: 'cab', object: cab2 },
+        { id: 'rack', object: rackGlb.scene, mount: { parent: 'cab', attachNode: 'Boom', at: [0, 0, 0.1], coupling: 'weld' } },
+        { id: 'wall', object: makeBox('Wall', [0.4, 1, 0.2]), mount: { at: [0, 0, 1.1], coupling: 'surface' } },
+      ],
+    });
+    expect(validateComposite(wrappedHiddenComp).valid).toBe(true);
 
     // 2. Slash-qualified unscoped clips (`inner/Swing`) rebind to distinct targets after reload + DFS-order rebuild (F9)!
     const baseRecipe = resolveVariationRecipe('cargo-pod');
@@ -235,6 +306,28 @@ describe('Round 3 review regression suite (load rebuild rest, sheared slot matri
     expect(outerTarget).toBeDefined();
     expect(innerTarget).toBeDefined();
     expect(outerTarget).not.toBe(innerTarget);
+
+    // 2b. Nesting that slash-qualified pair under `room` (`room: inner/Swing`) STILL rebinds to distinct doors after reload + rebuild (F9)!
+    const nestedSlash = composeAsset({
+      name: 'Nested Slash Room',
+      scopeNames: false,
+      parts: [{ id: 'room', object: sGlb1.scene }],
+    });
+    nestedSlash.animations = sGlb1.animations.map(c => {
+      const copy = c.clone();
+      copy.name = `room: ${c.name}`;
+      return copy;
+    });
+    const nsGlb1 = await roundTripGlb(nestedSlash);
+    const nsCtrl = createCompositeController(nsGlb1.scene, undefined, nsGlb1.animations);
+    nsCtrl.setChildParams('room/outer', {}, () => makeDoorUnit(true));
+    const nsGlb2 = await roundTripGlb(nsGlb1.scene, undefined, nsCtrl);
+    nsCtrl.dispose();
+    const nsOuter = nsGlb2.gltfJson.animations?.find(a => a.name === 'room: outer: Swing')?.channels?.[0]?.target?.node;
+    const nsInner = nsGlb2.gltfJson.animations?.find(a => a.name === 'room: inner/Swing')?.channels?.[0]?.target?.node;
+    expect(nsOuter).toBeDefined();
+    expect(nsInner).toBeDefined();
+    expect(nsOuter).not.toBe(nsInner);
 
     // 3. Nesting a loaded legacy 8dc84b7 GLB preserves its static physics lock (F11)!
     const makeDynLeaf = () => makeBox('Leaf', [0.3, 0.3, 0.3], { physics: { body: 'dynamic', massKg: 10 } });
@@ -287,5 +380,23 @@ describe('Round 3 review regression suite (load rebuild rest, sheared slot matri
       ],
     })).toThrow(/exceeds maximum length/);
     expect(rawUnmanifested.matrixWorld.elements).toEqual(matrixBefore);
+
+    // 4b. A later malformed track binding (`Door` with no `.property`) fails in pre-flight without mutating an earlier object (F15)!
+    const intact = new T.Group();
+    intact.name = 'Raw';
+    intact.position.set(3, 0, 0);
+    const intactMatrix = intact.matrixWorld.elements.slice();
+    const badTrackObj = makeBox('BadTrack', [0.2, 0.2, 0.2]);
+    badTrackObj.animations = [new T.AnimationClip('Bad', 1, [new T.VectorKeyframeTrack('Door', [0, 1], [0, 0, 0, 1, 0, 0])])];
+    expect(() => composeAsset({
+      name: 'Bad Track PreFlight',
+      parts: [
+        { id: 'first', object: intact },
+        { id: 'second', object: badTrackObj },
+      ],
+    })).toThrow();
+    expect(intact.name).toBe('Raw');
+    expect(intact.parent).toBeNull();
+    expect(intact.matrixWorld.elements).toEqual(intactMatrix);
   });
 });

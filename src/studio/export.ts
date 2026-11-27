@@ -50,6 +50,7 @@ function unwrapSceneWrapper(source: Object3D, clips: readonly AnimationClip[]): 
   while (
     Object.keys(cur.userData).length === 0
     && (cur.name === '' || cur.name === 'Scene' || cur.name === 'AuxScene')
+    && (cur === source || cur.animations.length === 0)
     && !targets.has(cur.name)
     && !targets.has(cur.uuid)
     && cur.children.length === 1
@@ -64,15 +65,25 @@ function unwrapSceneWrapper(source: Object3D, clips: readonly AnimationClip[]): 
   return cur;
 }
 
-/** Rebind unscoped (`scopeNames: false`) composite child clip tracks to exact node UUIDs on the export clone. */
+function stripChildClipPath(clipName: string, childPath: string): string | null {
+  let rest = clipName;
+  for (const seg of childPath.split('/')) {
+    if (rest.startsWith(`${seg}: `)) rest = rest.slice(seg.length + 2);
+    else if (rest.startsWith(`${seg}/`)) rest = rest.slice(seg.length + 1);
+    else return null;
+  }
+  return rest.length > 0 ? rest : null;
+}
+
+/** Rebind unscoped (or shared-prefix) composite child clip tracks to exact node UUIDs on the export clone. */
 function rebindUnscopedChildTracks(
   child: CompositeChildSpec,
   inner: Object3D,
-  clipPrefix: string,
   childPath: string,
   animations: readonly AnimationClip[],
+  sharedPrefix: boolean,
 ): void {
-  if (child.nodePrefix) return;
+  if (child.nodePrefix && !sharedPrefix) return;
   const ownNames = new Set<string>();
   const ownUuids = new Set<string>();
   traverseOwnSubtree(inner, node => {
@@ -80,10 +91,11 @@ function rebindUnscopedChildTracks(
     if (node.name) ownNames.add(node.name);
     if (typeof node.userData.localName === 'string') ownNames.add(node.userData.localName);
   });
-  const colonPrefix = `${clipPrefix}: `;
-  const slashPrefix = `${childPath}/`;
+  const nestedIds = child.capabilities.children?.map(sub => sub.id) ?? [];
   for (const clip of animations) {
-    if (!clip.name.startsWith(colonPrefix) && !clip.name.startsWith(slashPrefix)) continue;
+    const rest = stripChildClipPath(clip.name, childPath);
+    if (!rest) continue;
+    if (nestedIds.some(subId => rest.startsWith(`${subId}: `) || rest.startsWith(`${subId}/`))) continue;
     for (const track of clip.tracks) {
       const split = splitTrackTargetAndProperty(track.name, ownNames);
       if (!split) continue;
@@ -95,7 +107,10 @@ function rebindUnscopedChildTracks(
       if (ownUuids.has(targetPart)) continue;
       const tokens = targetPart.split(/[/:]/);
       const leaf = tokens[tokens.length - 1] ?? targetPart;
-      const resolved = findOwnNodeByName(inner, leaf) ?? findOwnNodeByName(inner, targetPart);
+      const unprefixed = child.nodePrefix && leaf.startsWith(child.nodePrefix) ? leaf.slice(child.nodePrefix.length) : leaf;
+      const resolved = findOwnNodeByName(inner, unprefixed, child.nodePrefix)
+        ?? findOwnNodeByName(inner, leaf, child.nodePrefix)
+        ?? findOwnNodeByName(inner, targetPart, child.nodePrefix);
       if (resolved) track.name = `${resolved.uuid}${propPart}`;
     }
   }
@@ -194,11 +209,16 @@ export function cloneForExport(
     }
   };
   if (capabilities.children?.length) {
+    const prefixCounts = new Map<string, number>();
+    walkChildren(capabilities.children, root, '', child => {
+      if (child.nodePrefix) prefixCounts.set(child.nodePrefix, (prefixCounts.get(child.nodePrefix) ?? 0) + 1);
+    });
     walkChildren(capabilities.children, root, '', (child, inner, childPath) => {
       for (const part of child.capabilities.detachableParts) {
         ensureVisible(findOwnNodeByName(inner, part.name, child.nodePrefix));
       }
-      rebindUnscopedChildTracks(child, inner, childPath.split('/').join(': '), childPath, root.animations);
+      const shared = Boolean(child.nodePrefix && (prefixCounts.get(child.nodePrefix) ?? 0) > 1);
+      rebindUnscopedChildTracks(child, inner, childPath, root.animations, shared);
     });
   }
 

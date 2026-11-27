@@ -1,7 +1,13 @@
 import * as T from 'three';
 import { parseRecipe, type Recipe } from '../data/recipe';
 import { measureRelativeTransform, pickUniquePrefix, reseatCompositeSlot, scopeChildSubtree } from './compose';
-import { findLegacyPhysicsOverride } from './compose-scope';
+import {
+  captureOwnNodeTransforms,
+  captureRestNodeTransforms,
+  findLegacyPhysicsOverride,
+  restoreOwnNodeTransforms,
+  type NodeTransformSnapshot,
+} from './compose-scope';
 import type { CompositeChildSpec, CompositeRestTransform } from './compose-schema';
 import {
   collectClipsForChild,
@@ -65,6 +71,7 @@ interface ChildRuntime {
   spec: CompositeChildSpec;
   slot: T.Object3D;
   inner: T.Object3D;
+  restNodes: NodeTransformSnapshot;
   controller: AssetController;
   subComposite?: CompositeAssetController | undefined;
   clips: T.AnimationClip[];
@@ -126,17 +133,14 @@ function createCompositeControllerInternal(
       reseatCompositeSlot(rt.slot, rt.inner, rt.spec.mount, undefined, undefined, includeNested, depSlots);
       return;
     }
-    const hostPose = hostRt.controller.getState().pose;
-    const entries = hostPose ? Object.entries(hostPose) : [];
-    const prevStaging = staging;
-    if (entries.length) staging = true;
+    const liveHostNodes = captureOwnNodeTransforms(hostRt.inner);
     try {
-      if (entries.length) hostRt.controller.resetParts();
+      restoreOwnNodeTransforms(hostRt.restNodes);
       reseatCompositeSlot(rt.slot, rt.inner, rt.spec.mount, hostRt.spec.capabilities, hostRt.inner, includeNested, depSlots);
       rt.spec.mount.slotRestPose = measureRelativeTransform(hostRt.inner, rt.slot);
     } finally {
-      for (const [p, v] of entries) hostRt.controller.setPart(p, v);
-      staging = prevStaging;
+      restoreOwnNodeTransforms(liveHostNodes);
+      hostRt.inner.updateMatrixWorld(true);
     }
   }
 
@@ -163,6 +167,7 @@ function createCompositeControllerInternal(
     const inner = slotObj.children[0] ?? slotObj;
     const childClips = collectClipsForChild(currentAnimPool, spec.id, inner);
     const controller = createAssetController(inner, spec.capabilities, spec.nodePrefix, { skipRootWrite: true, onChange: onChildChange });
+    const restNodes = captureRestNodeTransforms(inner, controller);
     const subComposite = spec.capabilities.children?.length
       ? createCompositeControllerInternal(inner, spec.capabilities, childClips, {
         skipRootWrite: true, onChange: onChildChange, onRebuild: () => { handleNestedChildRebuild(spec.id); },
@@ -170,7 +175,7 @@ function createCompositeControllerInternal(
       })
       : undefined;
     runtimes.set(spec.id, {
-      spec, slot: slotObj, inner, controller, ...(subComposite ? { subComposite } : {}),
+      spec, slot: slotObj, inner, restNodes, controller, ...(subComposite ? { subComposite } : {}),
       clips: childClips, mixer: new T.AnimationMixer(inner), actionsByClip: new Map(),
     });
   }
@@ -382,6 +387,7 @@ function createCompositeControllerInternal(
 
       rt.slot.add(rebuilt);
       rt.inner = rebuilt;
+      rt.restNodes = captureOwnNodeTransforms(rebuilt);
       const hostRt = rt.spec.mount.parent ? runtimes.get(rt.spec.mount.parent) : undefined;
       reseatAndRecordRest(rt, hostRt, Boolean(freshCaps.children?.length));
       if (nextPrefix) rt.spec.nodePrefix = nextPrefix;
@@ -477,18 +483,13 @@ function createCompositeControllerInternal(
       if (!internalOptions?.skipRootWrite) unregisterLiveController(root, api);
     },
   };
-
   syncManifest();
   initializing = false;
   if (!internalOptions?.skipRootWrite) registerLiveController(root, api);
   return api;
 }
 
-/**
- * Create a scoped multi-asset runtime controller for any composite asset (live-composed OR re-imported from GLB).
- * Pass `gltf.animations` as the optional third argument when loading from `GLTFLoader` so child clips stay playable
- * without mutating `gltf.scene.animations`.
- */
+/** Create a scoped multi-asset runtime controller for any live or GLB-reloaded composite asset. */
 export function createCompositeController(
   root: T.Object3D,
   initialCapabilities?: AssetCapabilities,
