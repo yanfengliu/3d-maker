@@ -36,7 +36,7 @@ export const layout = `
   <section id="editorPanel" aria-label="Object Studio">
     <header class="workspace-heading editor-heading">
       <div class="model-heading"><h2 id="sceneName">Relay Drone</h2><div class="asset-spec"><span id="assetCode"></span><a id="assetSource" target="_blank" rel="noopener noreferrer" hidden>View on PolyFork ↗</a></div></div>
-      <button id="save" class="btn save-model">${icon('plus',16)} Save to inventory</button>
+      <div class="model-actions"><button id="remix" class="btn" title="Start an editable copy">${icon('copy',15)} Remix</button><button id="save" class="btn save-model">${icon('plus',16)} Save to inventory</button></div>
     </header>
     <div class="editor-body">
       <section class="scenePanel" id="scenePanel" aria-label="3D viewport">

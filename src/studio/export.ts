@@ -1,10 +1,11 @@
-import { type Material, Mesh, type Group } from 'three';
+import { type BufferGeometry, type Material, Mesh, type Group } from 'three';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
-/** Snapshot an imported rig at rest. Geometry and textures can be shared read-only. */
+/** Capture the rig at rest, including material and vertex colors at export time. */
 export function cloneForExport(source: Group) {
   const root = clone(source);
   const materials = new Map<Material, Material>();
+  const paintedGeometry = new Map<BufferGeometry, BufferGeometry>();
   function copyMaterial(material: Material) {
     let copy = materials.get(material);
     if (!copy) {
@@ -20,6 +21,15 @@ export function cloneForExport(source: Group) {
     if (copy instanceof Mesh && original instanceof Mesh) {
       const material = original.material as Material | Material[];
       copy.material = Array.isArray(material) ? material.map(copyMaterial) : copyMaterial(material);
+      const geometry = original.geometry as BufferGeometry;
+      if (geometry.hasAttribute('color')) {
+        let snapshot = paintedGeometry.get(geometry);
+        if (!snapshot) {
+          snapshot = geometry.clone();
+          paintedGeometry.set(geometry, snapshot);
+        }
+        copy.geometry = snapshot;
+      }
     }
     original.children.forEach((node, index) => {
       const child = copy.children[index];
@@ -32,6 +42,7 @@ export function cloneForExport(source: Group) {
     root,
     dispose: () => {
       for (const material of materials.values()) material.dispose();
+      for (const geometry of paintedGeometry.values()) geometry.dispose();
     },
   };
 }

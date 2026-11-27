@@ -8,6 +8,10 @@ Animated assets start playing when opened. Properties and Animation are both vis
 
 ## PolyFork and imports
 
+**Remix** starts a new draft from the displayed model and its current edits, including unsaved changes. It preserves camera, animation and playback. The new draft gets its own ID on first save. Later saves update the copy. The same action works through the agent API as `remix(name?)`.
+
+**Model colors** lists the imported mesh’s materials and discrete vertex-color regions. Each region can be repainted or restored independently. For continuous vertex gradients, the material and overall tint remain editable. The inventory stores selected overrides alongside the source, and GLB export bakes the colors into the mesh and materials.
+
 The inventory requests free metadata and thumbnails from PolyFork by category, search term and page. If the service is unavailable, originals and local entries remain browsable and a retry control appears. Selecting a result opens its GLB from the publisher. The importer keeps embedded materials, mesh hierarchy, skeletons and clips. Name, tint, scale, and height are editable. White restores the original paint. The exported scene carries source credit and edit details for a PolyFork import. The local dataset and download scope are recorded in [the dataset guide](../dataset.md).
 
 ## Agent and game interfaces

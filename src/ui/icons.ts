@@ -18,6 +18,7 @@ const paths = {
   arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
   diagonal: '<path d="M6 18 18 6M7 6h11v11"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M15 5V4H5a1 1 0 0 0-1 1v10h1"/>',
   sliders:
     '<path d="M4 6h6m4 0h6M4 12h10m4 0h2M4 18h2m4 0h10"/><circle cx="12" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>',
   save: '<path d="M5 3h11l4 4v14H4V3zM8 3v6h8V3M8 21v-8h8v8"/>',

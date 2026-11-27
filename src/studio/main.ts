@@ -8,6 +8,7 @@ import { catalog, parseRecipe, type Recipe } from '../data/recipe';
 import { readInventory, saveAsset } from '../data/inventory';
 import {
   applyImportEdits,
+  listPaintSlots,
   listImports,
   openLocalGlb,
   openPolyforkGlb,
@@ -22,6 +23,7 @@ import { el, notify, report } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { layout } from '../ui/layout';
 import { showProperties, showAnimation, showPlayback } from '../ui/inspector';
+import { showModelPaint } from '../ui/model-paint';
 import { setupDialogs } from '../ui/dialogs';
 import { setupShelf } from './shelf';
 import { Viewport, disposeModel, type View } from './viewport';
@@ -33,8 +35,8 @@ const stage = new Viewport(el('viewport'));
 const autoplay = params.get('shot') !== '1';
 let recipe: Recipe | null = null;
 let imported: ImportedAsset | null = null;
-function newSelection(id?:string) {
-  return {id, write:Promise.resolve()};
+function newSelection(id?:string, remixDraft = false) {
+  return {id, remixDraft, write:Promise.resolve()};
 }
 let selection = newSelection();
 let grid = true,
@@ -97,13 +99,19 @@ function namePlaybackControl() {
   const clip = stage.model?.animations[stage.clipIndex];
   if (clip) el('play').title = 'Play or pause ' + clip.name + ' (Space)';
 }
+function properties() {
+  if (recipe) showProperties(recipe, edit);
+  else if (imported) {
+    showProperties({ ...imported.edits, primary: imported.edits.tint }, edit);
+    showModelPaint(listPaintSlots(imported), imported.edits.paint, paint => { edit({ paint }); });
+  }
+}
 function controls() {
   const clips = stage.model?.animations ?? [];
   el('play').hidden = !clips.length;
   showPlayback(stage.playing);
   namePlaybackControl();
-  if (recipe) showProperties(recipe, edit);
-  else if (imported) showProperties({ ...imported.edits, primary: imported.edits.tint }, edit);
+  properties();
   const markClip = showAnimation(clips, stage.clipIndex, stage.playing, stage.speed, stage.playAll,
     on => {
       stage.playAll = on;
@@ -153,7 +161,7 @@ function edit(patch: Partial<Recipe & ImportEdits>) {
       swap(buildModel(recipe), false);
     } else if (imported) {
       applyImportEdits(imported, { ...imported.edits, ...patch });
-      stage.place(false);
+      if (patch.scale !== undefined || patch.proportion !== undefined) stage.place(false);
     }
     toolbar();
   } catch (error) {
@@ -191,7 +199,7 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
 function save(): Promise<string> {
   const target = selection;
   const draft = recipe ? {...recipe} : null;
-  const file = imported ? {...imported, edits:{...imported.edits}} : null;
+  const file = imported ? {...imported, edits:structuredClone(imported.edits)} : null;
   // Each call owns the values it acknowledged. Queue writes on the displayed asset,
   // even if another catalog request starts or finishes before its first ID is assigned.
   const result = target.write.then(async () => {
@@ -208,6 +216,23 @@ function save(): Promise<string> {
   });
   target.write = result.then(() => undefined, () => undefined);
   return result;
+}
+function remix(newName?: string) {
+  const suffix = ' remix';
+  const copyName = newName ?? name().slice(0, 80 - suffix.length).replace(/[\uD800-\uDBFF]$/, '').trimEnd() + suffix;
+  if (recipe) {
+    recipe = parseRecipe({ ...recipe, name: copyName });
+    if (stage.model) stage.model.userData.recipe = { ...recipe };
+  } else if (imported) {
+    applyImportEdits(imported, { ...imported.edits, name: copyName });
+  } else throw new Error('Choose a model to remix.');
+  openSequence++;
+  selection = newSelection(undefined, true);
+  const input = el<HTMLInputElement>('assetName');
+  input.defaultValue = name();
+  input.value = name();
+  toolbar();
+  shelf.markSelection();
 }
 async function exportGLB(): Promise<ArrayBuffer> {
   const source = imported?.group;
@@ -244,6 +269,7 @@ async function downloadGlb() {
 const shelf = setupShelf({
   activeKey: () => {
     if (selection.id) return 'saved:' + selection.id;
+    if (selection.remixDraft) return null;
     if (recipe) return 'original:' + recipe.template;
     if (imported?.source.kind === 'polyfork') return 'polyfork:' + imported.source.assetId;
     return null;
@@ -277,6 +303,16 @@ function applyRecipe(input: unknown) {
 }
 const openRemote = (id: string, title: string, signal?: AbortSignal) =>
   openImport(() => openPolyforkGlb(id, title, signal), undefined, signal);
+const getImportEdits = () => imported ? structuredClone(imported.edits) : null;
+const paintSlots = () => imported ? listPaintSlots(imported) : [];
+function setImportEdits(edits: ImportEdits) {
+  if (!imported) throw new Error('Open an imported GLB first.');
+  const previous = imported.edits;
+  applyImportEdits(imported, edits);
+  if (previous.scale !== edits.scale || previous.proportion !== edits.proportion) stage.place(false);
+  toolbar();
+  properties();
+}
 const dialogs = setupDialogs({
   recipe: () => (recipe ? { ...recipe } : null),
   apply: applyRecipe,
@@ -286,6 +322,13 @@ const dialogs = setupDialogs({
 el('import').onclick = dialogs.imports;
 el('assistant').onclick = dialogs.assistant;
 el('export').onclick = dialogs.exports;
+el('remix').onclick = () => {
+  remix();
+  const input = el<HTMLInputElement>('assetName');
+  input.focus();
+  input.select();
+  notify('Remix ready. Save it to your inventory when you’re done.');
+};
 el('save').onclick = () => {
   const btn = el<HTMLButtonElement>('save');
   btn.disabled = true;
@@ -353,18 +396,14 @@ const api = {
   listTemplates: () => structuredClone(catalog),
   getRecipe: () => (recipe ? { ...recipe } : null),
   applyRecipe,
+  remix,
   save,
   listInventory: async () => [...readInventory(), ...(await listImports())],
   exportGLB,
   openPolyfork: openRemote,
-  getImportEdits: () => (imported ? { ...imported.edits } : null),
-  setImportEdits: (edits: ImportEdits) => {
-    if (!imported) throw new Error('Open an imported GLB first.');
-    applyImportEdits(imported, edits);
-    stage.place(false);
-    toolbar();
-    controls();
-  },
+  listPaintSlots: paintSlots,
+  getImportEdits,
+  setImportEdits,
   listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
   playClip: (index: number) => {
     if (!availableClips()[index]) throw new Error('Unknown animation clip.');

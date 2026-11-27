@@ -10,9 +10,11 @@ Open the studio and use window.forgeStudio.
 - getRecipe() reads the active starter recipe. Returns null while viewing an imported GLB.
 - applyRecipe(recipe) validates and displays a complete starter recipe.
 - save() saves the active asset to this browser's inventory.
+- remix(name?) starts a separately named draft from the current model and edits. It keeps the active clip and camera. Call save() to add the copy to inventory, and call save() again to update that copy.
 - listInventory() reads the browser's saved inventory.
 - exportGLB() returns a Promise<ArrayBuffer> containing the active asset as a binary glTF file.
-- getImportEdits() and setImportEdits({name, tint, scale, proportion}) read and apply edits to a loaded GLB.
+- listPaintSlots() enumerates the active GLB's editable colors as {id, label, color, originalColor}. Each color is an untinted six-digit sRGB value. Starter recipes have primary and accent colors instead.
+- getImportEdits() and setImportEdits({name, tint, scale, proportion, paint?}) read and replace the loaded GLB's edits. The optional paint object maps slot IDs from listPaintSlots() to colors. Retain the other edits when patching one field. Remove a key to restore that slot.
 - listClips() returns clip names and durations. playClip(index) previews a clip. Compatible humanoids include the packaged downloadable CC0 motion library. Both original characters also retain their two studio cycles. exportGLB() includes all available clips even before listClips() is called.
 - openPolyfork(id, name) loads a free GLB directly from PolyFork and returns a Promise<void>.
 

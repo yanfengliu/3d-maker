@@ -1,6 +1,6 @@
-import { Color, Group, Mesh } from 'three';
-import type { Material } from 'three';
+import { Color, Group } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { applyPalette, buildPalette, validatePaint, type ImportPalette } from './paint';
 
 export type ImportSource = { kind: 'local'; filename: string } | { kind: 'polyfork'; assetId: string; title: string; category?: string };
 export interface ImportEdits {
@@ -8,6 +8,7 @@ export interface ImportEdits {
   tint: string;
   scale: number;
   proportion: number;
+  paint?: Record<string, string>;
 }
 
 export interface ImportedAsset {
@@ -15,7 +16,13 @@ export interface ImportedAsset {
   source: ImportSource;
   edits: ImportEdits;
   originalFile: Blob | null;
-  colors: Map<Material & { color: Color }, Color>;
+  palette: ImportPalette;
+}
+
+export function listPaintSlots(asset: ImportedAsset) {
+  return Array.from(asset.palette.slots.values(), slot => ({
+    ...slot, originalColor: slot.color, color: asset.edits.paint?.[slot.id] ?? slot.color,
+  }));
 }
 
 /** Only binaries from the official free catalogue are fetched. */
@@ -32,13 +39,13 @@ export function validateEdits(edits: ImportEdits): ImportEdits {
   if (![edits.scale, edits.proportion].every(value => Number.isFinite(value) && value >= 0.65 && value <= 1.5)) {
     throw new Error('Scale and proportion must be between 0.65 and 1.5.');
   }
-  return { name: edits.name.trim(), tint: edits.tint.toLowerCase(), scale: edits.scale, proportion: edits.proportion };
+  const paint = validatePaint(edits.paint);
+  return { name: edits.name.trim(), tint: edits.tint.toLowerCase(), scale: edits.scale, proportion: edits.proportion, ...(paint ? { paint } : {}) };
 }
 
 export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void {
   const edits = validateEdits(next);
-  const tint = new Color(edits.tint);
-  for (const [material, base] of asset.colors) material.color.copy(base).multiply(tint);
+  applyPalette(asset.palette, new Color(edits.tint), asset.edits.paint, edits.paint);
   // The transform sits outside the imported scene, including its animated root and skeleton.
   asset.group.scale.set(edits.scale, edits.scale * edits.proportion, edits.scale);
   asset.group.userData.studioName = edits.name;
@@ -49,7 +56,8 @@ export function applyImportEdits(asset: ImportedAsset, next: ImportEdits): void 
       url: `https://polyfork.dev/asset/${asset.source.assetId}`,
       license: 'CC BY 4.0',
       licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-      changes: `Imported into 3D Maker. Tint ${edits.tint}, scale ${String(edits.scale)}, height multiplier ${String(edits.proportion)}.`,
+      changes: `Imported into 3D Maker. Tint ${edits.tint}, scale ${String(edits.scale)}, height multiplier ${String(edits.proportion)}.` +
+        (edits.paint ? ' Repainted ' + String(Object.keys(edits.paint).length) + ' color slots.' : ''),
     };
   }
   asset.group.updateMatrixWorld(true);
@@ -86,25 +94,15 @@ function checkResources(bytes: ArrayBuffer): void {
 async function openBinary(bytes: ArrayBuffer, source: ImportSource, label: string, file: Blob | null): Promise<ImportedAsset> {
   checkResources(bytes);
   const gltf = await new GLTFLoader().parseAsync(bytes, '');
-  const colors: ImportedAsset['colors'] = new Map();
   if (!gltf.scene.getObjectByProperty('isMesh', true)) throw new Error('This GLB has no mesh in its default scene.');
-  gltf.scene.traverse(node => {
-    if (!(node instanceof Mesh)) return;
-    const materials: Material | Material[] = node.material as Material | Material[];
-    for (const material of Array.isArray(materials) ? materials : [materials]) {
-      if ('color' in material && material.color instanceof Color) {
-        const colored = material as Material & { color: Color };
-        if (!colors.has(colored)) colors.set(colored, colored.color.clone());
-      }
-    }
-  });
+  const palette = buildPalette(gltf.scene, gltf.parser.associations);
   const group = new Group();
   group.add(gltf.scene);
   // GLTFExporter builds a new asset header. Carry source credits and licence metadata through the wrapper.
   group.userData.sourceAsset = gltf.asset;
   group.animations = gltf.animations;
   const name = label.trim().slice(0, 80) || 'Imported asset';
-  const asset = { group, source, originalFile: file, colors, edits: { name, tint: '#ffffff', scale: 1, proportion: 1 } };
+  const asset = { group, source, originalFile: file, palette, edits: { name, tint: '#ffffff', scale: 1, proportion: 1 } };
   applyImportEdits(asset, asset.edits);
   return asset;
 }

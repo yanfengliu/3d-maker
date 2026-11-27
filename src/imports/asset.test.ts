@@ -1,14 +1,15 @@
-import { AnimationMixer, Bone, LoopOnce, MeshStandardMaterial, SkinnedMesh } from 'three';
+import { AnimationMixer, Bone, BufferGeometry, Color, LoopOnce, MeshStandardMaterial, SkinnedMesh } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyImportEdits, openLocalGlb, openPolyforkGlb, polyforkGlbUrl } from './asset';
+import { applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, polyforkGlbUrl, validateEdits } from './asset';
 
 // A skinned triangle with a one-second bone rotation. The binary fixture exercises the loader itself.
-function modelFile(extra: Record<string, unknown> = {}): File {
+function modelFile(extra: Record<string, unknown> = {}, withColors = false): File {
   const arrays = [
     new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]), new Uint8Array(12),
     new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]), new Float32Array([0, 1]),
     new Float32Array([0, 0, 0, 1, 0, 0, 1, 0]),
   ];
+  if (withColors) arrays.push(new Uint8Array([0,255,0,32, 0,0,255,64, 0,255,0,96]));
   let length = 0;
   const bufferViews = arrays.map(array => {
     const view = { buffer: 0, byteOffset: length, byteLength: array.byteLength };
@@ -18,7 +19,7 @@ function modelFile(extra: Record<string, unknown> = {}): File {
   const document = {
     asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }],
     nodes: [{ children: [1, 2] }, { name: 'Pivot' }, { name: 'Shell', mesh: 0, skin: 0 }],
-    skins: [{ joints: [1] }], meshes: [{ primitives: [{ attributes: { POSITION: 0, JOINTS_0: 1, WEIGHTS_0: 2 }, material: 0 }] }],
+    skins: [{ joints: [1] }], meshes: [{ primitives: [{ attributes: { POSITION: 0, JOINTS_0: 1, WEIGHTS_0: 2, ...(withColors ? { COLOR_0: 5 } : {}) }, material: 0 }] }],
     materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.8, 0.3, 0.4, 1] } }],
     animations: [{ name: 'Tilt', samplers: [{ input: 3, output: 4 }], channels: [{ sampler: 0, target: { node: 1, path: 'rotation' } }] }],
     accessors: [
@@ -27,6 +28,7 @@ function modelFile(extra: Record<string, unknown> = {}): File {
       { bufferView: 2, componentType: 5126, count: 3, type: 'VEC4' },
       { bufferView: 3, componentType: 5126, count: 2, type: 'SCALAR', min: [0], max: [1] },
       { bufferView: 4, componentType: 5126, count: 2, type: 'VEC4' },
+      ...(withColors ? [{ bufferView: 5, componentType: 5121, normalized: true, count: 3, type: 'VEC4' }] : []),
     ],
     buffers: [{ byteLength: length }], bufferViews, ...extra,
   };
@@ -89,6 +91,47 @@ describe('imported GLB assets', () => {
     expect(asset.group.userData.attribution).toMatchObject({ creator: 'Polyfork', license: 'CC BY 4.0', url: 'https://polyfork.dev/asset/test-pilot' });
     expect(asset.originalFile).toBeNull();
     expect(() => polyforkGlbUrl('../other')).toThrow();
+  });
+
+  it('repaints and restores individual vertex zones and materials on an animated GLB', async () => {
+    const file = modelFile({}, true);
+    const asset = await openLocalGlb(file);
+    const mesh = asset.group.getObjectByName('Shell');
+    if (!(mesh instanceof SkinnedMesh) || !(mesh.geometry instanceof BufferGeometry) ||
+        !(mesh.material instanceof MeshStandardMaterial)) throw new Error('Missing shell.');
+    const slots = listPaintSlots(asset);
+    const green = slots.find(slot => slot.color === '#00ff00'), mat = slots.find(slot => slot.label === 'Material 1');
+    if (!green || !mat) throw new Error('Expected a garment zone and a base material.');
+    expect(slots.map(slot => slot.color)).toEqual(['#00ff00', '#0000ff', '#' + mesh.material.color.getHexString()]);
+    const baseColor = mesh.material.color.clone();
+    const geometry = mesh.geometry as BufferGeometry;
+    const base = asset.edits, source = geometry.getAttribute('color'), weights = geometry.getAttribute('skinWeight');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(await file.arrayBuffer()));
+    const reopened = await openPolyforkGlb('test-pilot', 'Pilot');
+    const paint = { [green.id]: '#EEDDAA', [mat.id]: '#eebbaa' };
+    const edits = { ...base, tint: '#808080', paint };
+    for (const target of [asset, reopened]) {
+      applyImportEdits(target, edits);
+      expect(listPaintSlots(target).find(slot => slot.id === green.id)).toMatchObject({color:'#eeddaa',originalColor:'#00ff00'});
+      expect(target.edits.paint?.[green.id]).toBe('#eeddaa');
+    }
+    expect(reopened.group.userData.attribution).toMatchObject({ changes: expect.stringContaining('Repainted 2') as unknown });
+    const rgb = (i: number) => new Color().fromBufferAttribute(geometry.getAttribute('color'), i);
+    expect(rgb(0).getHexString()).toBe('eeddaa');
+    expect(rgb(2).getHexString()).toBe('eeddaa');
+    expect(rgb(1).getHexString()).toBe('0000ff');
+    expect(geometry.getAttribute('color').getW(0)).toBeCloseTo(32 / 255);
+    expect(source.getX(0)).toBe(0);
+    expect(geometry.getAttribute('skinWeight')).toBe(weights);
+    expect(mesh.skeleton.bones[0]?.name).toBe('Pivot');
+    expect(mesh.material.color.toArray()).toEqual(new Color('#eebbaa').multiply(new Color('#808080')).toArray());
+    expect(() => { applyImportEdits(asset, { ...edits, paint: {'material-923': '#ddeeff'} }); }).toThrow(/no paint slot/);
+    expect(rgb(0).getHexString()).toBe('eeddaa');
+    applyImportEdits(asset, { ...base, paint: {} });
+    expect(rgb(0).getHexString()).toBe('00ff00');
+    expect(mesh.material.color.equals(baseColor)).toBe(true);
+    expect(asset.edits).toEqual(base);
+    expect(() => validateEdits({ ...base, paint: { [green.id]: 'green' } })).toThrow(/paint/);
   });
 
   it('rejects non-binary files, assets with external resources, and empty scenes', async () => {

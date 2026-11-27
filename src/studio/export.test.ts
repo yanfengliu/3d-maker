@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AnimationClip,
   BoxGeometry,
+  Float32BufferAttribute,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -11,6 +12,21 @@ import {
 import { cloneForExport } from './export';
 
 describe('import export snapshot', () => {
+  it('captures shared vertex colors before an edit during export', () => {
+    const geometry = new BoxGeometry();
+    geometry.setAttribute('color', new Float32BufferAttribute([1, 0, 0], 3));
+    const root = new Group();
+    root.add(new Mesh(geometry), new Mesh(geometry));
+    const snapshot = cloneForExport(root);
+    const [first, second] = snapshot.root.children;
+    if (!(first instanceof Mesh) || !(second instanceof Mesh)) throw new Error('Expected two meshes.');
+    const captured = (first as Mesh).geometry;
+    geometry.getAttribute('color').setXYZ(0, 0, 1, 0);
+    expect(captured).toBe((second as Mesh).geometry);
+    expect(captured.getAttribute('color').getX(0)).toBe(1);
+    expect(captured.getAttribute('color').getY(0)).toBe(0);
+    snapshot.dispose();
+  });
   it('keeps anonymous animation targets and isolates preview material settings', () => {
     const source = new Group(),
       original = new Mesh(new BoxGeometry(), new MeshStandardMaterial());

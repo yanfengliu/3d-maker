@@ -4,6 +4,12 @@ Browse and edit 3D assets on one desktop page. The inventory combines six studio
 
 [Open the studio](https://yanfengliu.github.io/3d-maker/)
 
+## Edit and remix a model
+
+Open an asset and choose **Remix** beside its name. The editor starts a separate draft with your current changes, camera and animation. Give it a name, edit it in **Properties**, then choose **Save to inventory**. Open it again from **Saved** to continue editing the same copy.
+
+On an original, change its colors, proportions, detail or mesh quality. On a PolyFork model or a local GLB, **Model colors** lets you repaint an individual material or an authored vertex-color region, such as a coat or rotor. Use the reset arrow beside the color to restore just that region. **Overall tint** and the size controls affect the whole model. GLB export includes the edited colors, rig and available animation clips.
+
 ## Run locally
 
 Use Node 24. Run `npm ci`, then `npm run dev`. For a production build and checks, run `npm run verify` and `npm run check:studio`.
