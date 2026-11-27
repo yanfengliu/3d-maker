@@ -109,6 +109,9 @@ export function showAnimation(
 ) {
   const panel = el('animationBody');
   const canSearch = clips.length > 8;
+  const clear = el<HTMLButtonElement>('clearMotionSearch');
+  clear.hidden = true;
+  clear.onclick = null;
   if (!clips.length) {
     el('motionCount').textContent = '0 clips';
     panel.innerHTML = '<p class="empty-mini">No playable clips for this model.</p>';
@@ -142,7 +145,7 @@ export function showAnimation(
   };
   if (canSearch) {
     const search = el<HTMLInputElement>('motionSearch');
-    search.oninput = () => {
+    const filterMotions = () => {
       const query = search.value.trim().toLowerCase();
       let matches = 0;
       for (const [i, button] of buttons.entries()) {
@@ -150,8 +153,16 @@ export function showAnimation(
         if (!button.hidden) matches++;
       }
       el('noMotionMatches').hidden = matches > 0;
-      el('motionCount').textContent = query ? String(matches) + ' / ' + String(clips.length) : String(clips.length) + ' clips';
+      el('motionCount').textContent = (query ? String(matches) + ' of ' : '') + String(clips.length) + ' clips';
+      clear.hidden = !query;
       el('clipList').scrollTop = 0;
+    };
+    search.oninput = filterMotions;
+    clear.setAttribute('aria-label', 'Show all ' + String(clips.length) + ' animations');
+    clear.onclick = () => {
+      search.value = '';
+      filterMotions();
+      search.focus();
     };
   }
   const sequence = panel.querySelector<HTMLInputElement>('#playAllClips');

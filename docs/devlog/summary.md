@@ -1,5 +1,7 @@
 # Devlog
 
+- 2026-11-26 — Animation search shows how many clips match out of the model’s full list. Show all clears the search while the current clip continues playing.
+
 - 2026-11-26 — Placed Properties and Animation side by side beneath the viewport. Opening a model now shows its settings and full clip list together while its default animation plays.
 
 - 2026-11-26 — Added the 85 downloadable CC0 humanoid motions to compatible rigs in the studio, three.js SDK and GLB exporter. Added default playback, the Space shortcut, clip search and continuous playback of the full list. Moved transport into the viewport and simplified the inventory and editor headers. Corrected the Characters filter for humanoids filed as animals upstream.

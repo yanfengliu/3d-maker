@@ -1,5 +1,9 @@
 # Studio defect register
 
+## 2026-11-26 — A filtered animation list looked like the entire library
+
+Searching for Dance left one row visible. The animation header now spells out the matching and total clip counts and offers Show all while a filter is active. The studio browser check covers the unfiltered, one-match and zero-match states and verifies that clearing a search preserves the playing clip.
+
 ## 2026-11-26 — Available models were difficult to discover
 
 The landing page showed six originals. Saved assets lived in another view and the full catalog required opening an import dialog. Visitors could not browse the available models by category. The studio now opens with a searchable, categorized inventory beside the editor.

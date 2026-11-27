@@ -100,7 +100,8 @@
 .shot-only #inventoryPanel,.shot-only .editor-heading{display:none}
 .shot-only .workspace-shell,.shot-only #editorPanel,.shot-only .editor-body{padding:0;margin:0;display:block;min-height:0}
 
-#motionCount{font-size:11px;letter-spacing:0;color:#636e5d}
+.motion-summary{display:flex;align-items:center;gap:8px;font-size:11px;white-space:nowrap;color:#636e5d}
+#clearMotionSearch{padding:3px 1px;font-size:inherit;color:#43533b;text-decoration:underline;text-underline-offset:3px}
 #motionSearch{flex-shrink:0;margin-bottom:8px}
 #clipList{align-content:start;min-height:0;overflow:auto;scrollbar-width:thin;padding:2px}
 #clipList .clip{text-align:left;min-height:32px;padding:6px 8px}

@@ -50,7 +50,7 @@ export const layout = `
           <div id="propertiesBody"></div>
         </section>
         <section class="inspector-section" aria-labelledby="animationHeading">
-          <header class="inspector-heading"><h2 id="animationHeading">Animation</h2><span id="motionCount" aria-label="Clip count"></span></header>
+          <header class="inspector-heading"><h2 id="animationHeading">Animation</h2><div class="motion-summary"><span id="motionCount" role="status"></span><button type="button" id="clearMotionSearch" hidden>Show all</button></div></header>
           <div id="animationBody"></div>
         </section>
       </section>
