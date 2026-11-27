@@ -115,7 +115,7 @@ describe('PolyFork search', () => {
     expect(call?.[1]?.credentials).toBe('omit');
     expect(result.assets).toEqual([{
       id: polyforkRow.id, title: polyforkRow.title, category: 'vehicle', triangles: 1242,
-      rigged: true, remixable: true, pageUrl: polyforkRow.page, thumbnailUrl: polyforkRow.thumbnail, glbUrl: polyforkRow.download.glb,
+      rigged: true, hasSkeleton: false, remixable: true, pageUrl: polyforkRow.page, thumbnailUrl: polyforkRow.thumbnail, glbUrl: polyforkRow.download.glb,
     }]);
   });
 

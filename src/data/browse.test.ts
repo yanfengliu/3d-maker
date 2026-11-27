@@ -106,6 +106,47 @@ describe('unified asset browsing', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
+  it('joins published humanoids across API classes before counting, filtering and paging', async () => {
+    const waiter = 'taverna-waiter-base', future = 'new-publisher-humanoid', kid = 'kid-in-a-cardboard-670f7d', wolf = 'test-wolf';
+    const ordinary = Array.from({length: 102}, (_, i) => 'test-character-' + String(i));
+    const byClass: Record<string, string[]> = { character: [...ordinary, kid], animal: [waiter, future, wolf] };
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(raw => {
+      if (!(raw instanceof URL)) throw new Error('Expected a catalog URL.');
+      const query = raw.searchParams, apiClass = query.get('class') ?? 'all';
+      const page = Number(query.get('page')), size = Number(query.get('per_page'));
+      const ids = byClass[apiClass] ?? [waiter, wolf];
+      const assets = ids.slice((page - 1) * size, page * size).map(id => ({
+        id, class: apiClass === 'all' ? 'animal' : apiClass, title: id, free: true,
+        has_skeleton: id !== kid && id !== wolf, triangles: 500, download: { glb: 'https://polyfork.dev/cdn/' + id + '.glb' },
+      }));
+      return Promise.resolve(Response.json({page, per_page: size, total: ids.length, assets}));
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const filters: BrowseQuery = { ...all, source: 'polyfork', category: 'character', query: 'roster paging' };
+    const keys: string[] = [];
+    for (let page = 1; page <= 9; page++) {
+      const found = await browseAssets({...filters, page}, empty);
+      expect(found.total).toBe(105);
+      expect(found.remoteError).toBeNull();
+      for (const item of found.items) {
+        expect(item.category).toBe('character');
+        keys.push(item.key);
+      }
+    }
+    expect(keys).toEqual([...ordinary, kid, waiter, future].map(id => 'polyfork:' + id));
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    const animals = await browseAssets({...filters, category: 'animal'}, empty);
+    expect(animals.items.map(i => i.key)).toEqual(['polyfork:' + wolf]);
+    expect(animals.total).toBe(1);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    const unfiltered = await browseAssets({...filters, category: 'all'}, empty);
+    expect(unfiltered.items.map(i => [i.key, i.category])).toEqual([['polyfork:' + waiter,'character'],['polyfork:' + wolf,'animal']]);
+    expect(unfiltered.total).toBe(2);
+    const saved = savedFile('Waiter in blue', {kind:'polyfork', assetId:waiter, category:'animal', title:'Waiter'});
+    expect((await browseAssets({...all, source:'saved', category:'animal'}, {recipes:[], imports:[saved]})).total).toBe(0);
+    expect((await browseAssets({...all, source:'saved', category:'character'}, {recipes:[], imports:[saved]})).total).toBe(1);
+  });
+
   it('preserves the result page and count when a later publisher page needs a retry', async () => {
     const requests = stubCatalog(15);
     const filters: BrowseQuery = { ...all, source: 'polyfork', query: 'retry second' };

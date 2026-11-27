@@ -4,6 +4,7 @@ export interface PolyforkAsset {
   category: string;
   triangles: number | null;
   rigged: boolean;
+  hasSkeleton: boolean;
   remixable: boolean;
   thumbnailUrl: string;
   pageUrl: string;
@@ -18,7 +19,6 @@ export interface PolyforkPage {
 }
 
 const origin = 'https://polyfork.dev';
-const perPage = 12;
 let retryAfter = 0;
 
 function count(value: unknown): value is number {
@@ -34,9 +34,11 @@ function parseAsset(value: unknown): PolyforkAsset | null {
   const glbUrl = `${origin}/cdn/${id}.glb`;
   if (!row.download || typeof row.download !== 'object' || !('glb' in row.download) || row.download.glb !== glbUrl) return null;
   const thumbnailUrl = `${origin}/files/${id}/renders/hero.png`;
+  // PolyFork flags a retargetable Mixamo skeleton separately from named posable parts.
   return {
-    id, title: row.title, category: row.class, triangles: row.triangles,
-    rigged: row.has_rig === true || row.has_skeleton === true, remixable: row.remixable === true,
+    id, title: row.title, category: row.class === 'animal' && row.has_skeleton === true ? 'character' : row.class,
+    triangles: row.triangles, hasSkeleton: row.has_skeleton === true,
+    rigged: row.has_rig === true, remixable: row.remixable === true,
     thumbnailUrl: row.thumbnail === thumbnailUrl ? thumbnailUrl : '',
     pageUrl: `${origin}/asset/${id}`, glbUrl,
   };
@@ -55,7 +57,7 @@ function rateLimitMessage(): string {
 }
 
 /** Search on demand. The API and model downloads stay on PolyFork's own origin. */
-export async function searchPolyfork(query: string, signal?: AbortSignal, page = 1, category?: string): Promise<PolyforkPage> {
+export async function searchPolyfork(query: string, signal?: AbortSignal, page = 1, category?: string, perPage = 12): Promise<PolyforkPage> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Choose a positive catalog page number.');
   if (Date.now() < retryAfter) throw new Error(rateLimitMessage());
   const url = new URL('/api/assets', origin);

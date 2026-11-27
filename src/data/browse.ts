@@ -3,6 +3,12 @@ import type { SavedAsset } from './inventory';
 import type { ImportEntry } from '../imports/library';
 import { searchPolyfork, type PolyforkAsset, type PolyforkPage } from './polyfork';
 
+import legacyIds from './legacy-humanoids.json';
+
+// Saved references created before the category fix only contain the asset ID and the raw API class.
+// Keep the small set affected at release so those saves can also be browsed correctly offline.
+const legacyHumanoids = new Set(legacyIds);
+
 export const categories = [
   { id: 'prop', label: 'Props' },
   { id: 'character', label: 'Characters' },
@@ -74,7 +80,8 @@ function savedCard(entry: SavedAsset | ImportEntry): BrowseItem {
   const { source } = entry;
   return {
     key: 'saved:' + entry.id, source: 'saved', entry, title: entry.name,
-    category: categoryOf('category' in source ? source.category : undefined),
+    category: source.kind === 'polyfork' && legacyHumanoids.has(source.assetId)
+      ? 'character' : categoryOf('category' in source ? source.category : undefined),
     thumbnailUrl: source.kind === 'polyfork' && /^[a-z0-9][a-z0-9_-]{0,159}$/.test(source.assetId)
       ? 'https://polyfork.dev/files/' + source.assetId + '/renders/hero.png' : '',
   };
@@ -111,13 +118,14 @@ const pageCache = new Map<string, { value: PolyforkPage; expires: number }>();
 const cacheLimit = 80;
 const cacheLifetime = 120_000;
 
-async function remotePage(filters: BrowseQuery, page: number, signal: AbortSignal): Promise<PolyforkPage> {
+async function remotePage(filters: BrowseQuery, page: number, signal: AbortSignal,
+  category: string = filters.category, size = pageSize): Promise<PolyforkPage> {
   signal.throwIfAborted();
-  const key = JSON.stringify([filters.category, filters.query.trim().toLowerCase(), page]);
+  const key = JSON.stringify([category, filters.query.trim().toLowerCase(), page, size]);
   const cached = pageCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
 
-  const value = await searchPolyfork(filters.query, signal, page, filters.category === 'all' ? undefined : filters.category);
+  const value = await searchPolyfork(filters.query, signal, page, category === 'all' ? undefined : category, size);
   signal.throwIfAborted();
   if (value.page !== page) throw new Error('PolyFork returned an unexpected catalog page.');
   if (pageCache.size >= cacheLimit) {
@@ -126,6 +134,18 @@ async function remotePage(filters: BrowseQuery, page: number, signal: AbortSigna
   }
   pageCache.set(key, { value, expires: Date.now() + cacheLifetime });
   return value;
+}
+
+// A merged class needs its corrected count before user-visible pagination. Read the affected
+// classes in API-sized batches and reuse those pages for subsequent searches with the same terms.
+async function classAssets(filters: BrowseQuery, category: string, signal: AbortSignal): Promise<PolyforkAsset[]> {
+  const first = await remotePage(filters, 1, signal, category, 100);
+  const assets = [...first.assets];
+  for (let page = 2; page <= Math.ceil(first.total / first.perPage); page++) {
+    const next = await remotePage(filters, page, signal, category, 100);
+    assets.push(...next.assets);
+  }
+  return assets;
 }
 
 function localPage(items: BrowseItem[], requested: number, remoteError: string | null = null): BrowsePage {
@@ -156,6 +176,17 @@ export async function browseAssets(filters: BrowseQuery, locals: BrowseLocals, s
   const request = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let knownPage: BrowsePage | undefined;
   try {
+    if (filters.category === 'character' || filters.category === 'animal') {
+      const classes = filters.category === 'character' ? ['character', 'animal'] : ['animal'];
+      const groups = await Promise.all(classes.map(category => classAssets(filters, category, request)));
+      const matches = new Map<string, BrowseItem>();
+      for (const group of groups) {
+        for (const asset of group) {
+          if (asset.category === filters.category && !matches.has(asset.id)) matches.set(asset.id, remoteCard(asset));
+        }
+      }
+      return localPage([...local, ...matches.values()], filters.page);
+    }
     const first = await remotePage(filters, 1, request);
     const total = local.length + first.total;
     const page = pageWithin(filters.page, total);
