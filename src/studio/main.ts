@@ -102,8 +102,9 @@ function namePlaybackControl() {
 function properties() {
   if (recipe) showProperties(recipe, edit);
   else if (imported) {
+    const selectedSlot = document.querySelector<HTMLSelectElement>('#paintSlot')?.value;
     showProperties({ ...imported.edits, primary: imported.edits.tint }, edit);
-    showModelPaint(listPaintSlots(imported), imported.edits.paint, paint => { edit({ paint }); });
+    showModelPaint(listPaintSlots(imported), imported.edits.paint, paint => { edit({ paint }); }, selectedSlot);
   }
 }
 function controls() {
@@ -196,6 +197,9 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
   toolbar();
   controls();
   shelf.markSelection();
+  if (asset.droppedPaintSlots?.length) {
+    notify(`Skipped ${String(asset.droppedPaintSlots.length)} outdated saved color override(s) that no longer match this model.`);
+  }
 }
 function save(): Promise<string> {
   const target = selection;

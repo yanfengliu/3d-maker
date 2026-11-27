@@ -1,4 +1,4 @@
-import { applyImportEdits, openPolyforkGlb, openStoredFile, validateEdits } from './asset';
+import { applyImportEdits, openPolyforkGlb, openStoredFile, reconcileSavedEdits, validateEdits } from './asset';
 import type { ImportEdits, ImportedAsset, ImportSource } from './asset';
 import { publishImportChange } from './changes';
 
@@ -98,7 +98,9 @@ export async function openSavedImport(id: string, signal?: AbortSignal): Promise
     if (!file) throw new Error('The saved GLB file is missing.');
     asset = await openStoredFile(file, source.filename);
   }
-  applyImportEdits(asset, entry.edits);
+  const { edits, dropped } = reconcileSavedEdits(asset, entry.edits);
+  applyImportEdits(asset, edits);
+  if (dropped.length) asset.droppedPaintSlots = dropped;
   return asset;
 }
 

@@ -243,7 +243,7 @@ export class Viewport {
     if (!this.model) return;
     const sampled = clip ? this.clipBox(clip) : this.restBounds;
     const shift = clip ? clipFocusShift(this.restBounds, sampled, this.radius) : new T.Vector3();
-    const active = clip ? sampled : this.restBounds;
+    const active = clip && shift.lengthSq() > 0 ? sampled : this.restBounds;
     this.framedClip = clip;
     this.bounds.copy(active);
     this.stageProps(active);

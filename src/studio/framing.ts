@@ -2,39 +2,33 @@ import * as T from 'three';
 
 const sampleCount = 7;
 const maxSkinSamples = 400;
+const maxMeshSamples = 800;
 
 export function fastBounds(root: T.Object3D): T.Box3 {
   root.updateMatrixWorld(true);
   const box = new T.Box3();
   const vertex = new T.Vector3();
-  const meshBox = new T.Box3();
   root.traverse((node) => {
     if (!(node instanceof T.Mesh)) return;
     const geometry = node.geometry as T.BufferGeometry;
-    if (node instanceof T.SkinnedMesh) {
-      node.skeleton.update();
-      const position = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
-      if (!position || position.count === 0) return;
-      const step = Math.max(1, Math.floor(position.count / maxSkinSamples));
-      for (let i = 0; i < position.count; i += step) {
-        vertex.fromBufferAttribute(position, i);
-        node.applyBoneTransform(i, vertex);
-        vertex.applyMatrix4(node.matrixWorld);
-        box.expandByPoint(vertex);
-      }
-      const last = position.count - 1;
-      if (last % step !== 0) {
-        vertex.fromBufferAttribute(position, last);
-        node.applyBoneTransform(last, vertex);
-        vertex.applyMatrix4(node.matrixWorld);
-        box.expandByPoint(vertex);
-      }
-      return;
+    const position = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
+    if (!position || position.count === 0) return;
+    const skinned = node instanceof T.SkinnedMesh;
+    if (skinned) node.skeleton.update();
+    const limit = skinned ? maxSkinSamples : maxMeshSamples;
+    const step = Math.max(1, Math.floor(position.count / limit));
+    for (let i = 0; i < position.count; i += step) {
+      vertex.fromBufferAttribute(position, i);
+      if (skinned) node.applyBoneTransform(i, vertex);
+      vertex.applyMatrix4(node.matrixWorld);
+      box.expandByPoint(vertex);
     }
-    if (!geometry.boundingBox) geometry.computeBoundingBox();
-    if (geometry.boundingBox) {
-      meshBox.copy(geometry.boundingBox).applyMatrix4(node.matrixWorld);
-      box.union(meshBox);
+    const last = position.count - 1;
+    if (last % step !== 0) {
+      vertex.fromBufferAttribute(position, last);
+      if (skinned) node.applyBoneTransform(last, vertex);
+      vertex.applyMatrix4(node.matrixWorld);
+      box.expandByPoint(vertex);
     }
   });
   return box;

@@ -14,6 +14,9 @@ it('applies named and ID-based paint with global settings while retaining other 
   } });
   const recolored = await editImportWithPrompt(result.edits, slots, 'set vertex-0-aabbcc to #010203 and restore jacket');
   expect(recolored.edits.paint).toEqual({ 'vertex-0-aabbcc': '#010203' });
+  const curly = await editImportWithPrompt(recolored.edits, slots, 'Paint \u201cHat and ribbon\u201d teal and reset tint');
+  expect(curly.edits.paint).toEqual({ 'vertex-0-aabbcc': '#379a93' });
+  expect(curly.edits.tint).toBe('#ffffff');
   expect(edits.paint).toEqual({ 'material-1': '#778899' });
 });
 
@@ -29,13 +32,16 @@ it('rejects unsupported or ambiguous instructions as a whole', async () => {
 it('constrains on-device patches to model paint slots and validates their real output', async () => {
   const destroy = vi.fn();
   const prompt = vi.fn().mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"vertex-0-aabbcc":"#abcdef"}}}')
+    .mockResolvedValueOnce('{"supported":true,"changes":{"reset":["material-1"]}}')
     .mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"material-9":"#001122"}}}')
     .mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"material-1":900}}}');
   vi.stubGlobal('LanguageModel', { availability: () => Promise.resolve('available'), create: () => Promise.resolve({ prompt, destroy }) });
   const result = await editImportWithPrompt(edits, slots, 'Give the hat a pale blue ribbon');
   expect(result).toEqual({engine: 'On-device AI', edits: {...edits, paint: {...edits.paint, 'vertex-0-aabbcc': '#abcdef'}}});
   expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Hat and ribbon'), expect.objectContaining({ responseConstraint: expect.any(Object) as unknown }));
+  const restored = await editImportWithPrompt(result.edits, slots, 'Restore jacket');
+  expect(restored.edits.paint).toEqual({ 'vertex-0-aabbcc': '#abcdef' });
   await expect(editImportWithPrompt(edits, slots, 'Invent a slot')).rejects.toThrow(/Unknown/);
   await expect(editImportWithPrompt(edits, slots, 'Return nonsense')).rejects.toThrow(/paint/i);
-  expect(destroy).toHaveBeenCalledTimes(3);
+  expect(destroy).toHaveBeenCalledTimes(4);
 });

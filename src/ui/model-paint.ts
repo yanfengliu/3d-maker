@@ -6,6 +6,7 @@ export function showModelPaint(
   slots: ReturnType<typeof listPaintSlots>,
   initial: Record<string, string> | undefined,
   apply: (paint: Record<string, string>) => void,
+  selectedId?: string,
 ) {
   if (!slots.length) return;
   const panel = el('modelPaint');
@@ -15,6 +16,7 @@ export function showModelPaint(
     <input id="slotColor" type="color" aria-label="Selected model color"/>
     <button type="button" class="square" id="resetSlot" aria-label="Restore selected color" title="Restore selected color">${icon('reset', 14)}</button></div>`;
   const selector = el<HTMLSelectElement>('paintSlot');
+  if (selectedId && slots.some(slot => slot.id === selectedId)) selector.value = selectedId;
   const color = el<HTMLInputElement>('slotColor');
   const reset = el<HTMLButtonElement>('resetSlot');
   const paint = new Map(Object.entries(initial ?? {}));

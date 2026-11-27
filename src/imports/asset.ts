@@ -17,6 +17,19 @@ export interface ImportedAsset {
   edits: ImportEdits;
   originalFile: Blob | null;
   palette: ImportPalette;
+  droppedPaintSlots?: string[];
+}
+
+export function reconcileSavedEdits(asset: ImportedAsset, saved: ImportEdits): { edits: ImportEdits; dropped: string[] } {
+  if (!saved.paint) return { edits: saved, dropped: [] };
+  const kept: Record<string, string> = {};
+  const dropped: string[] = [];
+  for (const [id, hex] of Object.entries(saved.paint)) {
+    if (asset.palette.slots.has(id)) kept[id] = hex;
+    else dropped.push(id);
+  }
+  const base: ImportEdits = { name: saved.name, tint: saved.tint, scale: saved.scale, proportion: saved.proportion };
+  return { edits: Object.keys(kept).length ? { ...base, paint: kept } : base, dropped };
 }
 
 export function listPaintSlots(asset: ImportedAsset) {

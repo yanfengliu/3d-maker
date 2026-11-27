@@ -126,10 +126,13 @@ export function setupDialogs(actions: DialogActions) {
     button('recipeTab').onclick = () => { assistant(true); };
     if (showRecipe) {
       const text = el<HTMLTextAreaElement>('recipeText');
+      const snapshot = JSON.stringify(recipe ?? imported);
       text.value = JSON.stringify(recipe ?? imported, null, 2);
       button('applyRecipe').onclick = () => {
         try {
-          if (actions.selectionKey() !== selection) throw new Error('The active model changed. Reopen AI tools for the new model.');
+          if (actions.selectionKey() !== selection || JSON.stringify(actions.recipe() ?? actions.importEdits()) !== snapshot) {
+            throw new Error('The active model changed. Reopen AI tools for the new model.');
+          }
           const value: unknown = JSON.parse(text.value);
           // A complete starter recipe can also be pasted while an import is open.
           if (imported && !(value && typeof value === 'object' && 'template' in value)) {

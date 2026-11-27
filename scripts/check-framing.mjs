@@ -191,6 +191,22 @@ export async function verifyClipFraming(browser, origin, site, out) {
     const treadMinY = exportedHipsMinY(glb, 'Treading water');
     assert.ok(swimMinY < -0.04, 'Exported Swimming Hips Y lost its underwater depth: ' + swimMinY);
     assert.ok(treadMinY < -0.35, 'Exported Treading water Hips Y lost its underwater depth: ' + treadMinY);
+
+    // Rigid models with spinning parts (Field Rover Traverse) must stay grounded at the same floor height as rest pose.
+    await page.goto(origin + site + '?asset=field-rover&shot=1');
+    await page.waitForFunction(() => window.__shotReady);
+    await waitFrames(page, 4);
+    const roverRest = await subjectBounds(page);
+    await page.goto(origin + site + '?asset=field-rover');
+    await page.waitForFunction(() => window.__shotReady);
+    await pauseAt(page, 0.2);
+    const roverTraverse = await subjectBounds(page);
+    await page.screenshot({ path: join(out, 'field-rover-traverse.png') });
+    assert.ok(
+      roverTraverse.count > 200 && Math.abs(roverTraverse.maxY - roverRest.maxY) < 0.025,
+      'Field Rover drifted vertically during Traverse: ' +
+        JSON.stringify({ restMaxY: roverRest.maxY, traverseMaxY: roverTraverse.maxY }),
+    );
     assert.deepEqual(errors, []);
   } finally {
     await context.close();

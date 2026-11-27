@@ -1,6 +1,6 @@
 import { AnimationMixer, Bone, BufferGeometry, Color, LoopOnce, MeshStandardMaterial, SkinnedMesh } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, polyforkGlbUrl, validateEdits } from './asset';
+import { applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, polyforkGlbUrl, reconcileSavedEdits, validateEdits } from './asset';
 
 // A skinned triangle with a one-second bone rotation. The binary fixture exercises the loader itself.
 function modelFile(extra: Record<string, unknown> = {}, withColors = false): File {
@@ -132,6 +132,11 @@ describe('imported GLB assets', () => {
     expect(mesh.material.color.equals(baseColor)).toBe(true);
     expect(asset.edits).toEqual(base);
     expect(() => validateEdits({ ...base, paint: { [green.id]: 'green' } })).toThrow(/paint/);
+    const reconciled = reconcileSavedEdits(asset, { ...edits, paint: { [green.id]: '#123456', 'vertex-99-abcdef': '#ff0000' } });
+    expect(reconciled.dropped).toEqual(['vertex-99-abcdef']);
+    expect(reconciled.edits.paint).toEqual({ [green.id]: '#123456' });
+    applyImportEdits(asset, reconciled.edits);
+    expect(asset.edits.paint).toEqual({ [green.id]: '#123456' });
   });
 
   it('rejects non-binary files, assets with external resources, and empty scenes', async () => {

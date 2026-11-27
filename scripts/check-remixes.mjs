@@ -236,6 +236,34 @@ async function paintedRemix(page, source, name, slot) {
   return (await download(page)).doc;
 }
 
+function exportedVertexColors(bytes, doc) {
+  const jsonLength = bytes.readUInt32LE(12);
+  const binOffset = 20 + jsonLength + 8;
+  const colors = [];
+  for (const mesh of doc.meshes ?? []) {
+    for (const primitive of mesh.primitives ?? []) {
+      const accessorIndex = primitive.attributes?.COLOR_0;
+      if (accessorIndex === undefined) continue;
+      const accessor = doc.accessors[accessorIndex];
+      const view = doc.bufferViews[accessor.bufferView];
+      const comps = accessor.type === 'VEC4' ? 4 : 3;
+      const stride = view.byteStride ?? comps * (accessor.componentType === 5126 ? 4 : accessor.componentType === 5123 ? 2 : 1);
+      const start = binOffset + (view.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
+      for (let i = 0; i < accessor.count; i++) {
+        const at = start + i * stride;
+        const read = (c) =>
+          accessor.componentType === 5126
+            ? bytes.readFloatLE(at + c * 4)
+            : accessor.componentType === 5123
+              ? bytes.readUInt16LE(at + c * 2) / 65535
+              : bytes.readUInt8(at + c) / 255;
+        colors.push([read(0), read(1), read(2)]);
+      }
+    }
+  }
+  return colors;
+}
+
 async function verifyStaticRepaintAndAiDialog(page, glbName, glbBuffer, outDir, shotPrefix) {
   await page.click('#import');
   await page.locator('input[type=file]').setInputFiles({
@@ -324,6 +352,18 @@ async function verifyStaticRepaintAndAiDialog(page, glbName, glbBuffer, outDir, 
   assert.equal(reopenedRemix.proportion, 1.12);
   await page.selectOption('#paintSlot', rotor.id);
   assert.equal(await page.locator('#slotColor').inputValue(), '#ee2244');
+  const exported = await download(page);
+  const vertexColors = exportedVertexColors(exported.bytes, exported.doc);
+  assert.ok(
+    vertexColors.some(([r, g, b]) => r > 0.7 && g < 0.06 && b < 0.1),
+    'Exported GLB did not bake the repainted #ee2244 vertex region into COLOR_0',
+  );
+  if (secondary.id.startsWith('vertex-')) {
+    assert.ok(
+      vertexColors.some(([r, g, b]) => b > 0.75 && r < 0.06),
+      'Exported GLB did not bake the JSON-edited #1166ff vertex region into COLOR_0',
+    );
+  }
 
   await openCard(page, baseName);
   const reopenedSource = await page.evaluate(() => window.forgeStudio.getImportEdits());

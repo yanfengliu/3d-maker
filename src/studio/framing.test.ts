@@ -84,4 +84,17 @@ describe('clip preview framing', () => {
     expect(scaledSwimFrame.width).toBeCloseTo(normalSwimFrame.width, 1);
     expect(scaledSwimFrame.height).toBeCloseTo(normalSwimFrame.height, 1);
   });
+
+  it('keeps rigid models with spinning wheels grounded without rotating-AABB floor drop', () => {
+    const row = catalog.find((entry) => entry.id === 'field-rover');
+    if (!row) throw new Error('Missing Field Rover template.');
+    const rover = createAsset(row.recipe);
+    const rest = new T.Box3().setFromObject(rover, true);
+    const radius = rest.getSize(new T.Vector3()).length() / 2;
+    const traverse = rover.animations.find((clip) => clip.name === 'Traverse');
+    if (!traverse) throw new Error('Missing Traverse clip.');
+    const bounds = sampleClipBounds(rover, traverse, rest);
+    expect(Math.abs(bounds.min.y - rest.min.y)).toBeLessThan(0.015);
+    expect(clipFocusShift(rest, bounds, radius).length()).toBe(0);
+  });
 });

@@ -17,7 +17,7 @@ export function commandColor(value: string): string | undefined {
 
 export function commandName(command: string) {
   const rename = /^(?:rename|name|call)(?:\s+(?:it|this|the asset))?(?:\s+to)?\s+(.+)$/i.exec(command);
-  return rename?.[1]?.replace(/^(["'])(.*)\1$/, '$2');
+  return rename?.[1]?.replace(/^(?:(["'])(.*)\1|\u201c(.*)\u201d|\u2018(.*)\u2019)$/, '$2$3$4');
 }
 
 function editClause(recipe: Recipe, clause: string): void {
@@ -66,10 +66,10 @@ function editClause(recipe: Recipe, clause: string): void {
 export function commandClauses(text: string): string[] {
   const clauses: string[] = [];
   // Keep separators within quoted asset names, including “Search and Rescue”.
-  const separators = /"[^"]*"|'[^']*'|[,;]|\s+(?:and then|and|then|with)\s+/gi;
+  const separators = /"[^"]*"|'[^']*'|\u201c[^\u201d]*\u201d|\u2018[^\u2019]*\u2019|[,;]|\s+(?:and then|and|then|with)\s+/gi;
   let start = 0;
   for (const match of text.matchAll(separators)) {
-    if (/^["']/.test(match[0])) continue;
+    if (/^["'\u201c\u2018]/.test(match[0])) continue;
     const clause = text.slice(start, match.index).trim();
     if (clause) clauses.push(clause);
     start = match.index + match[0].length;

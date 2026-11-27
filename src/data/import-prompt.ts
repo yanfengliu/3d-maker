@@ -5,7 +5,7 @@ import { commandClauses, commandColor, commandName } from './commands';
 export type SlotName = { id: string; label: string };
 const controls = { name: editFields.name, scale: editFields.scale, proportion: editFields.proportion, tint: editFields.primary };
 const keys = [...Object.keys(controls), 'paint'];
-const instructions = 'Translate the request to a patch of the supplied imported model. The paint object maps exact slot IDs to six-digit sRGB hex colors. Return only the requested fields and paint slots. tint multiplies the whole model. scale controls size, proportion controls height. Name changes require a rename request. If any part of the request exceeds these controls, set supported to false.';
+const instructions = 'Translate the request to a patch of the supplied imported model. The paint object maps exact slot IDs to six-digit sRGB hex colors. Put exact slot IDs to restore to their original color in reset. Return only the requested fields, paint slots, and reset IDs. tint multiplies the whole model (#ffffff resets tint). scale controls size, proportion controls height. Name changes require a rename request. If any part of the request exceeds these controls, set supported to false.';
 
 export function parseImportedSettings(value: unknown, slots: SlotName[]): ImportEdits {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !keys.includes(key)) ||
@@ -22,7 +22,7 @@ export function parseImportedSettings(value: unknown, slots: SlotName[]): Import
 }
 
 function findSlot(text: string, slots: SlotName[]) {
-  const target = text.trim().replace(/^(?:the )/, '').replace(/^(["'])(.*)\1$/, '$2');
+  const target = text.trim().replace(/^(?:the )/, '').replace(/^(?:(["'])(.*)\1|\u201c(.*)\u201d|\u2018(.*)\u2019)$/, '$2$3$4');
   const byId = slots.find(slot => slot.id === target);
   if (byId) return byId.id;
   const matching = slots.filter(slot => slot.label.toLowerCase() === target);
@@ -47,6 +47,11 @@ function importClause(next: ImportEdits, slots: SlotName[], clause: string) {
   }
   const reset = /^(?:restore|reset)\s+(.+)$/.exec(text);
   if (reset?.[1]) {
+    const target = reset[1].trim().replace(/^the\s+/, '');
+    if (target === 'tint' || target === 'overall tint') {
+      next.tint = '#ffffff';
+      return;
+    }
     const id = findSlot(reset[1], slots);
     if (next.paint) next.paint = Object.fromEntries(Object.entries(next.paint).filter(([key]) => key !== id));
     return;
@@ -65,8 +70,11 @@ function importClause(next: ImportEdits, slots: SlotName[], clause: string) {
 
 export async function editImportWithPrompt(original: ImportEdits, slots: SlotName[], prompt: string, signal?: AbortSignal) {
   const next = parseImportedSettings(original, slots);
-  const paint = { type: 'object', additionalProperties: false, properties: Object.fromEntries(slots.map(slot => [slot.id, editFields.primary])) };
-  const patch = await translateEdit({ model: next, slots }, prompt, instructions, slots.length ? { ...controls, paint } : controls, signal);
+  const paint = slots.length <= 64
+    ? { type: 'object', additionalProperties: false, properties: Object.fromEntries(slots.map(slot => [slot.id, editFields.primary])) }
+    : { type: 'object', additionalProperties: editFields.primary };
+  const reset = { type: 'array', items: { type: 'string' } };
+  const patch = await translateEdit({ model: next, slots }, prompt, instructions, slots.length ? { ...controls, paint, reset } : controls, signal);
   if (!patch) {
     for (const clause of commandClauses(prompt)) importClause(next, slots, clause);
     return { edits: parseImportedSettings(next, slots), engine: 'Local command' };
@@ -74,7 +82,25 @@ export async function editImportWithPrompt(original: ImportEdits, slots: SlotNam
   if ('paint' in patch && (!patch.paint || typeof patch.paint !== 'object' || Array.isArray(patch.paint) || !Object.keys(patch.paint).length)) {
     throw new Error('The on-device model returned an invalid paint edit.');
   }
-  const merged = { ...next, ...patch };
-  if ('paint' in patch) merged.paint = { ...next.paint, ...patch.paint as Record<string, string> };
+  const resetIds: string[] = [];
+  if ('reset' in patch) {
+    if (!Array.isArray(patch.reset) || !patch.reset.length || !patch.reset.every((id): id is string => typeof id === 'string')) {
+      throw new Error('The on-device model returned an invalid paint reset.');
+    }
+    for (const id of patch.reset) {
+      if (!slots.some(slot => slot.id === id)) throw new Error('Unknown paint slot: ' + id);
+      resetIds.push(id);
+    }
+  }
+  const restPatch = Object.fromEntries(Object.entries(patch).filter(([key]) => key !== 'reset'));
+  const merged = { ...next, ...restPatch };
+  if ('paint' in patch || resetIds.length) {
+    const updated = new Map(Object.entries(next.paint ?? {}));
+    for (const id of resetIds) updated.delete(id);
+    if ('paint' in patch) {
+      for (const [id, hex] of Object.entries(patch.paint as Record<string, string>)) updated.set(id, hex);
+    }
+    merged.paint = Object.fromEntries(updated);
+  }
   return { edits: parseImportedSettings(merged, slots), engine: 'On-device AI' };
 }
