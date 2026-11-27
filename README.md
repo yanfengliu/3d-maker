@@ -10,7 +10,7 @@ Use Node 24. Run `npm ci`, then `npm run dev`. For a production build and checks
 
 ## Character animations
 
-Choose a humanoid and open **Inspector → Animation**. The first clip plays when an asset opens. Search by motion and click any clip to play it immediately. Choose **Play all clips** to cycle through the whole list. Press **Space** to pause or resume. Pause to scrub a pose. Compatible PolyFork humanoids can use all 85 downloadable CC0 motions. Field Pilot and Survey Bot also keep their two original cycles. Exporting a GLB includes the entire available set even if you never previewed it. Animals, machines and unsupported rigs retain their embedded clips.
+Choose a humanoid. **Properties** and **Animation** appear together beneath the viewport. The first clip plays when an asset opens. Search by motion and click any clip to play it immediately. Choose **Play all clips** to cycle through the whole list. Press **Space** to pause or resume. Pause to scrub a pose. Compatible PolyFork humanoids can use all 85 downloadable CC0 motions. Field Pilot and Survey Bot also keep their two original cycles. Exporting a GLB includes the entire available set even if you never previewed it. Animals, machines and unsupported rigs retain their embedded clips.
 
 [Studio and PolyFork website comparison](docs/design/polyfork-comparison.md) · [Motion source and credits](docs/dataset.md#character-motion-library)
 

@@ -37,7 +37,6 @@ function newSelection(id?:string) {
   return {id, write:Promise.resolve()};
 }
 let selection = newSelection();
-let tab: 'props' | 'anim' = 'props';
 let grid = true,
   wire = false,
   openSequence = 0;
@@ -69,7 +68,7 @@ function availableClips() {
   const model = stage.model;
   if (!model) return [];
   const hadClips = model.animations.length > 0;
-  addCharacterAnimations(model);
+  if (document.body.classList.contains('shot-only')) addCharacterAnimations(model);
   if (!hadClips && model.animations.length) {
     stage.setClip(0);
     stage.play(autoplay);
@@ -86,10 +85,10 @@ document.addEventListener('keydown', event => {
   const target = event.target;
   if (!(target instanceof HTMLElement) || target.isContentEditable || document.querySelector('dialog[open]')) return;
   if (target.closest('input:not(#timeline),textarea,select,a,summary')) return;
-  // A selected result or tab keeps focus after a mouse click. Space can operate the
+  // A selected result keeps focus after a mouse click. Space can operate the
   // preview there, while other focused buttons keep their native keyboard activation.
   const button = target.closest('button');
-  if (button && !button.matches('#play,.clip[aria-pressed="true"],.inv-card[aria-pressed="true"],.tabs .active')) return;
+  if (button && !button.matches('#play,.clip[aria-pressed="true"],.inv-card[aria-pressed="true"]')) return;
   if (!availableClips().length) return;
   event.preventDefault();
   if (!event.repeat) showPlayback(togglePlayback());
@@ -99,52 +98,40 @@ function namePlaybackControl() {
   if (clip) el('play').title = 'Play or pause ' + clip.name + ' (Space)';
 }
 function controls() {
-  el('propertiesTab').setAttribute('aria-pressed', String(tab === 'props'));
-  el('animationTab').setAttribute('aria-pressed', String(tab === 'anim'));
-  el('propertiesTab').classList.toggle('active', tab === 'props');
-  el('animationTab').classList.toggle('active', tab === 'anim');
-  if (tab === 'anim') availableClips();
-  el('play').hidden = !stage.model?.animations.length;
+  const clips = stage.model?.animations ?? [];
+  el('play').hidden = !clips.length;
   showPlayback(stage.playing);
   namePlaybackControl();
-  let markClip: ((i: number) => void) | undefined;
-  if (tab === 'anim') {
-    markClip = showAnimation(
-      stage.model?.animations ?? [],
-      stage.clipIndex,
-      stage.playing,
-      stage.speed,
-      stage.playAll,
-      (on) => {
-        stage.playAll = on;
-        if (on) stage.play(true);
-        return stage.playing;
-      },
-      (i) => {
-        stage.setClip(i);
-        stage.seek(0);
-        stage.play(true);
-        namePlaybackControl();
-      },
-      (n) => {
-        stage.seek(n);
-      },
-      (n) => {
-        stage.speed = n;
-      },
-    );
-  } else if (recipe) showProperties(recipe, category(), edit);
-  else if (imported) showProperties({ ...imported.edits, primary: imported.edits.tint }, category(), edit);
+  if (recipe) showProperties(recipe, edit);
+  else if (imported) showProperties({ ...imported.edits, primary: imported.edits.tint }, edit);
+  const markClip = showAnimation(clips, stage.clipIndex, stage.playing, stage.speed, stage.playAll,
+    on => {
+      stage.playAll = on;
+      if (on) stage.play(true);
+      return stage.playing;
+    },
+    index => {
+      stage.setClip(index);
+      stage.seek(0);
+      stage.play(true);
+      namePlaybackControl();
+    },
+    fraction => { stage.seek(fraction); },
+    speed => { stage.speed = speed; },
+  );
   stage.onAdvance = index => { namePlaybackControl(); markClip?.(index); };
 }
 function swap(model: T.Group, refit: boolean) {
   const previous = stage.model;
   const clip = refit ? undefined : previous?.animations[stage.clipIndex];
   const playing = stage.playing, fraction = stage.clipFraction;
-  if (clip && (stage.playAll || !model.animations.some(candidate => candidate.name === clip.name))) addCharacterAnimations(model);
   if (refit) {
     stage.playAll = false;
-    if (autoplay && !model.animations.length) addCharacterAnimations(model);
+    if (!document.body.classList.contains('shot-only')) addCharacterAnimations(model);
+  } else if (previous) {
+    // A same-template property edit rebuilds geometry, while its named rig targets stay
+    // stable. Retain the already-bound library without decoding it during slider drags.
+    model.animations.push(...previous.animations.slice(model.animations.length));
   }
   stage.setModel(model, refit);
   if (refit) stage.play(autoplay);
@@ -181,7 +168,6 @@ function choose(next: Recipe, id?: string) {
   recipe = valid;
   imported = null;
   selection = newSelection(id);
-  tab = 'props';
   swap(model, true);
   toolbar();
   controls();
@@ -197,7 +183,6 @@ async function openImport(load: () => Promise<ImportedAsset>, id?: string, signa
   recipe = null;
   imported = asset;
   selection = newSelection(id);
-  tab = 'props';
   swap(asset.group, true);
   toolbar();
   controls();
@@ -311,14 +296,6 @@ el('save').onclick = () => {
     });
 };
 el('play').onclick = () => { showPlayback(togglePlayback()); };
-el('propertiesTab').onclick = () => {
-  tab = 'props';
-  controls();
-};
-el('animationTab').onclick = () => {
-  tab = 'anim';
-  controls();
-};
 el('reset').onclick = () => {
   if (recipe) {
     const row = catalog.find((v) => v.id === recipe?.template);

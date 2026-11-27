@@ -49,13 +49,6 @@ h1{font-size:clamp(35px,3.5vw,52px);font-weight:560;line-height:1.03;letter-spac
 .toolshelf em{height:15px;border-left:1px solid #ccd0c5;margin:0 3px}
 .scenePanel:fullscreen{border:0;border-radius:0}
 .inspector{background:#fdfdf9;display:flex;flex-direction:column}
-.panelhead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 9px}
-.panelhead h2{display:flex;align-items:center}
-.panelhead h2{font-size:17px;font-weight:620;gap:9px;letter-spacing:-.4px}
-.panelhead h2 svg{color:#676d5f}
-.tabs{display:flex;margin:0 16px 1px;background:#eeefe8;padding:3px;gap:3px;border-radius:6px}
-.tabs button{flex:1;border:1px solid transparent;min-height:27px;border-radius:4px;font-size:11px;font-weight:550;color:#666b60}
-.tabs .active{color:#252a20;background:#fcfcf9;border-color:#d7dacf;box-shadow:0 1px 2px #23271c0d}
 .propgroup{padding:13px 17px;border-bottom:1px solid #e0e2d9}
 .propgroup:last-child{border-bottom:0}
 .micro{display:block;color:#6b7064;font-size:9px;letter-spacing:1.45px;margin:0 0 10px}

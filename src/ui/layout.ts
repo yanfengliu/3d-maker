@@ -45,8 +45,14 @@ export const layout = `
         <div class="toolshelf"><button class="view-play" id="play" aria-keyshortcuts="Space" title="Play or pause (Space)" hidden></button><em class="play-divider"></em>${iconButton('fit','focus','Frame model')}${iconButton('grid','grid','Toggle floor grid')}${iconButton('wire','layers','Toggle wireframe')}<em></em>${iconButton('expand','expand','Expand viewport')}</div>
       </section>
       <section class="inspector" aria-label="Inspector">
-        <div class="panelhead"><div class="tabs"><button id="propertiesTab" class="active">Properties</button><button id="animationTab">Animation</button></div>${iconButton('reset','reset','Reset asset properties')}</div>
-        <div id="inspectorBody"></div>
+        <section class="inspector-section" aria-labelledby="propertiesHeading">
+          <header class="inspector-heading"><h2 id="propertiesHeading">Properties</h2>${iconButton('reset','reset','Reset asset properties')}</header>
+          <div id="propertiesBody"></div>
+        </section>
+        <section class="inspector-section" aria-labelledby="animationHeading">
+          <header class="inspector-heading"><h2 id="animationHeading">Animation</h2><span id="motionCount" aria-label="Clip count"></span></header>
+          <div id="animationBody"></div>
+        </section>
       </section>
     </div>
   </section>

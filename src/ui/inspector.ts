@@ -30,15 +30,14 @@ export interface Editable {
 }
 export function showProperties(
   value: Editable,
-  category: string,
   changed: (patch: Partial<Recipe & ImportEdits>) => void,
 ) {
   const isLocal = value.accent !== undefined;
-  el('inspectorBody').innerHTML =
-    `<div class="propgroup identity"><label class="micro" for="assetName">ASSET NAME</label><input class="namefield" id="assetName" value="${escapeHtml(value.name)}" maxlength="80" required/><small>${icon(category === 'Character' ? 'person' : 'studio', 12)} ${escapeHtml(category)}</small></div>
-  <div class="propgroup"><h3 class="micro">APPEARANCE</h3><label class="subrow" for="primaryColor"><span>${isLocal ? 'Body color' : 'Material tint'}</span><span class="hex" id="hex">${value.primary.toUpperCase()}</span></label><div class="paints">${paints.map(([label, color]) => `<button aria-label="${label}" aria-pressed="${String(value.primary.toLowerCase() === color)}" class="swatch" style="--swatch:${color}" data-paint="${color}" title="${label}"></button>`).join('')}<label class="custompaint" title="Custom color">${icon('plus', 14)}<input id="primaryColor" aria-label="Custom body color" type="color" value="${value.primary}"/></label></div>
+  el('propertiesBody').innerHTML =
+    `<div class="propgroup identity"><label class="property-label" for="assetName">Name</label><input class="namefield" id="assetName" value="${escapeHtml(value.name)}" maxlength="80" required/></div>
+  <div class="propgroup"><label class="subrow" for="primaryColor"><span>${isLocal ? 'Body color' : 'Material tint'}</span><span class="hex" id="hex">${value.primary.toUpperCase()}</span></label><div class="paints">${paints.map(([label, color]) => `<button aria-label="${label}" aria-pressed="${String(value.primary.toLowerCase() === color)}" class="swatch" style="--swatch:${color}" data-paint="${color}" title="${label}"></button>`).join('')}<label class="custompaint" title="Custom color">${icon('plus', 14)}<input id="primaryColor" aria-label="Custom body color" type="color" value="${value.primary}"/></label></div>
   ${value.accent ? `<label class="accentrow" for="accent"><span>Accent color</span><span class="colorchip"><i style="background:${value.accent}"></i><span>${value.accent.toUpperCase()}</span>${icon('chevron', 12)}<input type="color" aria-label="Accent color" id="accent" value="${value.accent}"/></span></label>` : ''}</div>
-  <div class="propgroup transforms"><h3 class="micro">GEOMETRY</h3>${slider('scale', 'Scale', value.scale)}${slider('proportion', isLocal ? 'Body width' : 'Height', value.proportion)}${isLocal ? `<label class="accentrow qualityrow" for="quality">Mesh quality<select id="quality"><option value="hd" ${value.quality === 'hd' ? 'selected' : ''}>HD</option><option value="standard" ${value.quality !== 'hd' ? 'selected' : ''}>Standard</option></select></label>` : ''}${value.detail !== undefined ? `<label class="detailrow"><span>Surface details</span><input id="detail" type="checkbox" role="switch" ${value.detail ? 'checked' : ''}/><i></i></label>` : ''}</div>`;
+  <div class="propgroup transforms">${slider('scale', 'Scale', value.scale)}${slider('proportion', isLocal ? 'Body width' : 'Height', value.proportion)}${isLocal ? `<label class="accentrow qualityrow" for="quality">Mesh quality<select id="quality"><option value="hd" ${value.quality === 'hd' ? 'selected' : ''}>HD</option><option value="standard" ${value.quality !== 'hd' ? 'selected' : ''}>Standard</option></select></label>` : ''}${value.detail !== undefined ? `<label class="detailrow"><span>Surface details</span><input id="detail" type="checkbox" role="switch" ${value.detail ? 'checked' : ''}/><i></i></label>` : ''}</div>`;
   el<HTMLInputElement>('assetName').onchange = (e) => {
     const input = e.currentTarget as HTMLInputElement;
     const name = input.value.trim() || value.name;
@@ -108,19 +107,20 @@ export function showAnimation(
   seek: (n: number) => void,
   setSpeed: (n: number) => void,
 ) {
-  const panel = el('inspectorBody');
+  const panel = el('animationBody');
   const canSearch = clips.length > 8;
   if (!clips.length) {
-    panel.innerHTML = '<p class="empty-mini">This asset has no playable clips.</p>';
+    el('motionCount').textContent = '0 clips';
+    panel.innerHTML = '<p class="empty-mini">No playable clips for this model.</p>';
     return undefined;
   }
   const rows = clips.map((clip, i) => `<button type="button" data-clip="${String(i)}" class="clip" aria-pressed="false">${icon('film', 15)}<span>${escapeHtml(clip.name)}</span><small>${clip.duration.toFixed(1)}s</small></button>`).join('');
-  panel.innerHTML = `<section class="propgroup anim motion-picker"><h3 class="micro">ANIMATION CLIPS <span id="motionCount"></span></h3>
+  panel.innerHTML = `<div class="motion-picker">
     ${canSearch ? '<input type="search" class="namefield" aria-label="Search animations" id="motionSearch" placeholder="Search animations…" autocomplete="off"/>' : ''}
-    <div class="cliplist" id="clipList">${rows}<p id="noMotionMatches" hidden>No matching animations.</p></div></section>
-    <section class="propgroup anim"><h3 class="micro">PLAYBACK</h3><strong id="motionName"></strong>
-    <div class="motion-transport">${clips.length > 1 ? `<label><input id="playAllClips" type="checkbox" ${playAll ? 'checked' : ''}/> Play all clips</label>` : ''}</div><label class="rangelabel" for="timeline">Timeline</label><input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/>
-    <label class="accentrow" for="speed">Speed<select id="speed">${[0.5, 1, 1.5, 2].map(n => `<option value="${String(n)}" ${n === speed ? 'selected' : ''}>${String(n)}×</option>`).join('')}</select></label></section>`;
+    <div class="cliplist" id="clipList">${rows}<p id="noMotionMatches" hidden>No matching animations.</p></div></div>
+    <div class="motion-settings"><div class="motion-status"><strong id="motionName"></strong><select id="speed" aria-label="Playback speed">${[0.5, 1, 1.5, 2].map(n => `<option value="${String(n)}" ${n === speed ? 'selected' : ''}>${String(n)}×</option>`).join('')}</select></div>
+    <input class="slider" aria-label="Animation timeline" id="timeline" type="range" min="0" max="1" step=".001" value="0"/>
+    ${clips.length > 1 ? `<label class="play-sequence"><input id="playAllClips" type="checkbox" ${playAll ? 'checked' : ''}/> Play all clips</label>` : ''}</div>`;
   const buttons = [...el('clipList').querySelectorAll<HTMLButtonElement>('[data-clip]')];
   function currentClip(selected: number) {
     el('motionName').textContent = clips[selected]?.name ?? '';
@@ -131,7 +131,7 @@ export function showAnimation(
   }
   currentClip(index);
   showPlayback(playing);
-  el('motionCount').textContent = String(clips.length);
+  el('motionCount').textContent = String(clips.length) + (clips.length === 1 ? ' clip' : ' clips');
   el('clipList').onclick = event => {
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-clip]') : null;
     if (!button) return;
@@ -150,7 +150,7 @@ export function showAnimation(
         if (!button.hidden) matches++;
       }
       el('noMotionMatches').hidden = matches > 0;
-      el('motionCount').textContent = query ? String(matches) + ' / ' + String(clips.length) : String(clips.length);
+      el('motionCount').textContent = query ? String(matches) + ' / ' + String(clips.length) : String(clips.length) + ' clips';
       el('clipList').scrollTop = 0;
     };
   }

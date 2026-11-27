@@ -101,12 +101,16 @@ try {
   await page.selectOption('#view', 'Top');
   await page.waitForTimeout(120);
   assert.notEqual((await pixels()).signature, before.signature);
-  await page.click('#animationTab');
   assert.match(await page.locator('#play').innerText(), /Play clip/);
   assert.equal(await page.locator('#timeline').inputValue(), '0');
-  await page.click('#propertiesTab');
+  for (const area of ['Properties','Animation']) {
+    assert.ok(await page.getByRole('region', {name:area, exact:true}).isVisible());
+  }
+  await page.setViewportSize({width:1408,height:960});
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const resized = await pixels();
-  assert.ok(resized.dark > 200 && resized.paint > 100, 'Changing inspector tabs cleared the viewport');
+  assert.ok(resized.dark > 200 && resized.paint > 100, 'Resizing the workspace cleared the viewport');
+  await page.setViewportSize({width:1440,height:1000});
   await verifyBrowsing(page, fixture, out);
   await page.locator('#assetName').fill('Game Pilot');
   await page.locator('#assetName').press('Tab');
@@ -123,7 +127,8 @@ try {
   assert.equal(recipe.name, 'Game Pilot');
   assert.equal(recipe.quality, 'standard');
   assert.equal(recipe.primary, '#cb714d');
-  await page.click('#animationTab');
+  assert.ok(await page.locator('#assetName').isVisible());
+  assert.ok(await page.locator('#motionSearch').isVisible());
   const originalClips = await page.evaluate(() => window.forgeStudio.listClips().map(clip => clip.name));
   assert.equal(originalClips.length, 87);
   await page.getByRole('searchbox', { name:'Search animations' }).fill('swimm');
@@ -135,9 +140,7 @@ try {
   await page.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > 0.03);
   await page.click('#play');
   const pausedAt = Number(await page.locator('#timeline').inputValue());
-  await page.click('#propertiesTab');
   await page.getByRole('button', { name:'Sage' }).click();
-  await page.click('#animationTab');
   assert.equal(await page.locator('#motionName').innerText(), 'Swimming');
   await page.waitForFunction(at => Math.abs(Number(document.querySelector('#timeline').value) - at) < 0.02, pausedAt);
   assert.match(await page.locator('#play').innerText(), /Play clip/);
@@ -202,7 +205,6 @@ try {
   assert.match(staleError,/removed|no longer|deleted/i);await stale.close();
   const playback = await context.newPage();
   await playback.goto(origin + site + '?asset=field-pilot');
-  await playback.click('#animationTab');
   assert.match(await playback.locator('#play').innerText(), /Pause/);
   await playback.waitForFunction(() => Number(document.querySelector('#timeline')?.value) > .03);
   await playback.keyboard.press('Space');
@@ -224,9 +226,8 @@ try {
   await playback.locator('#timeline').press('End');
   await playback.waitForFunction(() => document.querySelector('#motionName').textContent === 'Idle');
   // Rebuilding a character during a native clip must keep the entire playlist.
-  await playback.click('#propertiesTab');
   await playback.getByRole('button', {name:'Sage'}).click();
-  // The animation panel itself hydrates the library. Observe the playlist before reopening it.
+  // A property edit must preserve the full active playlist and its viewport transport.
   await playback.waitForFunction(() => document.querySelector('#play')?.title === 'Play or pause Agree (Space)', undefined, {timeout:15000});
   await playback.close();
   const sdk = await browser.newPage();
