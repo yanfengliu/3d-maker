@@ -80,7 +80,7 @@ npm run build
 npm run inspect:model -- <template-id> [--variation <variation-id>]
 ```
 
-This writes full-resolution `front.png`, `back.png`, `left.png`, `right.png`, `top.png`, `bottom.png`, `perspective.png`, and `metrics.json` into ignored `output/inspect/<slug>/`. Inspect every PNG directly and check this list before locking variations:
+This writes full-resolution `front.png`, `back.png`, `left.png`, `right.png`, `top.png`, `bottom.png`, `perspective.png`, `metrics.json`, and hierarchical `trace.json` (world bboxes, per-mesh triangle/open-edge counts, materials, and joints) into ignored `output/inspect/<slug>/`. Inspect every PNG directly and check this list before locking variations:
 
 - **All six faces complete**: No missing back walls, hollow bottoms, inverted normals, or disappearing single-sided domes (`Back`, `Bottom`, `Top`).
 - **Zero floating parts**: `metrics.json` reports `floatingComponents: []` (unless intentionally levitating effects like spores or arcane crystals) and every sign, mirror, handle, lamp, seat, dish, door, and bracket visibly connects to its parent from orthogonal views.
@@ -93,7 +93,7 @@ This writes full-resolution `front.png`, `back.png`, `left.png`, `right.png`, `t
 
 For generating new original procedural models or batch kit variations, follow the five-stage workflow packaged in `.agents/skills/author-3d-model/SKILL.md`:
 
-1. **Kit grammar, brief, and 2D turnaround art**: Reuse shared matte palettes and joinery helpers in `src/models/kit-grammar.ts` / `src/models/kit-materials.ts`, write a part brief, and generate a front+rear 2D reference image before coding geometry.
-2. **Parametric model-as-code + static mesh merge**: Declare semantic structural knobs (`ModelParamSpec[]` via `src/capabilities/param-schema.ts`), compress static sub-meshes with `mergeStaticParts()` (`src/models/merge-static.ts`) for compact draw calls and deterministic `tone` vertex-color shading while preserving live `primary`/`accent` tint zones and rigged/detachable pivots.
-3. **Truth harness & automatic metadata**: Lock append-only variations (`npm run variations:lock`), verify craft invariants, spatial colliders/clearances/surfaces, measured `ik` (`src/capabilities/ik-derive.ts`), and render all seven views (`npm run inspect:model`).
+1. **Kit grammar, brief, and 2D turnaround art**: Reuse shared matte palettes, frame-anchored placement (`bboxFrame`, `placeOnFrame`, `createHingeOnFrame`, `gridFrames`, `ringFrames` in `src/models/kit-frames.ts`), and joinery helpers in `src/models/kit-grammar.ts` / `src/models/kit-materials.ts`, write a part brief, and generate a front+rear 2D reference image before coding geometry.
+2. **Parametric model-as-code + static mesh merge**: Declare semantic structural knobs (`ModelParamSpec[]` via `src/capabilities/param-schema.ts`), compress static sub-meshes with `mergeStaticParts()` (`src/models/merge-static.ts`) for compact draw calls, deterministic `tone` vertex-color shading, and optional procedural vertex-color shaders (`colorFn` — `upwardBlendShader`, `heightBandShader`, `grainShader`) while preserving live `primary`/`accent` tint zones and rigged/detachable pivots.
+3. **Truth harness & automatic metadata**: Lock append-only variations (`npm run variations:lock`), verify craft invariants, spatial colliders/clearances/surfaces, measured `ik` (`src/capabilities/ik-derive.ts`), and render all seven views plus `trace.json` (`npm run inspect:model`).
 4. **Fresh-session adversarial visual judge**: Run an isolated read-only subagent reviewing ONLY the brief, 2D reference image, `metrics.json`, and all 7 PNGs; fix every concrete visual defect and re-verify until approved.
