@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Form Foundry starter recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "template", "name", "primary", "accent", "scale", "proportion", "detail"],
+  "properties": {
+    "version": { "const": 1 },
+    "template": { "enum": ["relay-drone", "field-rover", "survey-bot", "cargo-pod", "signal-tower", "field-pilot"] },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": "\\S" },
+    "primary": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}$", "description": "Main body color in sRGB." },
+    "accent": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}$", "description": "Secondary trim color in sRGB." },
+    "scale": { "type": "number", "minimum": 0.65, "maximum": 1.5, "description": "Uniform size multiplier. The default is 1." },
+    "proportion": { "type": "number", "minimum": 0.65, "maximum": 1.5, "description": "Shape multiplier applied by the selected template. The default is 1." },
+    "detail": { "type": "boolean", "description": "Enable optional secondary geometry." },
+    "quality": { "enum": ["standard", "hd"], "default": "standard", "description": "Choose the authored geometry level. Older recipes use standard when this field is absent." }
+  }
+}

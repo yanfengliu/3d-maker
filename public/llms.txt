@@ -1,0 +1,32 @@
+# Form Foundry
+
+Form Foundry edits procedural three.js assets in the browser. Fetch ./catalog.json for the starter catalog, including complete recipes. Its schema is at ./agent-schema.json. Both paths are relative to the deployed app.
+
+## Browser API
+
+Open the studio and use window.forgeStudio.
+
+- listTemplates() lists the available starters.
+- getRecipe() reads the active starter recipe. Returns null while viewing a PolyFork import.
+- applyRecipe(recipe) validates and displays a complete starter recipe.
+- save() saves the active asset to this browser's inventory.
+- listInventory() reads the browser's saved inventory.
+- exportGLB() returns a Promise<ArrayBuffer> containing the active asset as a binary glTF file.
+- openPolyfork(id, name) loads a free GLB directly from PolyFork and returns a Promise<void>.
+
+To change an asset, read its recipe, replace the requested fields, apply the full recipe and save when the user requests persistence. Both colors take six-digit sRGB hex values. Scale and proportion are numbers in [0.65, 1.5]. The detail field toggles optional secondary parts. Quality selects the authored geometry level, either "standard" or "hd". All six catalog recipes use HD. Version 1 recipes that omit quality render at standard quality.
+
+Example for the developer console
+
+    const studio = window.forgeStudio;
+    studio.applyRecipe({version:1, template:"relay-drone", name:"Ice survey drone", primary:"#84b9cd", accent:"#253640", scale:1, proportion:1.15, detail:true, quality:"hd"});
+    const glb = await studio.exportGLB();
+
+## Upstream assets
+
+Search the public PolyFork API for an asset id and title before calling openPolyfork. Get each asset's exact animation and rig metadata from its detail endpoint. Form Foundry's starter recipes and PolyFork's model-specific creation parameters use separate formats.
+
+- API overview: https://polyfork.dev/api
+- Search example: https://polyfork.dev/api/assets?q=drone&free=1&per_page=5
+- Agent instructions: https://polyfork.dev/prompt.txt
+- Attribution and licensing: https://polyfork.dev/licensing
