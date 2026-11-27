@@ -121,17 +121,21 @@ function buildFox(root: T.Group, p: Finish, detail: boolean) {
 function buildOwl(root: T.Group, p: Finish, detail: boolean) {
   const talon = tone(p, 'Talon', '#5e4b3a', 0.65)
   const body = group(root, 'OwlBody')
-  lathe(body, p, [0, 0.18, 0], [[0.01, 0], [0.22, 0.08], [0.34, 0.35], [0.32, 0.72], [0.24, 0.94], [0.01, 1.0]], p.primary)
+  lathe(body, p, [0, 0.18, 0], [[0.01, 0], [0.22, 0.08], [0.33, 0.28], [0.34, 0.56], [0.3, 0.78], [0.22, 0.93], [0.01, 1]], p.primary)
   orb(body, p, [0, 0.62, 0.14], [0.26, 0.36, 0.22], p.accent)
   cone(body, p, [0, 0.26, -0.32], 0.16, 0.42, p.primary, [-2.15, 0, 0])
   for (const s of [-1, 1]) {
     cyl(body, p, [s * 0.14, 0.14, 0.04], 0.06, 0.045, 0.22, p.accent)
     for (const a of [-0.45, 0, 0.45]) cap(body, p, [s * 0.14 + Math.sin(a) * 0.06, 0.026, 0.1 + Math.cos(a) * 0.07], 0.025, 0.09, talon, [Math.PI / 2, a, 0], 6)
-    const wing = group(body, s > 0 ? 'WingL' : 'WingR', [s * 0.29, 0.94, 0])
-    orb(wing, p, [s * 0.18, -0.14, -0.02], [0.22, 0.14, 0.2], p.primary)
-    orb(wing, p, [s * 0.36, -0.32, -0.08], [0.22, 0.08, 0.18], p.primary).rotation.z = -s * 0.55
-    cone(wing, p, [s * 0.48, -0.46, -0.14], 0.12, 0.32, p.accent, [0.2, 0, s * 2.45])
-    if (detail) for (let i = 0; i < 4; i++) orb(wing, p, [s * (0.2 + i * 0.08), -0.22 - i * 0.08, -0.06 - i * 0.02], [0.09, 0.03, 0.12], i % 2 ? p.accent : p.primary, 6)
+    const wing = group(body, s > 0 ? 'WingL' : 'WingR', [s * 0.28, 0.92, -0.02])
+    orb(wing, p, [s * 0.07, -0.18, -0.02], [0.085, 0.25, 0.19], p.primary).rotation.set(0.12, -s * 0.14, s * 0.14)
+    orb(wing, p, [s * 0.095, -0.35, -0.07], [0.062, 0.26, 0.14], p.primary).rotation.set(0.2, -s * 0.16, s * 0.06)
+    orb(wing, p, [s * 0.07, -0.36, -0.08], [0.042, 0.22, 0.1], p.accent).rotation.set(0.22, -s * 0.16, s * 0.05)
+    if (detail) {
+      for (let i = 0; i < 4; i++) {
+        orb(wing, p, [s * (0.105 - i * 0.008), -0.24 - i * 0.068, -0.1 - i * 0.02], [0.032, 0.13, 0.055], i % 2 ? p.accent : p.primary, 6).rotation.set(0.22, -s * 0.14, s * 0.06)
+      }
+    }
   }
   const head = group(body, 'OwlHead', [0, 1.15, 0.04])
   orb(head, p, [0, 0.14, 0], [0.27, 0.23, 0.24], p.primary)
@@ -142,7 +146,11 @@ function buildOwl(root: T.Group, p: Finish, detail: boolean) {
   }
   orb(head, p, [0, 0.05, 0.17], [0.14, 0.11, 0.1], p.accent, 8)
   cone(head, p, [0, 0.09, 0.28], 0.045, 0.12, talon, [Math.PI * 0.65, 0, 0])
-  if (detail) for (let i = 0; i < 6; i++) orb(body, p, [i % 2 ? 0.09 : -0.09, 0.45 + i * 0.07, 0.35], [0.03, 0.02, 0.018], p.primary, 6)
+  if (detail) {
+    for (const [x, y, z] of [[-0.08, 0.72, 0.34], [0.08, 0.72, 0.34], [0, 0.62, 0.355], [-0.09, 0.52, 0.34], [0.09, 0.52, 0.34]] as const) {
+      orb(body, p, [x, y, z], [0.022, 0.012, 0.01], p.primary, 6)
+    }
+  }
   root.animations = [
     new T.AnimationClip('Wing beat', 2.8, [
       rotationTrack('WingL', 'z', [0, 0.7, 1.4, 2.1, 2.8], [0, 0.85, 0.05, 0.78, 0]),
@@ -376,20 +384,30 @@ function buildDragon(root: T.Group, p: Finish, detail: boolean) {
   const body = group(root, 'DragonBody')
   orb(body, p, [0, 0.56, 0], [0.34, 0.36, 0.42], p.primary)
   orb(body, p, [0, 0.52, 0.14], [0.25, 0.3, 0.28], p.accent)
-  arc(body, p, [[0, 0.42, -0.34], [0.16, 0.26, -0.68], [0.42, 0.16, -0.78], [0.58, 0.22, -0.58]], 0.1, p.primary)
-  cone(body, p, [0.64, 0.25, -0.48], 0.11, 0.24, p.accent, [1.1, 0.5, -0.6])
+  arc(body, p, [[0, 0.42, -0.34], [0.16, 0.26, -0.68], [0.42, 0.16, -0.78], [0.56, 0.22, -0.58]], 0.1, p.primary)
+  orb(body, p, [0.56, 0.22, -0.58], [0.102, 0.102, 0.102], p.primary, 8)
+  cone(body, p, [0.62, 0.25, -0.49], 0.115, 0.24, p.accent, [1.3, 0, -0.55])
+  const memShape = new T.Shape()
+  memShape.moveTo(0.02, 0).quadraticCurveTo(0.18, 0.24, 0.34, 0.28).quadraticCurveTo(0.54, 0.27, 0.72, 0.16)
+    .quadraticCurveTo(0.62, -0.02, 0.56, -0.08).quadraticCurveTo(0.46, 0.03, 0.34, -0.12).quadraticCurveTo(0.18, 0.01, 0.02, -0.08)
+  const memGeo = new T.ExtrudeGeometry(memShape, { depth: 0.032, curveSegments: p.hd ? 18 : 6, bevelEnabled: p.hd, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2 })
+  memGeo.translate(0, 0, -0.016)
   for (const s of [-1, 1]) {
     orb(body, p, [s * 0.26, 0.26, -0.06], [0.16, 0.2, 0.2], p.primary, 9)
     orb(body, p, [s * 0.28, 0.065, 0.08], [0.11, 0.065, 0.16], p.primary, 8)
-    cap(body, p, [s * 0.24, 0.34, 0.34], 0.07, 0.2, p.primary, [0.55, 0, s * 0.2])
-    orb(body, p, [s * 0.24, 0.055, 0.42], [0.08, 0.055, 0.11], p.primary, 7)
-    const wing = group(body, s > 0 ? 'DragonWingL' : 'DragonWingR', [s * 0.28, 0.78, -0.08])
-    arc(wing, p, [[0, 0, 0], [s * 0.38, 0.34, -0.12], [s * 0.72, 0.18, -0.22]], 0.042, p.primary, 10, 6)
-    orb(wing, p, [s * 0.38, 0.08, -0.14], [0.36, 0.22, 0.032], p.accent).rotation.set(0.15, -s * 0.28, s * 0.15)
-    cone(wing, p, [s * 0.68, 0.02, -0.22], 0.14, 0.32, p.accent, [0, 0, -s * 1.4]).scale.set(1, 1, 0.22)
+    arc(body, p, [[s * 0.22, 0.46, 0.18], [s * 0.24, 0.28, 0.3], [s * 0.22, 0.06, 0.35]], 0.068, p.primary, 10, 7)
+    orb(body, p, [s * 0.22, 0.055, 0.37], [0.085, 0.055, 0.115], p.primary, 8)
+    const wing = group(body, s > 0 ? 'DragonWingL' : 'DragonWingR', [s * 0.26, 0.76, -0.08])
+    arc(wing, p, [[0, 0, 0], [s * 0.32, 0.28, -0.09], [s * 0.68, 0.16, -0.18]], 0.04, p.primary, 10, 6)
+    orb(wing, p, [s * 0.68, 0.16, -0.18], [0.042, 0.042, 0.042], p.primary, 7)
+    mesh(wing, memGeo, p.accent, [0, 0, 0]).rotation.y = s > 0 ? 0.26 : Math.PI - 0.26
     if (detail) {
-      arc(wing, p, [[s * 0.34, 0.32, -0.11], [s * 0.42, -0.08, -0.14]], 0.022, p.primary, 6, 5)
-      for (const x of [-0.04, 0.04]) cone(body, p, [s * 0.28 + x, 0.04, 0.22], 0.022, 0.07, p.stencil, [Math.PI / 2, 0, 0], 6)
+      arc(wing, p, [[s * 0.32, 0.28, -0.09], [s * 0.33, -0.1, -0.09]], 0.022, p.primary, 6, 5)
+      arc(wing, p, [[s * 0.32, 0.28, -0.09], [s * 0.54, -0.06, -0.15]], 0.02, p.primary, 6, 5)
+      for (const x of [-0.04, 0.04]) {
+        cone(body, p, [s * 0.28 + x, 0.04, 0.22], 0.022, 0.07, p.stencil, [Math.PI / 2, 0, 0], 6)
+        cone(body, p, [s * 0.22 + x * 0.8, 0.032, 0.47], 0.016, 0.055, p.stencil, [Math.PI / 2, 0, 0], 6)
+      }
     }
   }
   cap(body, p, [0, 0.92, 0.16], 0.15, 0.28, p.primary, [-0.25, 0, 0])
@@ -398,6 +416,7 @@ function buildDragon(root: T.Group, p: Finish, detail: boolean) {
   shell(head, [0, 0.04, 0.24], [0.26, 0.13, 0.28], p.primary, 0.42)
   for (const s of [-1, 1]) {
     arc(head, p, [[s * 0.12, 0.18, -0.02], [s * 0.22, 0.34, -0.16], [s * 0.26, 0.42, -0.3]], 0.036, p.accent, 8, 6)
+    cone(head, p, [s * 0.268, 0.436, -0.328], 0.036, 0.12, p.accent, [-1.1, 0, -s * 0.22], 8)
     eye(head, p, [s * 0.16, 0.11, 0.18], 0.04, detail)
   }
   const jaw = group(head, 'DragonJaw', [0, -0.04, 0.12])
