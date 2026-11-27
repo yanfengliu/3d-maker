@@ -35,6 +35,7 @@ export function setupShelf(actions: Actions) {
   let locals: BrowseLocals = { recipes: [], imports: [] };
   let load: AbortController | undefined, opening: AbortController | undefined;
   let timer = 0, localsRevision = 0, pages = 1, pendingKey = '';
+  let retryPage: number | undefined;
   let visible = new Map<string, BrowseItem>();
   const previews = new Map<string, {revision:string; image:string}>();
 
@@ -104,7 +105,8 @@ export function setupShelf(actions: Actions) {
     window.clearTimeout(timer);
     const controller = new AbortController();
     load = controller;
-    const requested = {...filters};
+    if (resetScroll) retryPage = undefined;
+    const requested = {...filters, page: retryPage ?? filters.page};
     if (resetScroll) el('resultsScroll').scrollTop = 0;
     markFilters();
     el('inventoryNotice').hidden = true;
@@ -112,6 +114,7 @@ export function setupShelf(actions: Actions) {
     const run = async () => {
       const found = await browseAssets(requested,locals,controller.signal);
       if (controller.signal.aborted) return;
+      retryPage = found.remoteError ? requested.page : undefined;
       filters.page = found.page;
       results(found.items, found.remoteError ? 'Online results are unavailable.' :
         requested.source === 'saved' && !locals.recipes.length && !locals.imports.length
@@ -156,6 +159,9 @@ export function setupShelf(actions: Actions) {
     const changed = JSON.stringify([recipes,imports]) !== JSON.stringify([locals.recipes,locals.imports]);
     if (!changed) return;
     locals = { recipes, imports };
+    if (pendingKey.startsWith('saved:') && ![...recipes,...imports].some(entry => 'saved:' + entry.id === pendingKey)) {
+      opening?.abort();
+    }
     const savedCount = el('inventorySources').querySelector('button[data-source-filter="saved"] small');
     if (savedCount) savedCount.textContent = String(recipes.length + imports.length);
     if (filters.source === 'all' || filters.source === 'saved') reload(false);
@@ -175,6 +181,7 @@ export function setupShelf(actions: Actions) {
     if (!item) return;
     if (button?.dataset.delete && item.source === 'saved') {
       if (!confirm('Delete this saved asset from your inventory?')) return;
+      if (pendingKey === item.key) opening?.abort();
       const {entry} = item;
       const remove = async () => {
         if ('recipe' in entry) removeAsset(entry.id);

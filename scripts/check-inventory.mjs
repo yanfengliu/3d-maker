@@ -126,6 +126,37 @@ export async function showSaved(page) {
   await page.locator('#inventorySearch').fill('');
 }
 
+async function deleteDuringOpen(page) {
+  await showSaved(page);
+  const title = 'Survey Rover 02', url = origin + '/cdn/survey-rover-02.glb';
+  // Hold an already received GLB before the importer gets it, as can happen with slow parsing.
+  await page.evaluate(target => {
+    const nativeFetch = window.fetch;
+    window.fetch = async (input, init) => {
+      const response = await nativeFetch(input, init);
+      if (String(input) !== target) return response;
+      window.fetch = nativeFetch;
+      const bytes = await response.arrayBuffer();
+      await new Promise(release => { window.pendingInventoryDownload = { release, signal: init.signal }; });
+      return new Response(bytes, { headers: response.headers });
+    };
+  }, url);
+  await open(page, title).click();
+  await page.waitForFunction(() => !!window.pendingInventoryDownload);
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Delete ' + title, exact: true }).click();
+  await open(page, title).waitFor({ state: 'detached' });
+  const canceled = await page.evaluate(() => {
+    const { signal, release } = window.pendingInventoryDownload;
+    delete window.pendingInventoryDownload;
+    release();
+    return signal.aborted;
+  });
+  assert.ok(canceled, 'Deleting a loading entry must cancel its open');
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await page.evaluate(() => window.forgeStudio.getRecipe()?.template), 'field-pilot');
+}
+
 export async function verifyBrowsing(page, fixture, out) {
   const priorUrl = page.url();
   assert.deepEqual(fixture.downloads, []);
@@ -148,6 +179,16 @@ export async function verifyBrowsing(page, fixture, out) {
   }
   assert.equal(names.size, 33);
   assert.ok(await page.locator('#inventoryNext').isDisabled());
+  // An expired catalog count can temporarily leave only one local page available.
+  await page.clock.setFixedTime(new Date(Date.now() + 180_000));
+  fixture.failNext();
+  await page.locator('#inventoryPrev').click();
+  await page.locator('#inventoryRetry').waitFor();
+  await page.locator('#inventoryRetry').click();
+  await open(page, rows[6].title).waitFor();
+  assert.equal(await page.locator('#inventoryPageNumber').inputValue(), '2');
+  await page.locator('#inventoryNext').click();
+  await open(page, rows[18].title).waitFor();
   await page.locator('#inventoryPageNumber').fill('2');
   await page.locator('#inventoryPageNumber').press('Enter');
   await open(page, rows[6].title).waitFor();
@@ -168,6 +209,8 @@ export async function verifyBrowsing(page, fixture, out) {
   assert.equal(page.url(), priorUrl);
   await visibleWorkspace(page);
   assert.equal(await page.locator('dialog[open]').count(), 0);
+  await page.locator('#save').click();
+  await page.waitForFunction(() => document.querySelector('#save').textContent.includes('Save changes'));
 
   // Draw the category view with a known original character after checking the remote import path.
   await page.locator('#inventorySearch').fill('');
@@ -189,6 +232,8 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.locator('#inventoryRetry').click();
   await open(page, 'Field Operator 03').waitFor();
   await waitGrid(page, 4);
+
+  await deleteDuringOpen(page);
 
   await page.locator('#inventorySearch').fill('');
   await source(page, 'original').click();

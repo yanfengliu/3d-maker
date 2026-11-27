@@ -1,6 +1,6 @@
 # Form Foundry
 
-A browser-based three.js object and character studio. Choose an original model, customize its shape and materials, preview its animations, and save a variant in your inventory. Import a local GLB or open a free PolyFork model directly from its catalog.
+Browse and edit 3D assets on one desktop page. The inventory combines six studio originals, the free PolyFork catalog and your saved assets. Search by name or choose a category, then select a thumbnail to open it in the adjacent three.js editor. Your search, filters and page stay in place while you customize, animate or export the model.
 
 [Open the studio](https://yanfengliu.github.io/3d-maker/)
 
