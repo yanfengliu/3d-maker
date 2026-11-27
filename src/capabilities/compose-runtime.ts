@@ -116,6 +116,30 @@ function createCompositeControllerInternal(
     if (!initializing && !syncing && !staging) syncManifest();
   };
 
+  function reseatAndRecordRest(
+    rt: ChildRuntime,
+    hostRt: ChildRuntime | undefined,
+    includeNested: boolean,
+    depSlots?: ReadonlySet<T.Object3D>,
+  ): void {
+    if (!hostRt) {
+      reseatCompositeSlot(rt.slot, rt.inner, rt.spec.mount, undefined, undefined, includeNested, depSlots);
+      return;
+    }
+    const hostPose = hostRt.controller.getState().pose;
+    const entries = hostPose ? Object.entries(hostPose) : [];
+    const prevStaging = staging;
+    if (entries.length) staging = true;
+    try {
+      if (entries.length) hostRt.controller.resetParts();
+      reseatCompositeSlot(rt.slot, rt.inner, rt.spec.mount, hostRt.spec.capabilities, hostRt.inner, includeNested, depSlots);
+      rt.spec.mount.slotRestPose = measureRelativeTransform(hostRt.inner, rt.slot);
+    } finally {
+      for (const [p, v] of entries) hostRt.controller.setPart(p, v);
+      staging = prevStaging;
+    }
+  }
+
   function handleNestedChildRebuild(childId: string): void {
     const rt = runtimes.get(childId);
     if (!rt?.subComposite) return;
@@ -126,11 +150,8 @@ function createCompositeControllerInternal(
     replaceChildClipsInPool(childId, rt.clips);
     const hostRt = rt.spec.mount.parent ? runtimes.get(rt.spec.mount.parent) : undefined;
     const depSlots = new Set<T.Object3D>();
-    for (const other of runtimes.values()) {
-      if (other.spec.mount.parent === childId) depSlots.add(other.slot);
-    }
-    reseatCompositeSlot(rt.slot, rt.inner, rt.spec.mount, hostRt?.spec.capabilities, hostRt?.inner, true, depSlots);
-    if (hostRt) rt.spec.mount.slotRestPose = measureRelativeTransform(hostRt.inner, rt.slot);
+    for (const other of runtimes.values()) if (other.spec.mount.parent === childId) depSlots.add(other.slot);
+    reseatAndRecordRest(rt, hostRt, true, depSlots);
     refreshAggregateMetadata();
     syncManifest();
     internalOptions?.onRebuild?.();
@@ -360,11 +381,9 @@ function createCompositeControllerInternal(
       rt.slot.remove(oldInner);
 
       rt.slot.add(rebuilt);
-      const hostRt = rt.spec.mount.parent ? runtimes.get(rt.spec.mount.parent) : undefined;
-      reseatCompositeSlot(rt.slot, rebuilt, rt.spec.mount, hostRt?.spec.capabilities, hostRt?.inner, Boolean(freshCaps.children?.length));
-      if (hostRt) rt.spec.mount.slotRestPose = measureRelativeTransform(hostRt.inner, rt.slot);
-
       rt.inner = rebuilt;
+      const hostRt = rt.spec.mount.parent ? runtimes.get(rt.spec.mount.parent) : undefined;
+      reseatAndRecordRest(rt, hostRt, Boolean(freshCaps.children?.length));
       if (nextPrefix) rt.spec.nodePrefix = nextPrefix;
       rt.spec.recipe = structuredClone(mergedRecipe) as unknown as Record<string, unknown>;
       rt.spec.capabilities = freshCaps;
@@ -429,28 +448,15 @@ function createCompositeControllerInternal(
     },
     stopClips(childId) {
       if (childId) {
-        if (childId.includes('/')) {
-          const [head, rest] = splitFirstSegment(childId);
-          requireNested(head).stopClips(rest);
-          return;
-        }
+        if (childId.includes('/')) { const [head, rest] = splitFirstSegment(childId); requireNested(head).stopClips(rest); return; }
         const rt = requireChild(childId);
-        rt.mixer.stopAllAction();
-        rt.actionsByClip.clear();
-        rt.subComposite?.stopClips();
+        rt.mixer.stopAllAction(); rt.actionsByClip.clear(); rt.subComposite?.stopClips();
         return;
       }
-      for (const rt of runtimes.values()) {
-        rt.mixer.stopAllAction();
-        rt.actionsByClip.clear();
-        rt.subComposite?.stopClips();
-      }
+      for (const rt of runtimes.values()) { rt.mixer.stopAllAction(); rt.actionsByClip.clear(); rt.subComposite?.stopClips(); }
     },
     update(deltaSeconds) {
-      for (const rt of runtimes.values()) {
-        if (rt.actionsByClip.size) rt.mixer.update(deltaSeconds);
-        rt.subComposite?.update(deltaSeconds);
-      }
+      for (const rt of runtimes.values()) { if (rt.actionsByClip.size) rt.mixer.update(deltaSeconds); rt.subComposite?.update(deltaSeconds); }
     },
     getAnimations: () => currentAnimPool.map(clip => clip.clone()),
     applyPoseToClone(cloneRoot) {
@@ -465,11 +471,8 @@ function createCompositeControllerInternal(
     syncManifest,
     dispose() {
       for (const rt of runtimes.values()) {
-        rt.mixer.stopAllAction();
-        rt.mixer.uncacheRoot(rt.inner);
-        rt.actionsByClip.clear();
-        rt.subComposite?.dispose();
-        rt.controller.dispose();
+        rt.mixer.stopAllAction(); rt.mixer.uncacheRoot(rt.inner); rt.actionsByClip.clear();
+        rt.subComposite?.dispose(); rt.controller.dispose();
       }
       if (!internalOptions?.skipRootWrite) unregisterLiveController(root, api);
     },

@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { CompositeChildSpec } from './compose-schema';
-import { findOwnNodeByName, surfaceBasis, traverseAssetGeometry } from './compose-tree';
+import { findOwnNodeByName, hasHiddenAncestor, surfaceBasis, traverseAssetGeometry } from './compose-tree';
 import {
   buildOrientedBox,
   colliderHalfExtents,
@@ -84,6 +84,7 @@ function resolveLiveOwnColliders(entry: FlatChildEntry): OrientedBox[] {
   if (!leafCaps.colliders?.length) return [];
   const prefix = entry.spec.nodePrefix ?? '';
   const hiddenSet = new Set(leafCaps.state?.hiddenParts ?? []);
+  if (hasHiddenAncestor(entry.inner, entry.inner, hiddenSet, prefix)) return [];
   const boxes: OrientedBox[] = [];
   for (const spec of leafCaps.colliders) {
     const layer = spec.layer ?? 'solid';
@@ -91,7 +92,7 @@ function resolveLiveOwnColliders(entry: FlatChildEntry): OrientedBox[] {
     if (spec.node) {
       if (hiddenSet.has(spec.node)) continue;
       const node = findOwnNodeByName(entry.inner, spec.node, prefix);
-      if (!node || !isVisibleInTree(node)) continue;
+      if (!node || !isVisibleInTree(node) || hasHiddenAncestor(node, entry.inner, hiddenSet, prefix)) continue;
       boxes.push(buildOrientedBox(node.matrixWorld, spec.at, colliderHalfExtents(spec), {
         id: `${entry.id}:carried:${spec.name}`,
         name: spec.name,

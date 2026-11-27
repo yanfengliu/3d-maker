@@ -13,6 +13,8 @@ export interface CompositeRestTransform {
   at: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number];
+  /** Optional exact 16-element column-major Matrix4 when parent scale + rotation introduces shear. */
+  matrix?: number[];
 }
 
 export interface CompositeMountSpec {
@@ -105,10 +107,16 @@ function parseRestTransform(value: unknown): CompositeRestTransform | undefined 
   if (!poseAt) return undefined;
   const poseRot = tuple3(value.rotation);
   const poseScale = tuple3(value.scale);
+  let matrix: number[] | undefined;
+  if (Array.isArray(value.matrix) && value.matrix.length === 16) {
+    const nums = value.matrix.map(Number);
+    if (nums.every(Number.isFinite)) matrix = nums;
+  }
   return {
     at: poseAt,
     ...(poseRot ? { rotation: poseRot } : {}),
     ...(poseScale && poseScale[0] > 0 && poseScale[1] > 0 && poseScale[2] > 0 ? { scale: poseScale } : {}),
+    ...(matrix ? { matrix } : {}),
   };
 }
 

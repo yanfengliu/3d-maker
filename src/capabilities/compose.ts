@@ -8,6 +8,7 @@ import {
   type PhysicsCoupling,
 } from './compose-schema';
 import {
+  findLegacyPhysicsOverride,
   measureRelativeTransform,
   pickUniquePrefix,
   scopeChildSubtree,
@@ -24,6 +25,7 @@ import {
 } from './compose-tree';
 import { inspectAsset } from './runtime';
 import {
+  readCapabilities,
   writeCapabilities,
   type AssetCapabilities,
   type SurfaceSpec,
@@ -135,12 +137,20 @@ function applySlotTransform(
 
 interface PreparedPart {
   id: string;
-  label: string;
+  labelOverride?: string;
   childRoot: T.Object3D;
-  childCaps: AssetCapabilities;
+  existingCaps?: AssetCapabilities;
   preservedRecipe?: Record<string, unknown>;
   mount: CompositeMountSpec;
   prefix?: string;
+}
+
+function sharesHierarchy(a: T.Object3D, b: T.Object3D): boolean {
+  let cur: T.Object3D | null = a;
+  while (cur) { if (cur === b) return true; cur = cur.parent; }
+  cur = b;
+  while (cur) { if (cur === a) return true; cur = cur.parent; }
+  return false;
 }
 
 /**
@@ -160,10 +170,11 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
   const rootName = options.name.trim();
   const scopeNames = options.scopeNames !== false;
 
-  // Stage 1 (pure pre-flight): validate every part's ID, parent order, attachNode, and scoped lengths BEFORE
-  // mutating, renaming, or reparenting ANY caller-supplied `part.object`.
+  // Stage 1 (zero-mutation pre-flight): validate IDs, distinct object references, parent order, attachNodes, and
+  // scoped lengths across ALL parts BEFORE mutating matrices, renaming nodes, or reparenting ANY caller object!
   const prepared: PreparedPart[] = [];
   const plannedById = new Map<string, PreparedPart>();
+  const seenObjects: T.Object3D[] = [];
   const plannedNames = new Set<string>([rootName]);
 
   for (const part of options.parts) {
@@ -177,6 +188,10 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     let preservedRecipe: Record<string, unknown> | undefined;
     if (part.object) {
       childRoot = part.object;
+      if (seenObjects.some(prev => sharesHierarchy(prev, childRoot))) {
+        throw new Error(`Composite part "${id}" reuses or overlaps an Object3D already supplied by another part; clone it first.`);
+      }
+      seenObjects.push(childRoot);
       const existingRecipe = childRoot.userData.recipe as Record<string, unknown> | undefined;
       if (part.recipe) preservedRecipe = structuredClone(part.recipe) as unknown as Record<string, unknown>;
       else if (existingRecipe && typeof existingRecipe === 'object') preservedRecipe = structuredClone(existingRecipe);
@@ -190,7 +205,8 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
       throw new Error(`Composite part "${id}" must provide either object or recipe.`);
     }
 
-    const childCaps = inspectAsset(childRoot);
+    // Pure read-only manifest lookup (never calls updateMatrixWorld on caller objects during pre-flight!).
+    const existingCaps = readCapabilities(childRoot) ?? undefined;
     const defaultCoupling: PhysicsCoupling = part.mount?.surface ? 'surface' : 'weld';
     const mount: CompositeMountSpec = {
       ...(part.mount?.parent ? { parent: part.mount.parent } : {}),
@@ -216,7 +232,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     }
 
     const prefix = scopeNames ? pickUniquePrefix(childRoot, id, plannedNames) : undefined;
-    validateScopedLengths(childRoot, id, prefix ?? '', childCaps);
+    validateScopedLengths(childRoot, id, prefix ?? '', existingCaps);
     plannedNames.add(`Slot_${id}`);
     childRoot.traverse(node => {
       if (node.name) plannedNames.add(prefix ? `${prefix}${node.name}` : node.name);
@@ -224,9 +240,9 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
 
     const entry: PreparedPart = {
       id,
-      label: part.label?.trim() || childCaps.name,
+      ...(part.label?.trim() ? { labelOverride: part.label.trim() } : {}),
       childRoot,
-      childCaps,
+      ...(existingCaps ? { existingCaps } : {}),
       ...(preservedRecipe ? { preservedRecipe } : {}),
       mount,
       ...(prefix ? { prefix } : {}),
@@ -235,7 +251,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
     plannedById.set(id, entry);
   }
 
-  // Stage 2 (commit): all parts are valid; scope, attach, seat, and record exact rest transforms.
+  // Stage 2 (commit): all parts passed pre-flight; inspect, upgrade legacy physics locks, scope, attach, and seat.
   const root = new T.Group();
   root.name = rootName;
   const childRootById = new Map<string, T.Object3D>();
@@ -244,7 +260,12 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
   const compositeClips: T.AnimationClip[] = [];
 
   for (const item of prepared) {
-    const { id, childRoot, childCaps, mount, prefix, preservedRecipe } = item;
+    const { id, childRoot, mount, prefix, preservedRecipe } = item;
+    const childCaps = inspectAsset(childRoot);
+    const legacyLock = !childCaps.physics?.locked ? findLegacyPhysicsOverride(childRoot) : undefined;
+    if (legacyLock) {
+      childCaps.physics = { ...childCaps.physics, body: legacyLock, locked: true };
+    }
     let hostParent: T.Object3D = root;
     let hostRoot: T.Object3D | undefined;
     let hostSurface: SurfaceSpec | undefined;
@@ -289,7 +310,7 @@ export function composeAsset(options: ComposeAssetOptions): T.Group {
 
     const childSpec: CompositeChildSpec = {
       id,
-      label: item.label,
+      label: item.labelOverride || childCaps.name,
       slotNode: slotName,
       ...(prefix ? { nodePrefix: prefix } : {}),
       mount,

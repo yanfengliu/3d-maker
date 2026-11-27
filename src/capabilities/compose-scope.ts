@@ -131,17 +131,26 @@ export function findLegacyPhysicsOverride(root: T.Object3D): 'static' | 'dynamic
     const raw: unknown = cur.userData.physicsBodyOverride;
     if (raw === 'static' || raw === 'dynamic') return raw;
     const only = cur.children.length === 1 ? cur.children[0] : undefined;
-    if (!only || only.userData.compositeSlot || only.userData.compositeChild) break;
+    if (!only || only.userData.compositeSlot) break;
     cur = only;
   }
   return undefined;
 }
 
-/** Measure `target`'s rest transform (position, rotation, scale) relative to `frameRoot`. */
+/** Measure `target`'s rest transform relative to `frameRoot`, preserving exact Matrix4 elements when sheared. */
 export function measureRelativeTransform(frameRoot: T.Object3D, target: T.Object3D): CompositeRestTransform {
   frameRoot.updateMatrixWorld(true);
   target.updateMatrixWorld(true);
   const rel = frameRoot.matrixWorld.clone().invert().multiply(target.matrixWorld);
+  const e = rel.elements;
+  const c0 = new T.Vector3(e[0], e[1], e[2]);
+  const c1 = new T.Vector3(e[4], e[5], e[6]);
+  const c2 = new T.Vector3(e[8], e[9], e[10]);
+  const n0 = c0.length() > 1e-9 ? c0.clone().normalize() : new T.Vector3(1, 0, 0);
+  const n1 = c1.length() > 1e-9 ? c1.clone().normalize() : new T.Vector3(0, 1, 0);
+  const n2 = c2.length() > 1e-9 ? c2.clone().normalize() : new T.Vector3(0, 0, 1);
+  const sheared =
+    Math.abs(n0.dot(n1)) > 1e-6 || Math.abs(n1.dot(n2)) > 1e-6 || Math.abs(n2.dot(n0)) > 1e-6;
   const pos = new T.Vector3();
   const quat = new T.Quaternion();
   const scale = new T.Vector3();
@@ -154,6 +163,7 @@ export function measureRelativeTransform(frameRoot: T.Object3D, target: T.Object
     at: [r3(pos.x), r3(pos.y), r3(pos.z)],
     ...(hasRot ? { rotation: [r3(euler.x), r3(euler.y), r3(euler.z)] } : {}),
     ...(hasScale ? { scale: [r3(scale.x), r3(scale.y), r3(scale.z)] } : {}),
+    ...(sheared ? { matrix: Array.from(e, v => Math.round(v * 1e6) / 1e6 || 0) } : {}),
   };
 }
 

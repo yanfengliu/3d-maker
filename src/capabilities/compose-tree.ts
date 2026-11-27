@@ -184,6 +184,9 @@ export function hasHiddenAncestor(
  */
 export function mountLocalMatrix(mount: CompositeMountSpec, hostSurface?: SurfaceSpec): T.Matrix4 {
   if (mount.slotRestPose) {
+    if (mount.slotRestPose.matrix?.length === 16) {
+      return new T.Matrix4().fromArray(mount.slotRestPose.matrix);
+    }
     const p = new T.Vector3(...mount.slotRestPose.at);
     const r = mount.slotRestPose.rotation ?? [0, 0, 0];
     const q = new T.Quaternion().setFromEuler(new T.Euler(r[0], r[1], r[2], 'XYZ'));
@@ -207,10 +210,16 @@ export function mountLocalMatrix(mount: CompositeMountSpec, hostSurface?: Surfac
   const s = typeof sc === 'number' ? new T.Vector3(sc, sc, sc) : new T.Vector3(sc[0], sc[1], sc[2]);
   const local = new T.Matrix4().compose(pos, q, s);
   if (mount.attachRestPose) {
-    const aPos = new T.Vector3(...mount.attachRestPose.at);
     const aRot = mount.attachRestPose.rotation ?? [0, 0, 0];
     const aQ = new T.Quaternion().setFromEuler(new T.Euler(aRot[0], aRot[1], aRot[2], 'XYZ'));
     const aSc = mount.attachRestPose.scale ?? [1, 1, 1];
+    if (hostSurface) {
+      // Surface coordinates are already in host-root space; apply only attachNode rotation/scale without double-translating.
+      const linearAttach = new T.Matrix4().compose(new T.Vector3(), aQ, new T.Vector3(aSc[0], aSc[1], aSc[2]));
+      const localLinear = new T.Matrix4().compose(new T.Vector3(), q, s);
+      return new T.Matrix4().makeTranslation(pos.x, pos.y, pos.z).multiply(linearAttach).multiply(localLinear);
+    }
+    const aPos = new T.Vector3(...mount.attachRestPose.at);
     const attachM = new T.Matrix4().compose(aPos, aQ, new T.Vector3(aSc[0], aSc[1], aSc[2]));
     return attachM.multiply(local);
   }

@@ -345,6 +345,8 @@ function appendResolvedVolumes(
   }
 
   const hiddenSet = new Set(hiddenOverride ?? caps.state?.hiddenParts ?? []);
+  // If the asset root itself is listed in hiddenParts, suppress all of its colliders (including root-bound Body colliders).
+  if (object && hasHiddenAncestor(object, object, hiddenSet, nodePrefix)) return;
 
   if (includeColliders && caps.colliders) {
     for (const spec of caps.colliders) {

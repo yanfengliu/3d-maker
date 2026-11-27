@@ -20,32 +20,38 @@ function isIdentityTransform(obj: Object3D): boolean {
   );
 }
 
-function collectAnimatedTargets(clips: readonly AnimationClip[]): Set<string> {
+function collectAnimatedTargets(clips: readonly AnimationClip[]): { targets: Set<string>; hasRootRelative: boolean } {
   const targets = new Set<string>();
   const emptyNames = new Set<string>();
+  let hasRootRelative = false;
   for (const clip of clips) {
     for (const track of clip.tracks) {
       const split = splitTrackTargetAndProperty(track.name, emptyNames);
-      if (!split?.targetPart) continue;
+      if (!split) continue;
+      if (!split.targetPart) {
+        hasRootRelative = true;
+        continue;
+      }
       targets.add(split.targetPart);
       for (const tok of split.targetPart.split(/[/:]/)) if (tok) targets.add(tok);
     }
   }
-  return targets;
+  return { targets, hasRootRelative };
 }
 
 /**
- * Unwrap only synthetic empty GLTFLoader scene wrappers (`name === '' | 'Scene'`, empty `userData`, identity transform,
- * and untargeted by any animation track) so repeated GLB saves never stack wrapper depth or drop authored groups/metadata.
+ * Unwrap only synthetic empty GLTFExporter/GLTFLoader scene wrappers (`name === '' | 'Scene' | 'AuxScene'`,
+ * empty `userData`, identity transform, and untargeted by any clip track) so repeated GLB saves never stack wrappers.
  */
 function unwrapSceneWrapper(source: Object3D, clips: readonly AnimationClip[]): Object3D {
-  const targeted = collectAnimatedTargets(clips);
+  const { targets, hasRootRelative } = collectAnimatedTargets(clips);
+  if (hasRootRelative) return source;
   let cur: Object3D = source;
   while (
     Object.keys(cur.userData).length === 0
-    && (cur.name === '' || cur.name === 'Scene')
-    && !targeted.has(cur.name)
-    && !targeted.has(cur.uuid)
+    && (cur.name === '' || cur.name === 'Scene' || cur.name === 'AuxScene')
+    && !targets.has(cur.name)
+    && !targets.has(cur.uuid)
     && cur.children.length === 1
     && cur.children[0]
     && isIdentityTransform(cur)
@@ -63,6 +69,7 @@ function rebindUnscopedChildTracks(
   child: CompositeChildSpec,
   inner: Object3D,
   clipPrefix: string,
+  childPath: string,
   animations: readonly AnimationClip[],
 ): void {
   if (child.nodePrefix) return;
@@ -73,9 +80,10 @@ function rebindUnscopedChildTracks(
     if (node.name) ownNames.add(node.name);
     if (typeof node.userData.localName === 'string') ownNames.add(node.userData.localName);
   });
-  const prefix = `${clipPrefix}: `;
+  const colonPrefix = `${clipPrefix}: `;
+  const slashPrefix = `${childPath}/`;
   for (const clip of animations) {
-    if (!clip.name.startsWith(prefix)) continue;
+    if (!clip.name.startsWith(colonPrefix) && !clip.name.startsWith(slashPrefix)) continue;
     for (const track of clip.tracks) {
       const split = splitTrackTargetAndProperty(track.name, ownNames);
       if (!split) continue;
@@ -190,7 +198,7 @@ export function cloneForExport(
       for (const part of child.capabilities.detachableParts) {
         ensureVisible(findOwnNodeByName(inner, part.name, child.nodePrefix));
       }
-      rebindUnscopedChildTracks(child, inner, childPath.split('/').join(': '), root.animations);
+      rebindUnscopedChildTracks(child, inner, childPath.split('/').join(': '), childPath, root.animations);
     });
   }
 
