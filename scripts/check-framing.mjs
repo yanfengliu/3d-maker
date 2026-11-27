@@ -199,6 +199,7 @@ export async function verifyClipFraming(browser, origin, site, out) {
     const roverRest = await subjectBounds(page);
     await page.goto(origin + site + '?asset=field-rover');
     await page.waitForFunction(() => window.__shotReady);
+    assert.equal(await page.locator('#motionName').innerText(), 'Traverse');
     await pauseAt(page, 0.2);
     const roverTraverse = await subjectBounds(page);
     await page.screenshot({ path: join(out, 'field-rover-traverse.png') });

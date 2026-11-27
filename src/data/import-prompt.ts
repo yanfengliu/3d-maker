@@ -73,7 +73,11 @@ export async function editImportWithPrompt(original: ImportEdits, slots: SlotNam
   const paint = slots.length <= 64
     ? { type: 'object', additionalProperties: false, properties: Object.fromEntries(slots.map(slot => [slot.id, editFields.primary])) }
     : { type: 'object', additionalProperties: editFields.primary };
-  const reset = { type: 'array', items: { type: 'string' } };
+  const reset = {
+    type: 'array',
+    minItems: 1,
+    items: slots.length <= 64 ? { type: 'string', enum: slots.map(slot => slot.id) } : { type: 'string' },
+  };
   const patch = await translateEdit({ model: next, slots }, prompt, instructions, slots.length ? { ...controls, paint, reset } : controls, signal);
   if (!patch) {
     for (const clause of commandClauses(prompt)) importClause(next, slots, clause);
@@ -84,7 +88,8 @@ export async function editImportWithPrompt(original: ImportEdits, slots: SlotNam
   }
   const resetIds: string[] = [];
   if ('reset' in patch) {
-    if (!Array.isArray(patch.reset) || !patch.reset.length || !patch.reset.every((id): id is string => typeof id === 'string')) {
+    if (!Array.isArray(patch.reset) || !patch.reset.every((id): id is string => typeof id === 'string') ||
+        (!patch.reset.length && Object.keys(patch).length === 1)) {
       throw new Error('The on-device model returned an invalid paint reset.');
     }
     for (const id of patch.reset) {

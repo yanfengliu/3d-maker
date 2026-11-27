@@ -99,10 +99,10 @@ function namePlaybackControl() {
   const clip = stage.model?.animations[stage.clipIndex];
   if (clip) el('play').title = 'Play or pause ' + clip.name + ' (Space)';
 }
-function properties() {
+function properties(keepSlot = false) {
   if (recipe) showProperties(recipe, edit);
   else if (imported) {
-    const selectedSlot = document.querySelector<HTMLSelectElement>('#paintSlot')?.value;
+    const selectedSlot = keepSlot ? document.querySelector<HTMLSelectElement>('#paintSlot')?.value : undefined;
     showProperties({ ...imported.edits, primary: imported.edits.tint }, edit);
     showModelPaint(listPaintSlots(imported), imported.edits.paint, paint => { edit({ paint }); }, selectedSlot);
   }
@@ -317,7 +317,7 @@ function setImportEdits(edits: ImportEdits) {
   if (previous.scale !== edits.scale || previous.proportion !== edits.proportion) stage.place(false);
   else stage.invalidate();
   toolbar();
-  properties();
+  properties(true);
 }
 const dialogs = setupDialogs({
   recipe: () => (recipe ? { ...recipe } : null),

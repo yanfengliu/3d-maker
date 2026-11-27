@@ -14,9 +14,10 @@ it('applies named and ID-based paint with global settings while retaining other 
   } });
   const recolored = await editImportWithPrompt(result.edits, slots, 'set vertex-0-aabbcc to #010203 and restore jacket');
   expect(recolored.edits.paint).toEqual({ 'vertex-0-aabbcc': '#010203' });
-  const curly = await editImportWithPrompt(recolored.edits, slots, 'Paint \u201cHat and ribbon\u201d teal and reset tint');
+  const curly = await editImportWithPrompt(recolored.edits, slots, 'Paint \u201cHat and ribbon\u201d teal, reset tint, and name it \u2018Harbour Pilot\u2019');
   expect(curly.edits.paint).toEqual({ 'vertex-0-aabbcc': '#379a93' });
   expect(curly.edits.tint).toBe('#ffffff');
+  expect(curly.edits.name).toBe('Harbour Pilot');
   expect(edits.paint).toEqual({ 'material-1': '#778899' });
 });
 
@@ -31,7 +32,7 @@ it('rejects unsupported or ambiguous instructions as a whole', async () => {
 
 it('constrains on-device patches to model paint slots and validates their real output', async () => {
   const destroy = vi.fn();
-  const prompt = vi.fn().mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"vertex-0-aabbcc":"#abcdef"}}}')
+  const prompt = vi.fn().mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"vertex-0-aabbcc":"#abcdef"},"reset":[]}}')
     .mockResolvedValueOnce('{"supported":true,"changes":{"reset":["material-1"]}}')
     .mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"material-9":"#001122"}}}')
     .mockResolvedValueOnce('{"supported":true,"changes":{"paint":{"material-1":900}}}');

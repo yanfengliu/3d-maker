@@ -2,7 +2,6 @@ import * as T from 'three';
 
 const sampleCount = 7;
 const maxSkinSamples = 400;
-const maxMeshSamples = 800;
 
 export function fastBounds(root: T.Object3D): T.Box3 {
   root.updateMatrixWorld(true);
@@ -15,8 +14,7 @@ export function fastBounds(root: T.Object3D): T.Box3 {
     if (!position || position.count === 0) return;
     const skinned = node instanceof T.SkinnedMesh;
     if (skinned) node.skeleton.update();
-    const limit = skinned ? maxSkinSamples : maxMeshSamples;
-    const step = Math.max(1, Math.floor(position.count / limit));
+    const step = skinned ? Math.max(1, Math.floor(position.count / maxSkinSamples)) : 1;
     for (let i = 0; i < position.count; i += step) {
       vertex.fromBufferAttribute(position, i);
       if (skinned) node.applyBoneTransform(i, vertex);

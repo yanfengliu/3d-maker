@@ -1,9 +1,9 @@
 # Model editing and remixing
 
-Status: active
-Owner: Codex
-Created: 2026-11-27
-Updated: 2026-11-27
+Status: complete
+Owner: Antigravity
+Created: 2026-11-26
+Updated: 2026-11-26
 
 ## Problem and outcome
 
@@ -29,4 +29,4 @@ Start a separate draft with the current settings and playback in place. Use the 
 
 ## Outcome
 
-Handoff on 26 November 2026. The animation list at `4e27aa7` is deployed. Remix, individual color editing and three-source save/reopen/export passed 70 tests, lint, strict types, both builds and the Chrome gate at the local implementation milestone `03df719`. The next checkpoint also wires AI tools and render invalidation for static imports. Verify import prompts through the actual dialog and repaint a stationary static model after the renderer settles, with a pixel regression. The Swimming screenshot at `output/studio/available-animations.png` shows the pilot partly outside the viewport; check clip framing for swimming and other low poses. Finish review, run both gates, push main and verify Pages and the live model workflow. [Partial implementation review](reviews/0_implementation.md)
+Completed on 26 November 2026. Remixing, individual material and vertex-color editing, static paint redraw invalidation, AI tools prompt and JSON editing for imports, and low-pose clip preview framing (Swimming, Treading water, Slide, and grounded rigid rotations on Field Rover) all passed 76 unit tests, strict types, zero-warning lint, both Vite builds, and the desktop Chrome studio gate (`scripts/check-studio.mjs`, `scripts/check-framing.mjs`, `scripts/check-remixes.mjs`) plus real-model checks on `Survey Drone` and `Family Traveller`. Independent review covered Round 0 (partial), Round 1 (Claude Opus 5.5 full diff review; Codex quota-limited), and Round 2 (Antigravity `agy` Claude Opus 5.5 High repair re-review); all P1/P2 findings (`F0`–`F8`) were resolved and verified before deployment. [Round 0](reviews/0_implementation.md) · [Round 1](reviews/1_implementation.md) · [Round 2](reviews/2_implementation.md)
