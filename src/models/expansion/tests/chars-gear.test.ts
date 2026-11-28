@@ -16,7 +16,10 @@ import { charactersCivilianMeta } from '../meta/characters-civilian';
 import { handheldFantasyScifiMeta } from '../meta/handheld-fantasy-scifi';
 import { handheldToolsMeta } from '../meta/handheld-tools';
 import { attachmentsWearablesPack } from '../packs/attachments-wearables';
+import { charactersAdventurePack } from '../packs/characters-adventure';
 import { charactersCivilianPack } from '../packs/characters-civilian';
+import { handheldFantasyScifiPack } from '../packs/handheld-fantasy-scifi';
+import { handheldToolsPack } from '../packs/handheld-tools';
 
 type PaintedMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 
@@ -40,6 +43,9 @@ const allMeta = [
 
 const allPacks: readonly ProceduralAssetDef[] = [
   ...charactersCivilianPack,
+  ...charactersAdventurePack,
+  ...handheldToolsPack,
+  ...handheldFantasyScifiPack,
   ...attachmentsWearablesPack,
 ];
 
@@ -103,6 +109,16 @@ function collectTsFiles(dir: string): string[] {
 describe('chars-gear expansion metadata and repo conventions', () => {
   it('defines 100 unique metadata items with zero Three.js imports and zero lock collisions', () => {
     expect(allMeta).toHaveLength(100);
+    expect(allPacks).toHaveLength(100);
+    expect(charactersCivilianPack).toHaveLength(20);
+    expect(charactersAdventurePack).toHaveLength(20);
+    expect(handheldToolsPack).toHaveLength(20);
+    expect(handheldFantasyScifiPack).toHaveLength(20);
+    expect(attachmentsWearablesPack).toHaveLength(20);
+    expect(allPacks.map(p => p.id)).toEqual(allMeta.map(m => m.id));
+    expect(allPacks.filter(p => p.browseCategory === 'character')).toHaveLength(40);
+    expect(allPacks.filter(p => p.browseCategory === 'ultra')).toHaveLength(40);
+    expect(allPacks.filter(p => p.browseCategory === 'attachment')).toHaveLength(20);
     expect(new Set(allMeta.map(m => m.id)).size).toBe(100);
     expect(new Set(allMeta.map(m => m.code)).size).toBe(100);
     expect(new Set(allMeta.map(m => m.name)).size).toBe(100);
@@ -235,21 +251,28 @@ describe.each(allPacks)('$code $name ($id)', def => {
     controller.dispose();
   });
 
-  it('passes auditModelCraft invariants on standard quality including detachable hiding', () => {
-    const model = buildAsset(def, { quality: 'standard', detail: true });
-    const audit = auditModelCraft(model);
-    expect(audit.meshCount).toBeGreaterThan(0);
-    expect(audit.nonFiniteVertices).toBe(0);
-    expect(audit.doubleSidedMeshes).toEqual([]);
-    expect(audit.materialIssues).toEqual([]);
-    expect(audit.minY).toBeGreaterThanOrEqual(-0.025);
-    expect(audit.minY).toBeLessThanOrEqual(0.08);
-    expect(audit.bottomToTopRatio).toBeGreaterThanOrEqual(0.55);
-    expect(audit.backToFrontRatio).toBeGreaterThanOrEqual(0.55);
-    expect(audit.leftRightBalance).toBeGreaterThanOrEqual(0.45);
-    expect(audit.floatingComponents).toEqual([]);
-    expect(audit.exposedZFightPairs).toEqual([]);
+  it('passes auditModelCraft invariants on standard quality including contrast colors, detail=false, and detachable hiding', () => {
+    for (const opts of [
+      { quality: 'standard' as const, detail: true },
+      { quality: 'standard' as const, detail: true, primary: '#ed5a19', accent: '#b6e623' },
+      { quality: 'standard' as const, detail: false },
+    ]) {
+      const model = buildAsset(def, opts);
+      const audit = auditModelCraft(model);
+      expect(audit.meshCount).toBeGreaterThan(0);
+      expect(audit.nonFiniteVertices).toBe(0);
+      expect(audit.doubleSidedMeshes).toEqual([]);
+      expect(audit.materialIssues).toEqual([]);
+      expect(audit.minY).toBeGreaterThanOrEqual(-0.025);
+      expect(audit.minY).toBeLessThanOrEqual(0.08);
+      expect(audit.bottomToTopRatio).toBeGreaterThanOrEqual(0.55);
+      expect(audit.backToFrontRatio).toBeGreaterThanOrEqual(0.55);
+      expect(audit.leftRightBalance).toBeGreaterThanOrEqual(0.45);
+      expect(audit.floatingComponents).toEqual([]);
+      expect(audit.exposedZFightPairs).toEqual([]);
+    }
 
+    const model = buildAsset(def, { quality: 'standard', detail: true });
     for (const part of def.detachableParts ?? []) {
       const node = model.getObjectByName(part.name);
       expect(node).toBeDefined();
