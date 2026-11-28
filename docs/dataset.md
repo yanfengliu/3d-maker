@@ -1,4 +1,14 @@
-# Polyfork dataset
+# Model datasets
+
+## Site assets
+
+The [site asset catalog](../public/datasets/site-assets/catalog.json) lists reusable, versioned GLBs extracted from procedural scenes. Paths in the catalog are relative to its directory. Each version has a byte count, a SHA-256 digest, dimensions in metres and source attribution. The studio serves the catalog at `./datasets/site-assets/catalog.json`. Open a downloaded GLB with **Import** in Form Foundry. The airport workspace also has this catalog and the verified v1 binary under the primary checkout’s local `dataset/site-assets/` directory.
+
+To add a version, append the new metadata, give its GLB a new path, and append its metadata digest in `src/data/site-assets.test.ts`. The full-history check compares every earlier version, and the pinned records also work in shallow checkouts.
+
+The first asset is the [SFO International Terminal departures roof, v1](../public/datasets/site-assets/sfo-international-roof/v1.glb). Its local origin is the supporting podium. The airport renderer places the model using the mapped headhouse footprint. The source scene determines the public-facing roof design, and the GLB preserves that revision for reuse.
+
+## Polyfork dataset
 
 The local dataset is in `dataset/polyfork/`. The 26 November 2026 snapshot contains the publisher’s 3,639-entry public index, a newer complete roster of 3,645 free API records, and two original GLBs. The remaining binaries are available on demand through the studio’s Polyfork search. [Public index](https://github.com/lucas-martinic/polyfork-catalog) · [API](https://polyfork.dev/api)
 
@@ -10,7 +20,7 @@ The local dataset is in `dataset/polyfork/`. The 26 November 2026 snapshot conta
 | `family-traveller-9af47e.glb` | Family Traveller, eight skins and three embedded clips (Idle, Walk and Run) |
 | `CREDITS.txt`, `manifest.json` | Per-model credits, modification status, source URLs, snapshot time, byte lengths and SHA-256 hashes |
 
-## Download and verify
+### Download and verify
 
 From the repository root, run `node scripts/dataset.mjs`. On the first run it downloads the pinned public index and pages the live metadata API, checks the publisher’s count against unique IDs, reads the two GLBs, then publishes the completed snapshot to `dataset/polyfork/`. Subsequent runs verify the saved files offline. Open either GLB with the studio’s file importer.
 
@@ -25,11 +35,11 @@ The initial snapshot has these SHA-256 digests.
 | `survey-drone-7c71f9.glb` | `7c3a072ce0a4f917226213ee78c62d4c73e617794d9aff7e612f237585d30edd` |
 | `family-traveller-9af47e.glb` | `06321437a64fbf7800306647ece56595173b00d834a5e16064fb7728a5af72e9` |
 
-## Use from another local session
+### Use from another local session
 
 On the shared Mac the catalog snapshot is at `/Users/yanfengliu/github/3d-maker/dataset/polyfork/` and the motion sources are at `/Users/yanfengliu/github/3d-maker/dataset/character-motions/`. Codex, Claude Code and other tools running as the same macOS user can read these paths when their filesystem permissions allow it. Another worktree can refer to the same absolute paths. A fresh clone on another machine can run the two download commands in this guide.
 
-## Storage and rights
+### Storage and rights
 
 Git tracks the downloader and instructions. The downloaded data occupies about 7.3 MiB for this snapshot and stays in an ignored directory outside the production build. The public index has an explicit reuse licence. The supplemental live API records stay local. [Index licence](https://github.com/lucas-martinic/polyfork-catalog/blob/b804068935f6d323d3bf2dd13b4a94d604ffe724/LICENSE.md)
 

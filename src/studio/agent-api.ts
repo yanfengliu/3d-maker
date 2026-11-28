@@ -76,6 +76,7 @@ export function createAgentApi(host: StudioHost) {
     listClips: host.listClips,
     playClip: host.playClip,
     getProjection: () => host.stage.getProjection(),
+    measureViewCoverage: () => host.stage.measureViewCoverage(),
     setProjection: (projection: Projection) => { host.setProjection(projection); },
     setView: (view: View) => { host.setView(view); },
     inspectModel: (): (AssetCapabilities & { paintSlots: PaintSlotSummary[] }) | null => {

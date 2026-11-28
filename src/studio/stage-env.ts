@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { expandInstancedBounds } from '../instanced-bounds';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 export function disposeModel(root: T.Object3D) {
@@ -55,6 +56,10 @@ export function measureModelBounds(model: T.Group): T.Box3 {
     const geometry = node.geometry as T.BufferGeometry;
     const pos = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
     if (!pos || !pos.count) return;
+    if (node instanceof T.InstancedMesh) {
+      expandInstancedBounds(measured, node);
+      return;
+    }
     const skinned = node instanceof T.SkinnedMesh;
     if (skinned) node.skeleton.update();
     for (let i = 0; i < pos.count; i++) {

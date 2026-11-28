@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { visitMeshVerticesInFrame } from '../instanced-bounds';
 import type { CompositeChildSpec, CompositeMountSpec } from './compose-schema';
 import { sanitizeMimicLinks, type RiggedPartSpec } from './rig-math';
 import type { AssetCapabilities, AssetPhysicsSpec, AssetRuntimeState, SurfaceSpec } from './schema';
@@ -234,18 +235,11 @@ export function measureCompositeLocalBox(root: T.Object3D): T.Box3 {
   root.updateMatrixWorld(true);
   const invRoot = root.matrixWorld.clone().invert();
   const box = new T.Box3();
-  const v = new T.Vector3();
   const rel = new T.Matrix4();
   root.traverse(node => {
     if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
-    const geo = node.geometry as T.BufferGeometry;
-    const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
-    if (!pos) return;
     rel.multiplyMatrices(invRoot, node.matrixWorld);
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(rel);
-      if (Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)) box.expandByPoint(v);
-    }
+    visitMeshVerticesInFrame(node, rel, v => box.expandByPoint(v));
   });
   return box;
 }

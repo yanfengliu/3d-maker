@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "sfo-international-roof",
+      "name": "Dianne Feinstein International Terminal roof",
+      "category": "buildings",
+      "versions": [
+        {
+          "version": 1,
+          "file": "sfo-international-roof/v1.glb",
+          "sha256": "96957c35b1b56a920176788c6b6a512a804bac540e85427b0fe648cdee09db2c",
+          "bytes": 273100,
+          "dimensionsMetres": { "width": 262.1302, "height": 22.1800, "depth": 65.3167 },
+          "origin": "The centre of the ticket-hall podium at roof-column base level. +X points towards the north shoulder, +Y is up, and the curb faces -Z.",
+          "source": {
+            "repository": "https://github.com/yanfengliu/airport",
+            "builder": "src/render/static/international-roof.ts",
+            "builderGitBlob": "e71cf8ead99911c945d168449b2d326d58ba2006",
+            "extractor": "tools/models/export-international-roof.mjs"
+          },
+          "credits": {
+            "model": "Yanfeng Liu, 2026. MIT.",
+            "footprint": "© OpenStreetMap contributors, ODbL.",
+            "footprintLicense": "https://www.openstreetmap.org/copyright",
+            "architecturalReferences": [
+              "https://www.som.com/projects/san-francisco-international-airport-international-terminal/",
+              "https://www.aisc.org/media/jffmxypr/2001-eae.pdf",
+              "https://noise.flysfo.com/wp-content/uploads/2023/02/Airport_Directors_Report_APR2020.pdf"
+            ]
+          },
+          "description": "The upper ticket hall as drawn in the airport simulation, including the cantilevered three-span roof, four skylights, instanced steelwork, curtain wall and curbside panels. The mapped podium, surrounding terminal wings and interior are separate in the simulation."
+        }
+      ]
+    }
+  ]
+}

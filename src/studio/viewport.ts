@@ -11,13 +11,9 @@ import {
   type Projection,
 } from './projection';
 import {
-  applyNightLighting,
-  buildRoomEnvironment,
-  disposeModel,
-  measureModelBounds,
-  softShadow,
-  updateStageProps,
+  applyNightLighting, buildRoomEnvironment, disposeModel, measureModelBounds, softShadow, updateStageProps,
 } from './stage-env';
+import { measureViewCoverage } from './view-coverage';
 
 export { disposeModel };
 export type { Projection };
@@ -387,6 +383,9 @@ export class Viewport {
     this.controls.maxDistance = reachRadius * 24;
     this.controls.update();
     this.resize();
+  }
+  measureViewCoverage() {
+    return measureViewCoverage(this.renderer, this.scene, this.camera, [this.grid, this.ground, this.shadow]);
   }
   showGrid(show: boolean) {
     this.grid.visible = show;

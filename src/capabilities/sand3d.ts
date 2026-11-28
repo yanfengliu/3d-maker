@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { expandInstancedBounds } from '../instanced-bounds';
 import {
   axisTuple,
   parseAxisSpec,
@@ -135,6 +136,10 @@ function measureDimensions(root: T.Object3D) {
     const geometry = node.geometry as T.BufferGeometry;
     const pos = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
     if (!pos || !pos.count) return;
+    if (node instanceof T.InstancedMesh) {
+      expandInstancedBounds(box, node);
+      return;
+    }
     for (let i = 0; i < pos.count; i++) {
       vertex.fromBufferAttribute(pos, i).applyMatrix4(node.matrixWorld);
       if (Number.isFinite(vertex.x) && Number.isFinite(vertex.y) && Number.isFinite(vertex.z)) box.expandByPoint(vertex);

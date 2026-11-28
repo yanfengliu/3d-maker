@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { measureDimensions, refreshLegacyInstanceDimensions } from './measure-dimensions';
 import { isAssetRootHidden } from './compose-scope';
 import {
   findOwnNodeByName,
@@ -74,29 +75,6 @@ export function clampToRange(range: [number, number], value: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function measureDimensions(root: T.Object3D) {
-  root.updateMatrixWorld(true);
-  const box = new T.Box3();
-  const vertex = new T.Vector3();
-  root.traverse(node => {
-    if (node.userData.studioOverlay || !(node instanceof T.Mesh)) return;
-    const geometry = node.geometry as T.BufferGeometry;
-    const pos = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
-    if (!pos || !pos.count) return;
-    for (let i = 0; i < pos.count; i++) {
-      vertex.fromBufferAttribute(pos, i).applyMatrix4(node.matrixWorld);
-      box.expandByPoint(vertex);
-    }
-  });
-  if (box.isEmpty()) return undefined;
-  const size = box.getSize(new T.Vector3());
-  const round = (n: number) => Math.round(n * 1000) / 1000;
-  return {
-    sizeM: { x: round(size.x), y: round(size.y), z: round(size.z) },
-    originY: round(box.min.y),
-  };
-}
-
 function describeClips(
   clips: readonly T.AnimationClip[],
   existing?: readonly { name: string; duration: number; synthesized?: boolean }[],
@@ -118,6 +96,7 @@ export function inspectAsset(root: T.Object3D, animations?: readonly T.Animation
   const sourceClips = animations?.length ? animations : root.animations;
   const clips = sourceClips.length ? describeClips(sourceClips, existing?.clips) : existing?.clips;
   if (existing) {
+    refreshLegacyInstanceDimensions(root, existing);
     const out: AssetCapabilities = {
       ...structuredClone(existing),
       ...(clips?.length ? { clips } : {}),

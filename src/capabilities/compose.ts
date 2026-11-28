@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { visitMeshVerticesInFrame } from '../instanced-bounds';
 import type { Recipe } from '../data/recipe';
 import {
   COMPOSITE_CHILD_ID_PATTERN,
@@ -71,21 +72,12 @@ function measureMinAlongNormalInHost(
   includeNestedSlots: boolean,
   skipSlots?: ReadonlySet<T.Object3D>,
 ): number {
-  const v = new T.Vector3();
   const rel = new T.Matrix4();
   let minProj = Infinity;
   traverseAssetGeometry(childRoot, includeNestedSlots, skipSlots, node => {
     if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
-    const geo = node.geometry as T.BufferGeometry;
-    const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
-    if (!pos) return;
     rel.multiplyMatrices(hostRootWorldInv, node.matrixWorld);
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(rel);
-      if (!Number.isFinite(v.x) || !Number.isFinite(v.y) || !Number.isFinite(v.z)) continue;
-      const proj = v.dot(normalInHost);
-      if (proj < minProj) minProj = proj;
-    }
+    visitMeshVerticesInFrame(node, rel, v => { minProj = Math.min(minProj, v.dot(normalInHost)); });
   });
   return Number.isFinite(minProj) ? minProj : 0;
 }

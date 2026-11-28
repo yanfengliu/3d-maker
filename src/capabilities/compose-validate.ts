@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { visitMeshVerticesInFrame } from '../instanced-bounds';
 import type { CompositeChildSpec } from './compose-schema';
 import { isAssetRootHidden } from './compose-scope';
 import { findOwnNodeByName, hasHiddenAncestor, surfaceBasis, traverseAssetGeometry } from './compose-tree';
@@ -177,7 +178,6 @@ export function validateComposite(
     const invHost = host.inner.matrixWorld.clone().invert();
     const { u, n, v } = surfaceBasis(surf.normal);
     const surfOrigin = new T.Vector3(...surf.at);
-    const pt = new T.Vector3();
     const rel = new T.Matrix4();
     let minU = Infinity, maxU = -Infinity;
     let minN = Infinity, maxN = -Infinity;
@@ -189,13 +189,8 @@ export function validateComposite(
       dependentSlotsByParent.get(entry.id),
       node => {
         if (!(node instanceof T.Mesh) || node.userData.studioOverlay) return;
-        const geo = node.geometry as T.BufferGeometry;
-        const pos = geo.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
-        if (!pos) return;
         rel.multiplyMatrices(invHost, node.matrixWorld);
-        for (let i = 0; i < pos.count; i++) {
-          pt.fromBufferAttribute(pos, i).applyMatrix4(rel);
-          if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y) || !Number.isFinite(pt.z)) continue;
+        visitMeshVerticesInFrame(node, rel, pt => {
           pt.sub(surfOrigin);
           const pu = pt.dot(u);
           const pn = pt.dot(n);
@@ -206,7 +201,7 @@ export function validateComposite(
           if (pn > maxN) maxN = pn;
           if (pv < minV) minV = pv;
           if (pv > maxV) maxV = pv;
-        }
+        });
       },
     );
     if (!Number.isFinite(minU)) continue;

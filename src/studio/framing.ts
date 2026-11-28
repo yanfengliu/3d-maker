@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { expandInstancedBounds } from '../instanced-bounds';
 
 const sampleCount = 7;
 const maxSkinSamples = 400;
@@ -12,6 +13,10 @@ export function fastBounds(root: T.Object3D): T.Box3 {
     const geometry = node.geometry as T.BufferGeometry;
     const position = geometry.getAttribute('position') as T.BufferAttribute | T.InterleavedBufferAttribute | undefined;
     if (!position || position.count === 0) return;
+    if (node instanceof T.InstancedMesh) {
+      expandInstancedBounds(box, node);
+      return;
+    }
     const skinned = node instanceof T.SkinnedMesh;
     if (skinned) node.skeleton.update();
     const step = skinned ? Math.max(1, Math.floor(position.count / maxSkinSamples)) : 1;

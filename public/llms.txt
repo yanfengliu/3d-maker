@@ -2,6 +2,8 @@
 
 Form Foundry edits procedural three.js assets and free PolyFork models in the browser. Fetch ./catalog.json for the starter catalog, including complete recipes. Its schema is at ./agent-schema.json. Both paths are relative to the deployed app.
 
+Versioned real-site models are indexed at ./datasets/site-assets/catalog.json. Resolve each version’s GLB path relative to that catalog. It lists dimensions in metres, SHA-256 and source credit.
+
 ## Self-describing exported GLBs
 
 Every GLB exported from Form Foundry (both studio originals and imported PolyFork models) embeds a versioned capability manifest in its exported root node extras at `nodes[0].extras.formFoundry` (exposed by three.js `GLTFLoader` on `gltf.scene.children[0]?.userData.formFoundry`, or `gltf.scene.userData.formFoundry`; `inspectAsset(gltf.scene, gltf.animations)` discovers it automatically). Inspect it before placing a model in a scene so authored interactions are never lost:
@@ -41,6 +43,7 @@ Open the studio and use window.forgeStudio.
 - getImportEdits() and setImportEdits({name, tint, scale, proportion, paint?, pose?, hiddenParts?, night?, decalText?}) read and replace the loaded GLB's edits. Retain the other edits when patching one field.
 - listClips() returns clip names and durations. playClip(index) previews a clip. Compatible humanoids include the packaged downloadable CC0 motion library. Original characters also retain their two studio cycles. exportGLB() includes all available clips even before listClips() is called.
 - getProjection() and setProjection("perspective" | "orthographic") read and switch the viewport projection (persisted across reloads and localhost ports; defaults to real-life perspective).
+- measureViewCoverage() returns model coverage as a percentage, normalized screen bounds and the frame edges touched by the model. It measures with the current camera and excludes the stage grid and floor shadows.
 - setView("Perspective" | "Front" | "Back" | "Left" | "Right" | "Top" | "Bottom") moves the camera to a cardinal or 3/4 inspection preset.
 - openPolyfork(id, name) loads a free GLB and its public metadata directly from PolyFork and returns a Promise<void>.
 

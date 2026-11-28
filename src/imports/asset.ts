@@ -1,4 +1,5 @@
 import { Color, Group } from 'three';
+import { refreshLegacyInstanceDimensions } from '../capabilities/measure-dimensions';
 import type { GLTFLoader as GltfLoaderClass } from 'three/addons/loaders/GLTFLoader.js';
 import { createAssetController, inspectAsset, type AssetController } from '../capabilities/runtime';
 import {
@@ -387,6 +388,7 @@ async function openBinary(
   group.animations = gltf.animations;
   const name = label.trim().slice(0, 80) || 'Imported asset';
   const embedded = readCapabilities(group);
+  if (embedded && !providedCapabilities) refreshLegacyInstanceDimensions(group, embedded);
   const capabilities = providedCapabilities ? providedCapabilities(group) : (embedded ? intersectWithNodes(group, embedded) : (() => {
     const inspected = inspectAsset(group);
     return {
