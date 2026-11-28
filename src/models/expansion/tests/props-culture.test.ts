@@ -9,8 +9,16 @@ import type { Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
+import { fantasyArcaneMeta } from '../meta/fantasy-arcane';
 import { musicStageMeta } from '../meta/music-stage';
+import { scifiStationsMeta } from '../meta/scifi-stations';
+import { sportsPlayMeta } from '../meta/sports-play';
+import { streetCivicMeta } from '../meta/street-civic';
+import { fantasyArcanePack } from '../packs/fantasy-arcane';
 import { musicStagePack } from '../packs/music-stage';
+import { scifiStationsPack } from '../packs/scifi-stations';
+import { sportsPlayPack } from '../packs/sports-play';
+import { streetCivicPack } from '../packs/street-civic';
 
 type PaintedMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 
@@ -23,7 +31,11 @@ interface LockFile {
 }
 
 const packGroups = [
-  { packId: 'music-stage', meta: musicStageMeta, assets: musicStagePack },
+  { packId: 'music-stage', prefix: 'MS', meta: musicStageMeta, assets: musicStagePack },
+  { packId: 'sports-play', prefix: 'SP', meta: sportsPlayMeta, assets: sportsPlayPack },
+  { packId: 'street-civic', prefix: 'SC', meta: streetCivicMeta, assets: streetCivicPack },
+  { packId: 'fantasy-arcane', prefix: 'FA', meta: fantasyArcaneMeta, assets: fantasyArcanePack },
+  { packId: 'scifi-stations', prefix: 'SS', meta: scifiStationsMeta, assets: scifiStationsPack },
 ] as const;
 
 const allMeta = packGroups.flatMap(g => g.meta);
@@ -80,21 +92,27 @@ function walkTsFiles(dir: string): string[] {
 }
 
 describe('props-culture metadata, conventions, and collision checks', () => {
-  it('defines unique IDs, codes, and names with zero collisions against variations.lock.json', () => {
+  it('defines 100 unique prop models across 5 packs with zero collisions against variations.lock.json', () => {
     const lock = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as LockFile;
     const lockedIds = new Set(Object.values(lock.entries).map(e => e.template));
     expect(lockedIds.size).toBeGreaterThanOrEqual(106);
+
+    expect(allMeta).toHaveLength(100);
+    expect(allAssets).toHaveLength(100);
 
     for (const group of packGroups) {
       expect(group.meta).toHaveLength(20);
       expect(group.assets).toHaveLength(20);
       expect(group.meta.every(m => m.pack === group.packId)).toBe(true);
+      expect(group.meta.map(m => m.code)).toEqual(
+        Array.from({ length: 20 }, (_, i) => `${group.prefix}-${String(i + 1).padStart(2, '0')}`),
+      );
       expect(group.assets.map(a => a.id)).toEqual(group.meta.map(m => m.id));
     }
 
-    expect(new Set(allAssets.map(a => a.id)).size).toBe(allAssets.length);
-    expect(new Set(allAssets.map(a => a.code)).size).toBe(allAssets.length);
-    expect(new Set(allAssets.map(a => a.name)).size).toBe(allAssets.length);
+    expect(new Set(allAssets.map(a => a.id)).size).toBe(100);
+    expect(new Set(allAssets.map(a => a.code)).size).toBe(100);
+    expect(new Set(allAssets.map(a => a.name)).size).toBe(100);
     expect(allAssets.every(a => a.category === 'Object' && a.browseCategory === 'prop')).toBe(true);
     expect(allMeta.every(m => !lockedIds.has(m.id))).toBe(true);
     expect(allMeta.every(m => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(m.id))).toBe(true);
@@ -102,7 +120,7 @@ describe('props-culture metadata, conventions, and collision checks', () => {
 
   it('keeps meta files free of Three.js imports and all expansion files <= 500 lines', () => {
     const files = walkTsFiles(EXPANSION_DIR);
-    expect(files.length).toBeGreaterThan(0);
+    expect(files.length).toBe(26);
     for (const file of files) {
       const text = readFileSync(file, 'utf8');
       const lines = text.split(/\r\n|\r|\n/);
@@ -208,30 +226,34 @@ describe.each(allAssets)('$code $name ($id)', asset => {
   });
 
   it('passes auditModelCraft watertight, grounding, connectivity, and Z-fighting invariants', () => {
-    const model = buildExpansionAsset(asset, { quality: 'standard', detail: true });
-    const audit = auditModelCraft(model);
-    expect(audit.meshCount).toBeGreaterThan(0);
-    expect(audit.nonFiniteVertices).toBe(0);
-    expect(audit.doubleSidedMeshes).toEqual([]);
-    expect(audit.materialIssues).toEqual([]);
-    expect(audit.minY).toBeGreaterThanOrEqual(-0.025);
-    expect(audit.minY).toBeLessThanOrEqual(0.08);
-    expect(audit.bottomToTopRatio).toBeGreaterThanOrEqual(0.55);
-    expect(audit.backToFrontRatio).toBeGreaterThanOrEqual(0.55);
-    expect(audit.leftRightBalance).toBeGreaterThanOrEqual(0.45);
-    expect(audit.floatingComponents).toEqual([]);
-    expect(audit.exposedZFightPairs).toEqual([]);
+    for (const detail of [true, false] as const) {
+      const model = buildExpansionAsset(asset, { quality: 'standard', detail });
+      const audit = auditModelCraft(model);
+      expect(audit.meshCount).toBeGreaterThan(0);
+      expect(audit.nonFiniteVertices).toBe(0);
+      expect(audit.doubleSidedMeshes).toEqual([]);
+      expect(audit.materialIssues).toEqual([]);
+      expect(audit.minY).toBeGreaterThanOrEqual(-0.025);
+      expect(audit.minY).toBeLessThanOrEqual(0.08);
+      expect(audit.bottomToTopRatio).toBeGreaterThanOrEqual(0.55);
+      expect(audit.backToFrontRatio).toBeGreaterThanOrEqual(0.55);
+      expect(audit.leftRightBalance).toBeGreaterThanOrEqual(0.45);
+      expect(audit.floatingComponents).toEqual([]);
+      expect(audit.exposedZFightPairs).toEqual([]);
 
-    for (const part of asset.detachableParts ?? []) {
-      const node = model.getObjectByName(part.name);
-      expect(node).toBeDefined();
-      if (!node) continue;
-      node.visible = false;
-      const detached = auditModelCraft(model);
-      node.visible = true;
-      expect(detached.bottomToTopRatio).toBeGreaterThanOrEqual(0.55);
-      expect(detached.backToFrontRatio).toBeGreaterThanOrEqual(0.55);
-      expect(detached.floatingComponents).toEqual([]);
+      if (detail) {
+        for (const part of asset.detachableParts ?? []) {
+          const node = model.getObjectByName(part.name);
+          expect(node).toBeDefined();
+          if (!node) continue;
+          node.visible = false;
+          const detached = auditModelCraft(model);
+          node.visible = true;
+          expect(detached.bottomToTopRatio).toBeGreaterThanOrEqual(0.55);
+          expect(detached.backToFrontRatio).toBeGreaterThanOrEqual(0.55);
+          expect(detached.floatingComponents).toEqual([]);
+        }
+      }
     }
   });
 });

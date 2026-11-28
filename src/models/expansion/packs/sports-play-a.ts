@@ -247,7 +247,7 @@ export function foldingPingPongTable(root: T.Group, p: Finish, detail: boolean):
   for (const sx of [-0.56, 0.56]) {
     for (const sz of [-0.26, 0.26]) { caster(g, [sx, 0.06, sz], 0.06, 0.05, p, 'x'); blk(g, [sx, 0.12, sz], [0.07, 0.08, 0.08], p.edge, hd); }
     blk(g, [sx, 0.14, 0], [0.065, 0.065, 0.62], p.dark, hd);
-    blk(g, [sx, 0.44, 0], [0.065, 0.62, 0.1], p.dark, hd);
+    blk(g, [sx, 0.42, 0], [0.065, 0.58, 0.08], p.dark, hd);
   }
   blk(g, [0, 0.26, 0], [1.14, 0.06, 0.08], p.dark, hd);
   blk(g, [0, 0.72, 0], [1.24, 0.06, 0.1], p.edge, hd);
