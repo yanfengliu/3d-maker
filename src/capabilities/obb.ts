@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { isAssetRootHidden } from './compose-scope';
+import { computeRestRootWorld, isAssetRootHidden } from './compose-scope';
 import { findOwnNodeByName, hasHiddenAncestor, isHiddenPartName, mountLocalMatrix } from './compose-tree';
 import { readSand3dCapabilities } from './sand3d';
 import {
@@ -395,15 +395,14 @@ function appendResolvedVolumes(
   }
 
   if (includeClearanceZones && caps.clearanceZones) {
+    const restRootWorld = object ? computeRestRootWorld(object, caps, nodePrefix) : rootWorld;
     for (const zone of caps.clearanceZones) {
       const volName = `${namePrefix}${zone.name}`;
       if (zone.part && isHiddenPartName(hiddenSet, zone.part, nodePrefix)) continue;
-      if (zone.part && object) {
-        const node = findOwnNodeByName(object, zone.part, nodePrefix);
-        if (node && (!isVisibleInTree(node) || hasHiddenAncestor(node, object, hiddenSet, nodePrefix))) continue;
-      }
+      const zoneNode = zone.part && object ? findOwnNodeByName(object, zone.part, nodePrefix) : undefined;
+      if (zoneNode && object && (!isVisibleInTree(zoneNode) || hasHiddenAncestor(zoneNode, object, hiddenSet, nodePrefix))) continue;
       volumes.push(buildOrientedBox(
-        rootWorld,
+        zoneNode && zoneNode === object ? restRootWorld : rootWorld,
         zone.at,
         [zone.size[0] * 0.5, zone.size[1] * 0.5, zone.size[2] * 0.5],
         {

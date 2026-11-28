@@ -428,10 +428,10 @@ export function restoreCompatibleChildState(
   prevState: AssetRuntimeState,
   prevDecalsVisible: boolean,
 ): void {
-  const riggedNames = new Set(freshCaps.riggedParts.map(p => p.name));
-  const coupled = new Set(freshCaps.riggedParts.filter(p => p.mimic && riggedNames.has(p.mimic.part)).map(p => p.name));
+  const liveParts = resolveLiveRiggedParts(rebuilt, freshCaps.riggedParts, prefix);
+  const coupled = new Set(liveParts.filter(p => Boolean(p.mimic)).map(p => p.name));
   for (const [part, val] of Object.entries(prevState.pose ?? {})) {
-    if (riggedNames.has(part) && !coupled.has(part) && findOwnNodeByName(rebuilt, part, prefix)) {
+    if (liveParts.some(p => p.name === part) && !coupled.has(part)) {
       controller.setPart(part, val);
     }
   }

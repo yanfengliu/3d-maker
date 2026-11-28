@@ -265,8 +265,18 @@ export function validateComposite(
   const isCarriedByClearancePart = (zoneOwner: FlatChildEntry, zoneName: string, other: FlatChildEntry): boolean => {
     const zone = zoneOwner.spec.capabilities.clearanceZones?.find(z => z.name === zoneName);
     if (!zone?.part) return false;
-    const partNames = [zone.part, ...listMimicFollowers(zoneOwner.spec.capabilities.riggedParts, zone.part)];
-    return partNames.some(pname => {
+    const parts = zoneOwner.spec.capabilities.riggedParts;
+    const byName = new Map(parts.map(p => [p.name, p]));
+    let rootLeader = zone.part;
+    const seen = new Set<string>([rootLeader]);
+    while (byName.get(rootLeader)?.mimic) {
+      const next = byName.get(rootLeader)?.mimic?.part;
+      if (!next || seen.has(next)) break;
+      seen.add(next);
+      rootLeader = next;
+    }
+    const family = [rootLeader, ...listMimicFollowers(parts, rootLeader)];
+    return family.some(pname => {
       const partNode = findOwnNodeByName(zoneOwner.inner, pname, zoneOwner.spec.nodePrefix);
       return Boolean(partNode && isDescendantOrSelf(other.slot, partNode));
     });

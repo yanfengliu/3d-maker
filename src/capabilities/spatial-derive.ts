@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { axisTuple, buildSweepSampleValues, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
+import { axisTuple, buildSweepSampleValues, listMimicFollowers, propagateMimicValues, sanitizeMimicLinks, slideOffsetFactor } from './rig-math';
 import type {
   ClearanceZoneSpec,
   ColliderLayer,
@@ -33,7 +33,8 @@ function isSelfSpinner(part: RiggedPartSpec): boolean {
 function isEffectiveSpinner(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): boolean {
   if (!isSelfSpinner(part)) return false;
   if (!part.mimic) return true;
-  // A multi-turn follower (e.g. 3-turn spoke) driven by a bounded non-spinner leader sweeps a finite stroke and needs clearance.
+  // A bounded mimic follower (even multi-turn) sweeps a finite stroke; skip only unbounded continuous chains.
+  if (!part.continuous) return false;
   const byName = new Map(allParts.map(p => [p.name, p]));
   let cur: RiggedPartSpec | undefined = part;
   const seen = new Set<string>();
@@ -41,7 +42,7 @@ function isEffectiveSpinner(part: RiggedPartSpec, allParts: readonly RiggedPartS
     seen.add(cur.name);
     cur = byName.get(cur.mimic.part);
   }
-  return !cur || isSelfSpinner(cur);
+  return !cur || Boolean(cur.continuous);
 }
 
 function hasNonSpinnerFollower(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): boolean {
@@ -282,20 +283,21 @@ export function deriveSpatialMetadata(
 ): DerivedSpatialMetadata {
   root.updateMatrixWorld(true);
   const invRoot = root.matrixWorld.clone().invert();
+  const liveParts = sanitizeMimicLinks(riggedParts.filter(p => Boolean(root.getObjectByName(p.name))));
   const dynamicNodes = new Set<T.Object3D>();
   const activeRigged: { part: RiggedPartSpec; node: T.Object3D }[] = [];
   const sweepLeaders: { part: RiggedPartSpec; node: T.Object3D }[] = [];
   const activeDetachable: { part: DetachablePartSpec; node: T.Object3D }[] = [];
 
-  for (const part of riggedParts) {
+  for (const part of liveParts) {
     const node = root.getObjectByName(part.name);
     if (!node) continue;
-    const nonSpinner = !isEffectiveSpinner(part, riggedParts);
+    const nonSpinner = !isEffectiveSpinner(part, liveParts);
     if (nonSpinner) {
       dynamicNodes.add(node);
       activeRigged.push({ part, node });
     }
-    if (!part.mimic && (nonSpinner || hasNonSpinnerFollower(part, riggedParts))) {
+    if (!part.mimic && (nonSpinner || hasNonSpinnerFollower(part, liveParts))) {
       sweepLeaders.push({ part, node });
     }
   }
@@ -349,7 +351,7 @@ export function deriveSpatialMetadata(
       ),
       node: part.name,
       restPose,
-      layer: colliderLayerForPart(part, riggedParts),
+      layer: colliderLayerForPart(part, liveParts),
       ...(part.describe ? { describe: part.describe } : {}),
     });
   }
@@ -365,10 +367,10 @@ export function deriveSpatialMetadata(
     const restQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
     const leaderSlideScale = slideOffsetFactor(part);
-    const followerNames = listMimicFollowers(riggedParts, part.name);
+    const followerNames = listMimicFollowers(liveParts, part.name);
     const followerStates = followerNames
       .map(fname => {
-        const fSpec = riggedParts.find(p => p.name === fname);
+        const fSpec = liveParts.find(p => p.name === fname);
         const fNode = root.getObjectByName(fname);
         if (!fSpec || !fNode) return null;
         return {
@@ -380,8 +382,8 @@ export function deriveSpatialMetadata(
 
     interface TrackedZone { spec: RiggedPartSpec; host: T.Object3D; boxes: { node: T.Object3D; corners: T.Vector3[] }[]; sweepBox: T.Box3 }
     const movingCarriers: { spec: RiggedPartSpec; node: T.Object3D }[] = [
-      ...(!isEffectiveSpinner(part, riggedParts) ? [{ spec: part, node }] : []),
-      ...followerStates.filter(fs => !isEffectiveSpinner(fs.spec, riggedParts)).map(fs => ({ spec: fs.spec, node: fs.node })),
+      ...(!isEffectiveSpinner(part, liveParts) ? [{ spec: part, node }] : []),
+      ...followerStates.filter(fs => !isEffectiveSpinner(fs.spec, liveParts)).map(fs => ({ spec: fs.spec, node: fs.node })),
     ];
     const trackedByNode = new Map<T.Object3D, TrackedZone>();
     for (const c of movingCarriers) {
@@ -406,7 +408,7 @@ export function deriveSpatialMetadata(
     const activeTracked = [...trackedByNode.values()].filter(tz => tz.boxes.length > 0);
     if (!activeTracked.length) continue;
 
-    const sampleValues = buildSweepSampleValues(part, riggedParts, { minSteps: 13, degPerStep: 15, maxTotalSteps: 144 });
+    const sampleValues = buildSweepSampleValues(part, liveParts, { minSteps: 13, degPerStep: 15, maxTotalSteps: 144 });
     const rel = new T.Matrix4();
     const pt = new T.Vector3();
     try {
@@ -416,7 +418,7 @@ export function deriveSpatialMetadata(
         if (part.type === 'slide') node.position.addScaledVector(axis, value * leaderSlideScale);
         else node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         if (followerStates.length) {
-          const coupled = propagateMimicValues(riggedParts, part.name, value);
+          const coupled = propagateMimicValues(liveParts, part.name, value);
           for (const fs of followerStates) {
             const fVal = coupled.get(fs.spec.name) ?? 0;
             fs.node.position.copy(fs.restPos);

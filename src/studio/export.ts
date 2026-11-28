@@ -127,12 +127,18 @@ function canonicalizeExportMirroredPivots(
   riggedParts: RiggedPartSpec[],
   prefix: string,
   animatedTargets: ReadonlySet<string>,
+  hasRootRelative = false,
 ): void {
   for (const part of riggedParts) {
     if (part.type !== 'rotate') continue;
     const node = findOwnNodeByName(scopeRoot, part.name, prefix);
     if (!node || (node.scale.y >= 0 && node.scale.z >= 0)) continue;
-    if (animatedTargets.has(node.uuid) || (node.name && animatedTargets.has(node.name)) || animatedTargets.has(part.name)) {
+    if (
+      (hasRootRelative && node === scopeRoot)
+      || animatedTargets.has(node.uuid)
+      || (node.name && animatedTargets.has(node.name))
+      || animatedTargets.has(part.name)
+    ) {
       continue;
     }
     const oldSx = node.scale.x < 0 ? -1 : 1;
@@ -317,14 +323,14 @@ export function cloneForExport(
       };
     });
   } else delete capabilities.clips;
-  const exportTargets = collectAnimatedTargets(root.animations).targets;
+  const { targets: exportTargets, hasRootRelative: exportRootRel } = collectAnimatedTargets(root.animations);
   if (capabilities.riggedParts.length) {
-    canonicalizeExportMirroredPivots(root, capabilities.riggedParts, '', exportTargets);
+    canonicalizeExportMirroredPivots(root, capabilities.riggedParts, '', exportTargets, exportRootRel);
   }
   if (capabilities.children?.length) {
     walkChildren(capabilities.children, root, '', (child, inner) => {
       if (child.capabilities.riggedParts.length) {
-        canonicalizeExportMirroredPivots(inner, child.capabilities.riggedParts, child.nodePrefix ?? '', exportTargets);
+        canonicalizeExportMirroredPivots(inner, child.capabilities.riggedParts, child.nodePrefix ?? '', exportTargets, false);
       }
     });
   }

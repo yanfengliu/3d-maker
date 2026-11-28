@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { computeRestRootWorld } from './compose-scope';
 import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, resolveLiveRiggedParts, traverseOwnSubtree } from './compose-tree';
 import { axisTuple, buildSweepSampleValues, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import { readSand3dCapabilities } from './sand3d';
@@ -65,7 +66,7 @@ function measureLocalNodeBox(
   traverseOwnSubtree(node, child => {
     if (child !== node && excludeNodes?.has(child)) return;
     if (child.userData.studioOverlay || !(child instanceof T.Mesh) || !isVisibleInTree(child)) return;
-    if (excludeNodes) {
+    if (excludeNodes && child !== node) {
       let anc = child.parent;
       while (anc && anc !== node) {
         if (excludeNodes.has(anc)) return;
@@ -252,9 +253,10 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
       });
     }
 
+    const clearanceWorld = node === root ? computeRestRootWorld(root, caps, prefix) : root.matrixWorld;
     const buildZones = (zoneKey: string, localKey: string) =>
       (clearanceByPart.get(zoneKey) ?? clearanceByPart.get(localKey) ?? []).map(z =>
-        buildOrientedBox(root.matrixWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
+        buildOrientedBox(clearanceWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
           id: `sweep:clearance:${z.name}`, name: z.name, ownerId: root.name || 'Asset',
           kind: 'clearance', layer: z.kind, part: zoneKey,
           ...(z.rotation ? { rotation: z.rotation } : {}),

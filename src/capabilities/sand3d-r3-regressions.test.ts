@@ -365,4 +365,113 @@ describe('Sand3D round-3 adversarial regressions (nested carriers, root carriage
     expect(gNode?.quaternion.angleTo(new T.Quaternion())).toBeCloseTo(0, 4);
     mCtrl2.dispose();
   });
+
+  it('covers r4 pinpoint invariants: detachable Mesh, posed root carriage, 16/96-turn alias-free sampling, continuous crank reach, bounded 360->1080, co-moving payload, direct deriveSpatialMetadata on pruned chains, strict Float32 GLB timestamps, and root-relative .scale mirror tracks', async () => {
+    const mat = new T.MeshStandardMaterial({ color: '#607080' });
+
+    // 1. Detachable Mesh (directly a T.Mesh, not a Group) under collider-bearing Slide is caught by sweep!
+    const dm = new T.Group();
+    const s1 = new T.Group(); s1.name = 'Slide'; s1.add(new T.Mesh(new T.BoxGeometry(0.1, 0.1, 0.1), mat));
+    const flagMesh = new T.Mesh(new T.BoxGeometry(0.1, 0.1, 0.1), mat);
+    flagMesh.name = 'Flag'; flagMesh.position.set(0.25, 0, 0);
+    s1.add(flagMesh); dm.add(s1);
+    writeCapabilities(dm, {
+      version: 1, name: 'DM', nightZones: [], decals: [],
+      riggedParts: [{ name: 'Slide', label: 'Slide', type: 'slide', axis: 'x', range: [0, 0.4] }],
+      detachableParts: [{ name: 'Flag', label: 'Flag' }],
+      colliders: [{ name: 'Slide', shape: 'box', at: [0, 0, 0], size: [0.1, 0.1, 0.1], node: 'Slide', layer: 'solid' }],
+    });
+    const wall65 = buildOrientedBox(new T.Matrix4(), [0.65, 0, 0], [0.05, 0.1, 0.1], { id: 'w:1', name: 'W', ownerId: 'w', kind: 'collider', layer: 'solid' });
+    expect(checkRiggedSweep(dm, { obstacles: [wall65] }).valid).toBe(false);
+
+    // 2. Posed root carriage (root itself is posed at 0.60 m): empty sweep passes, placement catches return wall at x = 0.20 m!
+    const posedRoot = new T.Group(); posedRoot.name = 'carriage'; posedRoot.position.set(0.6, 0, 0);
+    posedRoot.userData.s3d_joint = { name: 'carriage', type: 'prismatic', value: 0.6, axis: [1, 0, 0], lower: 0, upper: 0.6 };
+    const rw = new T.Group(); rw.name = 'wrist'; rw.position.set(0.2, 0, 0);
+    rw.userData.s3d_joint = { name: 'wrist', type: 'revolute', value: 0, axis: [0, 1, 0], lower: 0, upper: 1 };
+    rw.add(new T.Mesh(new T.BoxGeometry(0.1, 0.1, 0.1), mat));
+    posedRoot.add(rw);
+    expect(checkRiggedSweep(posedRoot).valid).toBe(true);
+    expect(validateScenePlacement([
+      { id: 'pr', object: posedRoot },
+      { id: 'w20', position: [0.2, 0, 0], capabilities: { version: 1, name: 'W', riggedParts: [], detachableParts: [], nightZones: [], decals: [], colliders: [{ name: 'B', shape: 'box', at: [0, 0, 0], size: [0.06, 0.2, 0.2], layer: 'solid' }] } },
+    ]).valid).toBe(false);
+
+    // 3. 16-turn spoke passes empty sweep; 96-turn 1 m spoke catches wall at y = 0.98 m in BOTH sweep & placement!
+    const makeMultiTurn = (turns: number) => {
+      const g = new T.Group();
+      const sl = new T.Group(); sl.name = 'sl'; sl.userData.s3d_joint = { name: 'sl', type: 'prismatic', value: 0, axis: [1, 0, 0], lower: 0, upper: 0.2 };
+      sl.add(new T.Mesh(new T.BoxGeometry(0.04, 0.04, 0.04), mat));
+      const sp = new T.Group(); sp.name = 'sp';
+      sp.userData.s3d_joint = { name: 'sp', type: 'revolute', value: 0, axis: [0, 0, 1], lower: 0, upper: Math.PI * 2 * turns, mimic: { joint: 'sl', multiplier: (Math.PI * 2 * turns) / 0.2 } };
+      const bar = new T.Mesh(new T.BoxGeometry(1.0, 0.04, 0.04), mat); bar.position.set(0.5, 0, 0);
+      sp.add(bar); g.add(sl, sp); return g;
+    };
+    expect(checkRiggedSweep(makeMultiTurn(16)).valid).toBe(true);
+    const spoke96 = makeMultiTurn(96);
+    const wall98 = buildOrientedBox(new T.Matrix4(), [0, 0.98, 0], [0.05, 0.03, 0.05], { id: 'w:98', name: 'W98', ownerId: 'w', kind: 'collider', layer: 'solid' });
+    expect(checkRiggedSweep(spoke96, { obstacles: [wall98] }).valid).toBe(false);
+    expect(validateScenePlacement([
+      { id: 's96', object: spoke96 },
+      { id: 'w98', position: [0, 0.98, 0], capabilities: { version: 1, name: 'W', riggedParts: [], detachableParts: [], nightZones: [], decals: [], colliders: [{ name: 'B', shape: 'box', at: [0, 0, 0], size: [0.1, 0.06, 0.1], layer: 'solid' }] } },
+    ]).valid).toBe(false);
+
+    // 4. Continuous crank -> 0.20 m slide at 0.01 m/rad catches wall at x = 0.19 m; bounded 360° -> 1080° emits clearance!
+    const crankSlide = new T.Group();
+    const ck = new T.Group(); ck.name = 'ck'; ck.userData.s3d_joint = { name: 'ck', type: 'continuous', value: 0, axis: [0, 0, 1] };
+    ck.add(new T.Mesh(new T.BoxGeometry(0.05, 0.05, 0.05), mat));
+    const cs = new T.Group(); cs.name = 'cs'; cs.userData.s3d_joint = { name: 'cs', type: 'prismatic', value: 0, axis: [1, 0, 0], lower: 0, upper: 0.2, mimic: { joint: 'ck', multiplier: 0.01 } };
+    cs.add(new T.Mesh(new T.BoxGeometry(0.04, 0.04, 0.04), mat));
+    crankSlide.add(ck, cs);
+    const wall19 = buildOrientedBox(new T.Matrix4(), [0.19, 0, 0], [0.02, 0.1, 0.1], { id: 'w:19', name: 'W19', ownerId: 'w', kind: 'collider', layer: 'solid' });
+    expect(checkRiggedSweep(crankSlide, { obstacles: [wall19] }).valid).toBe(false);
+    const rot360 = new T.Group();
+    const r360 = new T.Group(); r360.name = 'r360'; r360.userData.s3d_joint = { name: 'r360', type: 'revolute', value: 0, axis: [0, 0, 1], lower: 0, upper: Math.PI * 2 };
+    r360.add(new T.Mesh(new T.BoxGeometry(0.04, 0.04, 0.04), mat));
+    const s1080 = new T.Group(); s1080.name = 's1080'; s1080.userData.s3d_joint = { name: 's1080', type: 'revolute', value: 0, axis: [0, 0, 1], lower: 0, upper: Math.PI * 6, mimic: { joint: 'r360', multiplier: 3 } };
+    const sm = new T.Mesh(new T.BoxGeometry(0.6, 0.04, 0.04), mat); sm.position.set(0.3, 0, 0); s1080.add(sm);
+    rot360.add(r360, s1080);
+    expect(readSand3dCapabilities(rot360)?.clearanceZones?.some(z => z.part === 's1080')).toBe(true);
+
+    // 5. Parallel co-moving slides (0.30 m separation) with payload on leader pass validateComposite!
+    const par = new T.Group();
+    const pLead = new T.Group(); pLead.name = 'p_lead'; pLead.position.set(0.3, 0, 0);
+    pLead.userData.s3d_joint = { name: 'p_lead', type: 'prismatic', value: 0, axis: [1, 0, 0], lower: 0, upper: 0.6 };
+    pLead.add(new T.Mesh(new T.BoxGeometry(0.06, 0.06, 0.06), mat));
+    const pFol = new T.Group(); pFol.name = 'p_fol';
+    pFol.userData.s3d_joint = { name: 'p_fol', type: 'prismatic', value: 0, axis: [1, 0, 0], lower: 0, upper: 0.6, mimic: { joint: 'p_lead', multiplier: 1 } };
+    pFol.add(new T.Mesh(new T.BoxGeometry(0.06, 0.06, 0.06), mat));
+    par.add(pLead, pFol);
+    const loadBox = new T.Group(); loadBox.name = 'Load'; loadBox.add(new T.Mesh(new T.BoxGeometry(0.08, 0.08, 0.08), mat));
+    writeCapabilities(loadBox, { version: 1, name: 'Load', riggedParts: [], detachableParts: [], nightZones: [], decals: [], colliders: [{ name: 'B', shape: 'box', at: [0, 0, 0], size: [0.08, 0.08, 0.08], layer: 'solid' }] });
+    const parComp = composeAsset({ name: 'ParCell', parts: [{ id: 'par', object: par }, { id: 'load', object: loadBox, mount: { parent: 'par', attachNode: 'p_lead', at: [0, 0, 0], coupling: 'weld' } }] });
+    expect(validateComposite(parComp).valid).toBe(true);
+
+    // 6. Tiny 0.08 mm / 100 m stop clip has strictly increasing Float32 timestamps (glTF 2.0 §5.8.1)!
+    const tsRig = new T.Group();
+    const ls = new T.Group(); ls.name = 'ls'; ls.userData.s3d_joint = { name: 'ls', type: 'prismatic', value: 0, axis: [1, 0, 0], lower: 0, upper: 100 };
+    ls.add(new T.Mesh(new T.BoxGeometry(0.05, 0.05, 0.05), mat));
+    const fd = new T.Group(); fd.name = 'fd'; fd.userData.s3d_joint = { name: 'fd', type: 'revolute', value: 0, axis: [0, 1, 0], lower: 0, upper: Math.PI, mimic: { joint: 'ls', multiplier: Math.PI / 0.00008 } };
+    fd.add(new T.Mesh(new T.BoxGeometry(0.05, 0.05, 0.05), mat));
+    tsRig.add(ls, fd);
+    const tsTimes = synthesizeRigClips(tsRig)[0]?.tracks[0]?.times ?? [];
+    for (let i = 1; i < tsTimes.length; i++) {
+      expect(Math.fround(tsTimes[i] ?? 0)).toBeGreaterThan(Math.fround(tsTimes[i - 1] ?? 0));
+    }
+
+    // 7. Root-relative ".scale" track on mirrored [1,-1,1] root preserves tip Y = -0.75 m after cloneForExport + GLB reload!
+    const mRoot = new T.Group(); mRoot.name = 'm_root'; mRoot.scale.set(1, -1, 1);
+    mRoot.userData.s3d_joint = { name: 'm_root', type: 'revolute', value: 0, axis: [0, 1, 0], lower: 0, upper: Math.PI / 2 };
+    const mLeaf = new T.Mesh(new T.BoxGeometry(0.2, 0.2, 0.04), mat); mLeaf.position.set(0, 0.5, 0); mRoot.add(mLeaf);
+    mRoot.animations = [new T.AnimationClip('RootScale', 1, [new T.VectorKeyframeTrack('.scale', [0, 1], [1, -1, 1, 1, -2, 1])])];
+    const mSnap = cloneForExport(mRoot, { includePartClips: false }, null);
+    const mBytes = await exportGlb(mSnap.root, true);
+    mSnap.dispose();
+    const mReload = await new GLTFLoader().parseAsync(mBytes, '');
+    const mMix = new T.AnimationMixer(mReload.scene);
+    if (mReload.animations[0]) mMix.clipAction(mReload.animations[0]).play();
+    mMix.update(0.5); mReload.scene.updateMatrixWorld(true);
+    const mTarget = mReload.scene.getObjectByName('m_root') ?? mReload.scene;
+    expect(new T.Vector3(0, 0.5, 0).applyMatrix4(mTarget.matrixWorld).y).toBeCloseTo(-0.75, 3);
+  });
 });

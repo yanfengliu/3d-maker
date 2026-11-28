@@ -1,12 +1,32 @@
 import * as T from 'three';
 import { MAX_SCOPED_NAME_LEN, type CompositeChildSpec, type CompositeRestTransform } from './compose-schema';
-import { isHiddenPartName, traverseOwnSubtree } from './compose-tree';
+import { findOwnNodeByName, getRiggedRestPose, isHiddenPartName, traverseOwnSubtree } from './compose-tree';
+import { axisTuple, slideOffsetFactor } from './rig-math';
 import type { AssetCapabilities } from './schema';
 
 export type NodeTransformSnapshot = Map<
   T.Object3D,
   { pos: T.Vector3; rot: T.Euler; quat: T.Quaternion; scale: T.Vector3 }
 >;
+
+/** Return `root.matrixWorld` at rest pose (backing out any active pose when `root` itself is a rigged part). */
+export function computeRestRootWorld(root: T.Object3D, caps: AssetCapabilities, prefix = ''): T.Matrix4 {
+  const rootPart = caps.riggedParts.find(p => findOwnNodeByName(root, p.name, prefix) === root);
+  if (!rootPart) return root.matrixWorld;
+  const reg = getRiggedRestPose(root);
+  let restPos = reg ? reg.pos.clone() : root.position.clone();
+  let restQuat = reg ? reg.quat.clone() : root.quaternion.clone();
+  if (!reg) {
+    const localName = prefix && rootPart.name.startsWith(prefix) ? rootPart.name.slice(prefix.length) : rootPart.name;
+    const pose = caps.state?.pose?.[rootPart.name] ?? caps.state?.pose?.[localName] ?? 0;
+    if (Math.abs(pose) <= 1e-9) return root.matrixWorld;
+    const axis = new T.Vector3(...axisTuple(rootPart.axis));
+    if (rootPart.type === 'slide') restPos = restPos.addScaledVector(axis, -pose * slideOffsetFactor(rootPart));
+    else restQuat = restQuat.multiply(new T.Quaternion().setFromAxisAngle(axis, -T.MathUtils.degToRad(pose))).normalize();
+  }
+  const localRest = new T.Matrix4().compose(restPos, restQuat, root.scale);
+  return root.parent ? root.parent.matrixWorld.clone().multiply(localRest) : localRest;
+}
 
 export function captureOwnNodeTransforms(root: T.Object3D): NodeTransformSnapshot {
   const snap: NodeTransformSnapshot = new Map();
