@@ -27,9 +27,12 @@ export const layout = `
         <div id="inventoryNotice" class="inventory-notice" role="status" hidden><span id="inventoryNoticeText"></span><button class="textbutton" id="inventoryRetry">Retry</button></div>
         <div class="results-scroll" id="resultsScroll"><div id="assetGrid" aria-label="Inventory assets"></div></div>
         <form id="inventoryPager" class="inventory-pager" aria-label="Inventory pages">
-          <button id="inventoryPrev" class="square" type="button" aria-label="Previous page" title="Previous page">${icon('back',16)}</button>
-          <label>Page <input type="number" id="inventoryPageNumber" min="1" value="1" aria-label="Page number"/></label><span id="pageLimit">of 1</span>
-          <button id="inventoryNext" class="square" type="button" aria-label="Next page" title="Next page">${icon('forward',16)}</button>
+          <span class="pager-nav" id="inventoryPageNav">
+            <button id="inventoryPrev" class="square" type="button" aria-label="Previous page" title="Previous page">${icon('back',16)}</button>
+            <label>Page <input type="number" id="inventoryPageNumber" min="1" value="1" aria-label="Page number"/></label><span id="pageLimit">of 1</span>
+            <button id="inventoryNext" class="square" type="button" aria-label="Next page" title="Next page">${icon('forward',16)}</button>
+          </span>
+          <label class="pager-size"><select id="inventoryPageSize" aria-label="Models per page"><option value="24">24 / page</option><option value="36" selected>36 / page</option><option value="48">48 / page</option><option value="96">96 / page</option></select></label>
         </form>
       </section>
     </div>

@@ -104,6 +104,7 @@ export async function inventoryFixture(context, project) {
 }
 
 const grid = '#assetGrid .inv-card';
+const PAGE_SIZE = 36;
 const open = (page, title) => page.getByRole('button', { name: 'Open ' + title, exact: true });
 const source = (page, value) => page.locator('[data-source-filter="' + value + '"]');
 const category = (page, value) => page.locator('[data-category="' + value + '"]');
@@ -123,14 +124,15 @@ export async function verifyInitialInventory(page) {
   await visibleWorkspace(page);
   const originalCount = await page.evaluate(() => window.forgeStudio.listTemplates().length);
   const totalAssets = originalCount + rows.length;
-  const firstPageOriginals = Math.min(12, originalCount);
-  const firstPageRemote = 12 - firstPageOriginals;
+  const firstPageOriginals = Math.min(PAGE_SIZE, originalCount);
+  const firstPageRemote = PAGE_SIZE - firstPageOriginals;
   await page.waitForFunction(
     expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
     String(totalAssets),
   );
   if (firstPageRemote > 0) await open(page, 'Survey Rover 01').waitFor();
-  await waitGrid(page, 12);
+  await waitGrid(page, PAGE_SIZE);
+  assert.equal(await page.locator('#inventoryPageSize').inputValue(), String(PAGE_SIZE));
   assert.equal(await page.locator(grid + '[data-source=original]').count(), firstPageOriginals);
   assert.equal(await page.locator(grid + '[data-source=polyfork]').count(), firstPageRemote);
   assert.match(await page.locator('#inventoryTotal').textContent(), new RegExp('\\b' + totalAssets + '\\b'));
@@ -192,17 +194,17 @@ export async function verifyBrowsing(page, fixture, out) {
   const templates = await page.evaluate(() => window.forgeStudio.listTemplates());
   const originalCount = templates.length;
   const totalAssets = originalCount + rows.length;
-  const totalPages = Math.ceil(totalAssets / 12);
+  const totalPages = Math.ceil(totalAssets / PAGE_SIZE);
   const firstTitleOnPage = p => {
-    const idx = (p - 1) * 12;
+    const idx = (p - 1) * PAGE_SIZE;
     return idx < originalCount ? templates[idx].recipe.name : rows[idx - originalCount].title;
   };
   const names = new Set();
   for (let p = 1; p <= totalPages; p++) {
-    const start = (p - 1) * 12;
+    const start = (p - 1) * PAGE_SIZE;
     await open(page, firstTitleOnPage(p)).waitFor();
-    if (start < originalCount && start + 12 > originalCount) await open(page, rows[0].title).waitFor();
-    const expectedCount = Math.min(12, totalAssets - start);
+    if (start < originalCount && start + PAGE_SIZE > originalCount) await open(page, rows[0].title).waitFor();
+    const expectedCount = Math.min(PAGE_SIZE, totalAssets - start);
     await waitGrid(page, expectedCount);
     const labels = await page.locator(grid).evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')));
     assert.equal(labels.length, expectedCount);
@@ -214,6 +216,15 @@ export async function verifyBrowsing(page, fixture, out) {
   }
   assert.equal(names.size, totalAssets);
   assert.ok(await page.locator('#inventoryNext').isDisabled());
+  // Switching models-per-page live updates grid density and total page count, then restores 24/page.
+  await page.selectOption('#inventoryPageSize', '48');
+  await waitGrid(page, Math.min(48, totalAssets));
+  assert.equal(await page.locator('#pageLimit').textContent(), 'of ' + Math.ceil(totalAssets / 48).toLocaleString());
+  await page.selectOption('#inventoryPageSize', String(PAGE_SIZE));
+  await waitGrid(page, PAGE_SIZE);
+  await page.locator('#inventoryPageNumber').fill(String(totalPages));
+  await page.locator('#inventoryPageNumber').press('Enter');
+  await open(page, firstTitleOnPage(totalPages)).waitFor();
   // An expired catalog count can temporarily leave only local pages available; Retry restores the requested page.
   const prevPage = totalPages - 1;
   await page.clock.setFixedTime(new Date(Date.now() + 180_000));
@@ -266,8 +277,8 @@ export async function verifyBrowsing(page, fixture, out) {
     expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
     String(totalChars),
   );
-  if (totalChars <= 12) await open(page, 'Field Operator 03').waitFor();
-  await waitGrid(page, Math.min(12, totalChars));
+  if (totalChars <= PAGE_SIZE) await open(page, 'Field Operator 03').waitFor();
+  await waitGrid(page, Math.min(PAGE_SIZE, totalChars));
   await page.screenshot({ path: join(out, 'inventory-category.png') });
 
   // A failed remote search leaves the current model intact and the page can recover in place.
@@ -279,7 +290,7 @@ export async function verifyBrowsing(page, fixture, out) {
   assert.equal(await page.evaluate(() => window.forgeStudio.getRecipe()?.template), 'field-pilot');
   await page.locator('#inventoryRetry').click();
   await open(page, 'Field Operator 03').waitFor();
-  await waitGrid(page, Math.min(12, fieldOrigChars + 3));
+  await waitGrid(page, Math.min(PAGE_SIZE, fieldOrigChars + 3));
 
   await deleteDuringOpen(page);
 
@@ -299,12 +310,12 @@ export async function verifyBrowsing(page, fixture, out) {
     expected => new RegExp('\\b' + expected + '\\b').test(document.querySelector('#inventoryTotal')?.textContent ?? ''),
     String(totalBuildings),
   );
-  if (totalBuildings > 12) {
-    await page.locator('#inventoryPageNumber').fill(String(Math.ceil(totalBuildings / 12)));
+  if (totalBuildings > PAGE_SIZE) {
+    await page.locator('#inventoryPageNumber').fill(String(Math.ceil(totalBuildings / PAGE_SIZE)));
     await page.locator('#inventoryPageNumber').press('Enter');
   }
   await open(page, 'Relay Station 01').waitFor({ timeout: 6000 });
-  await waitGrid(page, totalBuildings > 12 ? totalBuildings - Math.floor((totalBuildings - 1) / 12) * 12 : totalBuildings);
+  await waitGrid(page, totalBuildings > PAGE_SIZE ? totalBuildings - Math.floor((totalBuildings - 1) / PAGE_SIZE) * PAGE_SIZE : totalBuildings);
   assert.ok(await page.locator('#inventoryNotice').isHidden());
   // Opening a PolyFork GLB recovers automatically from a transient 429 download error.
   fixture.failNextGlb(429);
@@ -314,7 +325,7 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.locator('#inventorySearch').fill('');
   await source(page, 'original').click();
   await category(page, 'character').click();
-  await waitGrid(page, Math.min(12, origChars));
+  await waitGrid(page, Math.min(PAGE_SIZE, origChars));
   // Combined source + category filters must show matching/total badge, combined heading, active chips, and one-click clear.
   assert.equal(await source(page, 'original').getAttribute('aria-pressed'), 'true');
   assert.equal(await category(page, 'character').getAttribute('aria-pressed'), 'true');
@@ -327,7 +338,7 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.waitForFunction(expected => {
     const imgs = [...document.querySelectorAll('#assetGrid [data-source="original"] img')];
     return imgs.length === expected && imgs.every(img => img.complete && img.naturalWidth > 0);
-  }, Math.min(12, origChars));
+  }, Math.min(PAGE_SIZE, origChars));
   await page.clock.fastForward(200);
   await page.screenshot({ path: join(out, 'filter-toggles-combined.png') });
   // Removing the category filter chip restores all Originals and resets the sidebar count back to the full total.
@@ -341,6 +352,6 @@ export async function verifyBrowsing(page, fixture, out) {
   await page.clock.fastForward(200);
   await page.screenshot({ path: join(out, 'filter-toggles-originals.png') });
   await category(page, 'character').click();
-  await waitGrid(page, Math.min(12, origChars));
+  await waitGrid(page, Math.min(PAGE_SIZE, origChars));
   await open(page, 'Field Pilot').click();
 }

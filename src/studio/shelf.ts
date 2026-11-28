@@ -1,5 +1,5 @@
 import {
-  browseAssets, categories, categoryLabel, localBrowseItems,
+  browseAssets, categories, categoryLabel, DEFAULT_PAGE_SIZE, localBrowseItems, PAGE_SIZE_OPTIONS,
   type BrowseCategory, type BrowseItem, type BrowseLocals, type BrowseQuery, type BrowseSource,
 } from '../data/browse';
 import { clearPolyforkBackoff, expirePolyforkCooldown } from '../data/polyfork';
@@ -23,7 +23,26 @@ const categoryIcons: Record<BrowseCategory, Icon> = {
   terrain: 'terrain', ultra: 'tool', attachment: 'attachment', hand: 'hand', import: 'upload',
 };
 const sourceLabels = { original: 'Original', saved: 'Saved', polyfork: 'PolyFork' };
-const perPage = 12;
+const pageSizeStorageKey = 'forge-studio-page-size';
+
+function parsePageSizeOption(value: unknown): number | null {
+  const num = typeof value === 'number' ? value : Number(value);
+  return PAGE_SIZE_OPTIONS.includes(num as typeof PAGE_SIZE_OPTIONS[number]) ? num : null;
+}
+function readPageSizePreference(): number {
+  try {
+    return parsePageSizeOption(window.localStorage.getItem(pageSizeStorageKey)) ?? DEFAULT_PAGE_SIZE;
+  } catch {
+    return DEFAULT_PAGE_SIZE;
+  }
+}
+function savePageSizePreference(size: number): void {
+  try {
+    window.localStorage.setItem(pageSizeStorageKey, String(size));
+  } catch {
+    // Ignore storage errors in restricted contexts.
+  }
+}
 interface Actions {
   open: (entry: BrowseItem, signal: AbortSignal) => Promise<void>;
   deleted: (id: string) => void;
@@ -33,8 +52,11 @@ export function setupShelf(actions: Actions) {
   const grid = el('assetGrid');
   const query = el<HTMLInputElement>('inventorySearch');
   const pageInput = el<HTMLInputElement>('inventoryPageNumber');
+  const pageSizeSelect = el<HTMLSelectElement>('inventoryPageSize');
   const prev = el<HTMLButtonElement>('inventoryPrev'), next = el<HTMLButtonElement>('inventoryNext');
-  const filters: BrowseQuery = { source: 'all', category: 'all', query: '', page: 1 };
+  let perPage = readPageSizePreference();
+  pageSizeSelect.value = String(perPage);
+  const filters: BrowseQuery = { source: 'all', category: 'all', query: '', page: 1, pageSize: perPage };
   let locals: BrowseLocals = { recipes: [], imports: [] };
   let load: AbortController | undefined, opening: AbortController | undefined;
   let timer = 0, retryTimer = 0, localsRevision = 0, pages = 1, pendingKey = '';
@@ -70,7 +92,7 @@ export function setupShelf(actions: Actions) {
     const title = escapeHtml(item.title);
     const key = escapeHtml(item.key);
     const swatch = item.source === 'original' ? item.recipe.template : item.category;
-    const imgAttr = index < 6 ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"';
+    const imgAttr = item.source === 'original' || index < 12 ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"';
     const visual = `<div class="inv-picture" data-kind="${swatch}">
       <span class="no-picture">${icon(categoryIcons[item.category],36)}</span>
       ${image ? `<img src="${escapeHtml(image)}" alt="" ${imgAttr}/>` : ''}
@@ -141,7 +163,8 @@ export function setupShelf(actions: Actions) {
   }
   function counts(total:number, partial:boolean) {
     pages = Math.max(1, Math.ceil(total / perPage));
-    el('inventoryPager').hidden = pages <= 1;
+    el('inventoryPageNav').hidden = pages <= 1;
+    el('inventoryPager').hidden = total <= PAGE_SIZE_OPTIONS[0] && perPage === DEFAULT_PAGE_SIZE;
     pageInput.value = String(filters.page);
     pageInput.max = String(pages);
     el('pageLimit').textContent = 'of ' + pages.toLocaleString();
@@ -293,6 +316,15 @@ export function setupShelf(actions: Actions) {
   next.onclick = ()=>{ selectPage(filters.page+1); };
   el('inventoryPager').onsubmit = event=>{ event.preventDefault(); selectPage(pageInput.valueAsNumber); };
   pageInput.onchange = ()=>{ selectPage(pageInput.valueAsNumber); };
+  pageSizeSelect.onchange = ()=>{
+    const selected = parsePageSizeOption(pageSizeSelect.value);
+    if (!selected || selected === perPage) { pageSizeSelect.value = String(perPage); return; }
+    perPage = selected;
+    filters.pageSize = perPage;
+    filters.page = 1;
+    savePageSizePreference(perPage);
+    reload(true);
+  };
   el('inventoryRetry').onclick = ()=>{ clearPolyforkBackoff(); reload(false); };
   return {
     markSelection,

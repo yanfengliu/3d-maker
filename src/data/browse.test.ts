@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ImportEntry } from '../imports/library';
-import { browseAssets, categories, localBrowseItems, type BrowseLocals, type BrowseQuery } from './browse';
+import { browseAssets, categories, DEFAULT_PAGE_SIZE, localBrowseItems, type BrowseLocals, type BrowseQuery } from './browse';
 import { clearPolyforkBackoff } from './polyfork';
 import { catalog } from './recipe';
 
@@ -72,28 +72,38 @@ describe('unified asset browsing', () => {
   });
 
   it('paginates originals, saved variants and all remote hits without duplicate or skipped rows', async () => {
-    const remoteCount = 32;
+    const remoteCount = 56;
     const requests = stubCatalog(remoteCount);
     const locals = { recipes: [savedRecipe()], imports: [] };
     const localCount = catalog.length + 1;
     const total = localCount + remoteCount;
-    const pageCount = Math.ceil(total / 12);
-    const expectedLengths = Array.from({ length: pageCount }, (_, i) => Math.min(12, total - i * 12));
+    const pageCount = Math.ceil(total / DEFAULT_PAGE_SIZE);
+    const expectedLengths = Array.from({ length: pageCount }, (_, i) => Math.min(DEFAULT_PAGE_SIZE, total - i * DEFAULT_PAGE_SIZE));
     const pages = [];
     for (let page = 1; page <= pageCount; page++) pages.push(await browseAssets({ ...all, page }, locals));
     expect(pages.map(p => p.items.length)).toEqual(expectedLengths);
-    expect(pages.every(p => p.total === total && !p.remoteError)).toBe(true);
+    expect(pages.every(p => p.total === total && p.pageSize === DEFAULT_PAGE_SIZE && !p.remoteError)).toBe(true);
     const items = pages.flatMap(p => p.items);
     expect(items.slice(0, catalog.length).map(item => item.key)).toEqual(catalog.map(row => 'original:' + row.id));
     expect(items[catalog.length]?.key).toBe('saved:rover-copy');
     expect(items.slice(localCount).map(item => item.key)).toEqual(
       Array.from({ length: remoteCount }, (_, n) => 'polyfork:test-asset-' + String(n)),
     );
-    const expectedRemoteCalls = Math.ceil(remoteCount / 12);
+    const expectedRemoteCalls = Math.ceil(remoteCount / DEFAULT_PAGE_SIZE);
     expect(requests).toHaveBeenCalledTimes(expectedRemoteCalls);
     const pastLast = await browseAssets({ ...all, page: 999 }, locals);
     expect(pastLast).toEqual(pages[pageCount - 1]);
     expect(requests).toHaveBeenCalledTimes(expectedRemoteCalls);
+  });
+
+  it('honors custom pageSize values such as 48 and 96 for denser browsing', async () => {
+    const page48 = await browseAssets({ ...all, source: 'original', page: 1, pageSize: 48 }, empty);
+    expect(page48.pageSize).toBe(48);
+    expect(page48.items).toHaveLength(48);
+    const page96 = await browseAssets({ ...all, source: 'original', page: 2, pageSize: 96 }, empty);
+    expect(page96.pageSize).toBe(96);
+    expect(page96.items).toHaveLength(96);
+    expect(page96.items[0]?.key).toBe('original:' + (catalog[96]?.id ?? ''));
   });
 
   it('combines search and category upstream and for both locally available sources', async () => {
@@ -152,7 +162,8 @@ describe('unified asset browsing', () => {
     vi.stubGlobal('fetch', fetcher);
     const filters: BrowseQuery = { ...all, source: 'polyfork', category: 'character', query: 'roster paging' };
     const keys: string[] = [];
-    for (let page = 1; page <= 9; page++) {
+    const totalCharacterPages = Math.ceil(105 / DEFAULT_PAGE_SIZE);
+    for (let page = 1; page <= totalCharacterPages; page++) {
       const found = await browseAssets({...filters, page}, empty);
       expect(found.total).toBe(105);
       expect(found.remoteError).toBeNull();
@@ -176,13 +187,17 @@ describe('unified asset browsing', () => {
   });
 
   it('preserves the result page and count when a later publisher page needs a retry', async () => {
-    const requests = stubCatalog(15);
+    const requests = stubCatalog(DEFAULT_PAGE_SIZE + 3);
     const filters: BrowseQuery = { ...all, source: 'polyfork', query: 'retry second' };
     await browseAssets(filters, empty);
     requests.mockRejectedValueOnce(new Error('temporary failure'));
     const second = { ...filters, page: 2 };
-    expect(await browseAssets(second, empty)).toMatchObject({ page: 2, total: 15, items: [], remoteError: 'temporary failure' });
-    expect((await browseAssets(second, empty)).items.map(item => item.title)).toEqual(['Asset 12','Asset 13','Asset 14']);
+    expect(await browseAssets(second, empty)).toMatchObject({ page: 2, total: DEFAULT_PAGE_SIZE + 3, items: [], remoteError: 'temporary failure' });
+    expect((await browseAssets(second, empty)).items.map(item => item.title)).toEqual([
+      'Asset ' + String(DEFAULT_PAGE_SIZE),
+      'Asset ' + String(DEFAULT_PAGE_SIZE + 1),
+      'Asset ' + String(DEFAULT_PAGE_SIZE + 2),
+    ]);
     expect(requests).toHaveBeenCalledTimes(3);
   });
 
@@ -206,18 +221,20 @@ describe('unified asset browsing', () => {
   it('keeps available pages on either side of a failed class page and reuses them on retry', async () => {
     let outage = true;
     const requests = classOutage({character:201, animal:1}, (source,page) => outage && source === 'character' && page === 2);
-    const filters: BrowseQuery = {...all, source:'polyfork', category:'character', query:'middle page outage', page:9};
+    const filters: BrowseQuery = {...all, source:'polyfork', category:'character', query:'middle page outage', page:3};
     const partial = await browseAssets(filters,empty);
     expect(partial.total).toBe(102);
-    expect(partial.page).toBe(9);
-    expect(partial.items.map(item => item.key)).toEqual([96,97,98,99,200].map(i => 'polyfork:character-' + String(i)).concat('polyfork:animal-0'));
+    expect(partial.page).toBe(3);
+    const expectedPartial = Array.from({ length: 28 }, (_, i) => 'polyfork:character-' + String(72 + i))
+      .concat(['polyfork:character-200', 'polyfork:animal-0']);
+    expect(partial.items.map(item => item.key)).toEqual(expectedPartial);
     expect(partial.remoteError).toMatch(/incomplete/);
     expect(requests).toHaveLength(4);
     outage = false;
     const complete = await browseAssets(filters,empty);
     expect(complete.total).toBe(202);
     expect(complete.remoteError).toBeNull();
-    expect(complete.items[4]?.key).toBe('polyfork:character-100');
+    expect(complete.items[28]?.key).toBe('polyfork:character-100');
     expect(requests.slice(4)).toEqual(['character/2']);
   });
 
@@ -289,7 +306,7 @@ describe('unified asset browsing', () => {
     });
     vi.stubGlobal('fetch', fetcher);
     const localBuildings = localBrowseItems({ ...all, source: 'original', category: 'building', query: '' }, empty);
-    const lastPage = Math.ceil((localBuildings.length + 1) / 12);
+    const lastPage = Math.ceil((localBuildings.length + 1) / DEFAULT_PAGE_SIZE);
     const query: BrowseQuery = { ...all, category: 'building', query: 'building', page: lastPage };
     const first = browseAssets(query, empty);
     const second = browseAssets(query, empty);
@@ -297,14 +314,14 @@ describe('unified asset browsing', () => {
     const [a, b] = await Promise.all([first, second]);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(a.total).toBe(localBuildings.length + 1);
-    const expectedTail = [...localBuildings.slice((lastPage - 1) * 12).map(i => i.title), 'Village Shopfront'];
+    const expectedTail = [...localBuildings.slice((lastPage - 1) * DEFAULT_PAGE_SIZE).map(i => i.title), 'Village Shopfront'];
     expect(b.items.map(i => i.title)).toEqual(expectedTail);
 
     // A 429 without Retry-After exposes a short retryAfterMs instead of a 60s lockout.
     vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(null, { status: 429 })));
     const limited = await browseAssets({ ...all, category: 'building', query: 'buildings' }, empty);
     expect(limited.total).toBe(localBuildings.length);
-    expect(limited.items.map(i => i.title)).toEqual(localBuildings.slice(0, 12).map(i => i.title));
+    expect(limited.items.map(i => i.title)).toEqual(localBuildings.slice(0, DEFAULT_PAGE_SIZE).map(i => i.title));
     expect(limited.remoteError).toMatch(/^PolyFork is limiting/);
     expect(limited.retryAfterMs).toBe(2000);
   });
