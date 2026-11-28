@@ -35,6 +35,10 @@
     {
       "id": 6,
       "theme": "asset-composition"
+    },
+    {
+      "id": 7,
+      "theme": "sand3d-glb-importer"
     }
   ]
 }
