@@ -7,8 +7,16 @@ import type { Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
+import { buildingsCivicMeta } from '../meta/buildings-civic';
+import { buildingsFantasyScifiMeta } from '../meta/buildings-fantasy-scifi';
 import { buildingsWorldMeta } from '../meta/buildings-world';
+import { terrainBiomesMeta } from '../meta/terrain-biomes';
+import { terrainStructuresMeta } from '../meta/terrain-structures';
+import { buildingsCivicPack } from '../packs/buildings-civic';
+import { buildingsFantasyScifiPack } from '../packs/buildings-fantasy-scifi';
 import { buildingsWorldPack } from '../packs/buildings-world';
+import { terrainBiomesPack } from '../packs/terrain-biomes';
+import { terrainStructuresPack } from '../packs/terrain-structures';
 
 type PaintedMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 
@@ -16,8 +24,21 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const EXPANSION_ROOT = resolve(HERE, '..');
 const LOCK_PATH = resolve(HERE, '../../variations.lock.json');
 
-const allMeta = [...buildingsWorldMeta];
-const allAssets: readonly ProceduralAssetDef[] = [...buildingsWorldPack];
+const allMeta = [
+  ...buildingsWorldMeta,
+  ...buildingsCivicMeta,
+  ...buildingsFantasyScifiMeta,
+  ...terrainBiomesMeta,
+  ...terrainStructuresMeta,
+];
+
+const allAssets: readonly ProceduralAssetDef[] = [
+  ...buildingsWorldPack,
+  ...buildingsCivicPack,
+  ...buildingsFantasyScifiPack,
+  ...terrainBiomesPack,
+  ...terrainStructuresPack,
+];
 
 function collectMeshes(root: T.Object3D): PaintedMesh[] {
   const result: PaintedMesh[] = [];
@@ -69,17 +90,29 @@ function walkTsFiles(dir: string): string[] {
   return out.sort();
 }
 
-describe('worlds-built expansion invariants', () => {
-  it('has unique IDs, codes, names and zero collisions with variations.lock.json', () => {
+describe('worlds-built 100-object expansion invariants', () => {
+  it('delivers 5 packs x 20 objects (60 building + 40 terrain) with zero ID collisions', () => {
+    expect(buildingsWorldPack).toHaveLength(20);
+    expect(buildingsCivicPack).toHaveLength(20);
+    expect(buildingsFantasyScifiPack).toHaveLength(20);
+    expect(terrainBiomesPack).toHaveLength(20);
+    expect(terrainStructuresPack).toHaveLength(20);
+    expect(allMeta).toHaveLength(100);
+    expect(allAssets).toHaveLength(100);
+
+    const buildingsCount = allAssets.filter(a => a.browseCategory === 'building').length;
+    const terrainCount = allAssets.filter(a => a.browseCategory === 'terrain').length;
+    expect(buildingsCount).toBe(60);
+    expect(terrainCount).toBe(40);
+
     const lockRaw = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as { entries?: Record<string, unknown> };
     const lockKeys = Object.keys(lockRaw.entries ?? lockRaw);
     const lockedIds = new Set(lockKeys.map(k => k.split('@')[0] ?? k));
     expect(lockedIds.size).toBeGreaterThanOrEqual(106);
 
-    expect(allAssets.length).toBe(allMeta.length);
-    expect(new Set(allAssets.map(a => a.id)).size).toBe(allAssets.length);
-    expect(new Set(allAssets.map(a => a.code)).size).toBe(allAssets.length);
-    expect(new Set(allAssets.map(a => a.name)).size).toBe(allAssets.length);
+    expect(new Set(allAssets.map(a => a.id)).size).toBe(100);
+    expect(new Set(allAssets.map(a => a.code)).size).toBe(100);
+    expect(new Set(allAssets.map(a => a.name)).size).toBe(100);
 
     for (const def of allAssets) {
       expect(lockedIds.has(def.id), `ID collision with lockfile: ${def.id}`).toBe(false);
@@ -94,16 +127,25 @@ describe('worlds-built expansion invariants', () => {
     }
   });
 
-  it('keeps meta files free of Three.js imports and all expansion files <= 500 lines', () => {
+  it('keeps meta files free of Three.js imports, files <= 500 lines, and zero control-channel reads', () => {
     const metaDir = join(EXPANSION_ROOT, 'meta');
-    for (const file of walkTsFiles(metaDir)) {
+    const metaFiles = walkTsFiles(metaDir);
+    expect(metaFiles).toHaveLength(5);
+    for (const file of metaFiles) {
       const text = readFileSync(file, 'utf8');
       expect(text, `Three import found in ${file}`).not.toMatch(/from\s+['"]three/);
     }
+    const controlPatterns = [/import\.meta\.env/, /process\.env/, /window\.location/];
     for (const file of walkTsFiles(EXPANSION_ROOT)) {
-      const lines = readFileSync(file, 'utf8').split(/\r\n|\r|\n/);
+      const text = readFileSync(file, 'utf8');
+      const lines = text.split(/\r\n|\r|\n/);
       if (lines[lines.length - 1] === '') lines.pop();
       expect(lines.length, `${file} exceeds 500 lines (${String(lines.length)})`).toBeLessThanOrEqual(500);
+      if (!file.endsWith('worlds-built.test.ts')) {
+        for (const pat of controlPatterns) {
+          expect(text, `Control channel match in ${file}`).not.toMatch(pat);
+        }
+      }
     }
   });
 });
