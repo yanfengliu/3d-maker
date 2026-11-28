@@ -1,5 +1,5 @@
 import * as T from 'three'
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import { characterRig } from '../animation/rig'
 import { inspectAsset } from '../capabilities/runtime'
 import { listVariations } from '../data/recipe'
@@ -25,6 +25,11 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
   const getNormal = () => (cachedNormal ??= buildModel(recipe))
   const getSimple = () => (cachedSimple ??= buildModel({ ...recipe, scale: 1.25, proportion: 1.4, detail: false }))
   const getHd = () => (recipe.quality === 'hd' ? getNormal() : (cachedHd ??= buildModel({ ...recipe, quality: 'hd' })))
+  afterAll(() => {
+    cachedNormal = undefined
+    cachedSimple = undefined
+    cachedHd = undefined
+  })
 
   it('builds finite geometry that uses both requested paint colors', () => {
     const scene = buildModel({ ...recipe, primary: '#ed5a19', accent: '#b6e623' })

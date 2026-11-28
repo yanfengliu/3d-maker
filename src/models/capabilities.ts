@@ -3,7 +3,7 @@ import type { Recipe } from '../data/recipe';
 import { deriveIkMetadata } from '../capabilities/ik-derive';
 import { writeCapabilities, type AssetCapabilities, type RiggedPartSpec } from '../capabilities/schema';
 import { deriveSpatialMetadata } from '../capabilities/spatial-derive';
-import { extraAssets } from './collections';
+import { extraMetaById } from './collections/meta';
 import { expansionMetaById } from './expansion/meta';
 import { getExpansionAsset } from './expansion/registry';
 import { DEFAULT_VARIATION_ID, findVariation, variationsForTemplate } from './variations';
@@ -46,8 +46,6 @@ const starterParts: Record<string, readonly RiggedPartSpec[]> = {
   'field-pilot': [],
 };
 
-const extraById = new Map(extraAssets.map(asset => [asset.id, asset]));
-
 function uniqueByName<Item extends { name: string }>(items: readonly Item[]): Item[] {
   const out: Item[] = [];
   const seen = new Set<string>();
@@ -65,8 +63,8 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
   const box = new T.Box3().setFromObject(root);
   const size = box.isEmpty() ? new T.Vector3(1, 1, 1) : box.getSize(new T.Vector3());
   const round = (n: number) => Math.round(n * 1000) / 1000;
-  const extra = extraById.get(recipe.template) ?? getExpansionAsset(recipe.template);
-  const meta = expansionMetaById.get(recipe.template);
+  const extra = getExpansionAsset(recipe.template);
+  const meta = extraMetaById.get(recipe.template) ?? expansionMetaById.get(recipe.template);
   const variation = findVariation(recipe.template, recipe.variation);
   const baseDescription = extra?.description ?? meta?.description ?? starterDescriptions[recipe.template];
   const description = variation ? `${variation.label}: ${variation.situation}` : baseDescription;

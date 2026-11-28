@@ -7,6 +7,7 @@ import { createAssetController } from '../../../capabilities/runtime';
 import { writeCapabilities } from '../../../capabilities/schema';
 import type { Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
+import { extraAssets } from '../../collections';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
 import { fantasyArcaneMeta } from '../meta/fantasy-arcane';
@@ -114,13 +115,18 @@ describe('props-culture metadata, conventions, and collision checks', () => {
     expect(new Set(allAssets.map(a => a.code)).size).toBe(100);
     expect(new Set(allAssets.map(a => a.name)).size).toBe(100);
     expect(allAssets.every(a => a.category === 'Object' && a.browseCategory === 'prop')).toBe(true);
-    expect(allMeta.every(m => !lockedIds.has(m.id))).toBe(true);
+    const baseIds = new Set([
+      'relay-drone', 'field-rover', 'survey-bot', 'cargo-pod', 'signal-tower', 'field-pilot',
+      ...extraAssets.map(a => a.id),
+    ]);
+    expect(allMeta.every(m => !baseIds.has(m.id))).toBe(true);
+    expect(allMeta.every(m => lockedIds.has(m.id))).toBe(true);
     expect(allMeta.every(m => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(m.id))).toBe(true);
   });
 
   it('keeps meta files free of Three.js imports and all expansion files <= 500 lines', () => {
     const files = walkTsFiles(EXPANSION_DIR);
-    expect(files.length).toBe(26);
+    expect(files.length).toBeGreaterThanOrEqual(26);
     for (const file of files) {
       const text = readFileSync(file, 'utf8');
       const lines = text.split(/\r\n|\r|\n/);

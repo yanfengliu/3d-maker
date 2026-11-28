@@ -4,13 +4,15 @@ import { getModelParamSpecs, type Recipe } from '../data/recipe'
 import { character } from './character'
 import { attachOriginalCapabilities } from './capabilities'
 import { extraAssets } from './collections'
+import { COLLECTIONS_PACK_ID } from './collections/meta'
 import { drone } from './drone'
 import { cargo, rover, tower } from './equipment'
 import { ensureAllExpansionPacks } from './expansion/all'
-import { getExpansionAsset } from './expansion/registry'
+import { getExpansionAsset, registerExpansionPack } from './expansion/registry'
 import { finishes } from './parts'
 import { findVariation } from './variations'
 
+registerExpansionPack(COLLECTIONS_PACK_ID, extraAssets)
 ensureAllExpansionPacks()
 
 const extraBuilders = new Map(extraAssets.map(asset => [asset.id, asset.build]))

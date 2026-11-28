@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { inspectAsset } from '../../capabilities/runtime';
 import { catalog, resolveVariationRecipe, type Recipe } from '../../data/recipe';
 import type { ProceduralAssetDef } from '../collection-types';
+import { extraAssets } from '../collections';
+import { COLLECTIONS_PACK_ID, extraAssetsMeta } from '../collections/meta';
 import { fingerprintGroup } from '../fingerprint';
 import { buildModel } from '../index';
 import { box, group, rotationTrack } from '../parts';
@@ -67,6 +69,19 @@ describe('expansion types, metadata, and registry plumbing', () => {
       expect(expansionPackOf(item.id)).toBe(item.pack);
     }
     expect(expansionPackOf('relay-drone')).toBeUndefined();
+    expect(extraAssetsMeta).toEqual(
+      extraAssets.map(a => ({
+        id: a.id,
+        code: a.code,
+        category: a.category,
+        browseCategory: a.browseCategory,
+        name: a.name,
+        primary: a.primary,
+        accent: a.accent,
+        description: a.description,
+        pack: COLLECTIONS_PACK_ID,
+      })),
+    );
   });
 
   it('registers, queries, and unregisters expansion packs cleanly', () => {

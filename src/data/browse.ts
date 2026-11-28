@@ -1,7 +1,7 @@
 import { catalog, type Recipe, type TemplateId } from './recipe';
 import type { SavedAsset } from './inventory';
 import type { ImportEntry } from '../imports/library';
-import { extraAssets } from '../models/collections';
+import { extraAssetsMeta } from '../models/collections/meta';
 import { expansionMeta } from '../models/expansion/meta';
 import {
   PolyforkRateLimitError,
@@ -72,7 +72,7 @@ const starterCategories: Record<string, BrowseCategory> = {
 
 const originalCategories = new Map<string, BrowseCategory>([
   ...Object.entries(starterCategories),
-  ...extraAssets.map(asset => [asset.id, asset.browseCategory] as const),
+  ...extraAssetsMeta.map(asset => [asset.id, asset.browseCategory] as const),
   ...expansionMeta.map(asset => [asset.id, asset.browseCategory] as const),
 ]);
 

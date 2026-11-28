@@ -7,6 +7,7 @@ import { createAssetController } from '../../../capabilities/runtime';
 import type { AssetCapabilities } from '../../../capabilities/schema';
 import type { Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
+import { extraAssets } from '../../collections';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
 import { animalsOceanMythMeta } from '../meta/animals-ocean-myth';
@@ -117,12 +118,17 @@ describe('vehicles-life expansion catalog contracts', () => {
     expect(new Set(codes).size).toBe(100);
     expect(new Set(names).size).toBe(100);
 
+    const baseIds = new Set([
+      'relay-drone', 'field-rover', 'survey-bot', 'cargo-pod', 'signal-tower', 'field-pilot',
+      ...extraAssets.map(a => a.id),
+    ]);
+    expect(ids.filter(id => baseIds.has(id))).toEqual([]);
+
     const lockJson = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as {
       entries: Record<string, { template: string }>;
     };
-    const existingIds = new Set(Object.values(lockJson.entries).map(e => e.template));
-    const collisions = ids.filter(id => existingIds.has(id));
-    expect(collisions).toEqual([]);
+    const lockedIds = new Set(Object.values(lockJson.entries).map(e => e.template));
+    expect(ids.filter(id => !lockedIds.has(id))).toEqual([]);
 
     expect(ALL_ASSETS.filter(a => a.browseCategory === 'vehicle')).toHaveLength(60);
     expect(ALL_ASSETS.filter(a => a.browseCategory === 'animal')).toHaveLength(40);

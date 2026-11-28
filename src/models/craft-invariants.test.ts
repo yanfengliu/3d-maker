@@ -1,5 +1,5 @@
 import * as T from 'three'
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import { inspectAsset } from '../capabilities/runtime'
 import { listVariations } from '../data/recipe'
 import { auditModelCraft } from './craft-invariants'
@@ -69,10 +69,17 @@ describe('craft-invariants synthetic defect detection', () => {
 })
 
 describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
-  const model = buildModel({ ...recipe, quality: 'standard' })
-  const audit = auditModelCraft(model)
+  let cachedModel: T.Group | undefined
+  let cachedAudit: ReturnType<typeof auditModelCraft> | undefined
+  const getModel = () => (cachedModel ??= buildModel({ ...recipe, quality: 'standard' }))
+  const getAudit = () => (cachedAudit ??= auditModelCraft(getModel()))
+  afterAll(() => {
+    cachedModel = undefined
+    cachedAudit = undefined
+  })
 
   it('has finite watertight geometry, grounded base, clean materials, and zero DoubleSide shells', () => {
+    const audit = getAudit()
     expect(audit.meshCount).toBeGreaterThan(0)
     expect(audit.nonFiniteVertices).toBe(0)
     expect(audit.doubleSidedMeshes).toEqual([])
@@ -85,6 +92,7 @@ describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
   })
 
   it('has zero unintended floating parts', () => {
+    const audit = getAudit()
     if (INTENTIONAL_FLOATING_KEYS.has(key)) {
       expect(audit.floatingComponents.length).toBeGreaterThan(0)
     } else {
@@ -93,10 +101,11 @@ describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
   })
 
   it('has zero exposed coplanar Z-fighting faces', () => {
-    expect(audit.exposedZFightPairs).toEqual([])
+    expect(getAudit().exposedZFightPairs).toEqual([])
   })
 
   it('stays connected and watertight when any detachable part is hidden', () => {
+    const model = getModel()
     const caps = inspectAsset(model)
     for (const part of caps.detachableParts) {
       const node = model.getObjectByName(part.name)

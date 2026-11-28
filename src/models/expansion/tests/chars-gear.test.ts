@@ -8,6 +8,7 @@ import { createAssetController } from '../../../capabilities/runtime';
 import { writeCapabilities } from '../../../capabilities/schema';
 import { catalog, type Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
+import { extraAssets } from '../../collections';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
 import { attachmentsWearablesMeta } from '../meta/attachments-wearables';
@@ -127,12 +128,15 @@ describe('chars-gear expansion metadata and repo conventions', () => {
       entries: Record<string, { template: string }>;
     };
     const lockedIds = new Set(Object.values(lock.entries).map(e => e.template));
-    const existingCodes = new Set(catalog.map(c => c.code));
-    const existingNames = new Set(catalog.map(c => c.recipe.name));
+    const baseEntries = catalog.slice(0, 6 + extraAssets.length);
+    const baseIds = new Set(baseEntries.map(c => c.id));
+    const baseCodes = new Set(baseEntries.map(c => c.code));
+    const baseNames = new Set(baseEntries.map(c => c.recipe.name));
     for (const item of allMeta) {
-      expect(lockedIds.has(item.id), `ID collision with variations.lock.json: ${item.id}`).toBe(false);
-      expect(existingCodes.has(item.code), `Code collision with existing catalog: ${item.code}`).toBe(false);
-      expect(existingNames.has(item.name), `Name collision with existing catalog: ${item.name}`).toBe(false);
+      expect(baseIds.has(item.id), `ID collision with base catalog: ${item.id}`).toBe(false);
+      expect(baseCodes.has(item.code), `Code collision with base catalog: ${item.code}`).toBe(false);
+      expect(baseNames.has(item.name), `Name collision with base catalog: ${item.name}`).toBe(false);
+      expect(lockedIds.has(item.id), `Missing from variations.lock.json: ${item.id}`).toBe(true);
       expect(item.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(item.primary).toMatch(/^#[\da-f]{6}$/i);
       expect(item.accent).toMatch(/^#[\da-f]{6}$/i);

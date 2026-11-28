@@ -1,15 +1,40 @@
 import type { ProceduralAssetDef } from '../collection-types';
+import { COLLECTIONS_PACK_ID, extraMetaById } from '../collections/meta';
 import { expansionPackOf } from './meta';
 import { isExpansionPackLoaded, registerExpansionPack } from './registry';
 import type { ExpansionPackId } from './types';
 
 export type ExpansionPackLoader = () => Promise<readonly ProceduralAssetDef[]>;
 
-/**
- * Dynamic pack loaders wired in Phase 2 (`() => import('./packs/<pack>').then(...)`).
- * Empty in Phase 1 until the 25 expansion packs are merged.
- */
-const packLoaders: Readonly<Partial<Record<ExpansionPackId, ExpansionPackLoader>>> = {};
+/** Dynamic pack loaders so the browser studio code-splits base collections and all 25 expansion packs on demand. */
+const packLoaders: Readonly<Record<ExpansionPackId | typeof COLLECTIONS_PACK_ID, ExpansionPackLoader>> = {
+  [COLLECTIONS_PACK_ID]: () => import('../collections').then(m => m.extraAssets),
+  'home-furniture': () => import('./packs/home-furniture').then(m => m.homeFurniturePack),
+  'kitchen-appliances': () => import('./packs/kitchen-appliances').then(m => m.kitchenAppliancesPack),
+  'workshop-machinery': () => import('./packs/workshop-machinery').then(m => m.workshopMachineryPack),
+  'science-medical': () => import('./packs/science-medical').then(m => m.scienceMedicalPack),
+  'culinary-market': () => import('./packs/culinary-market').then(m => m.culinaryMarketPack),
+  'music-stage': () => import('./packs/music-stage').then(m => m.musicStagePack),
+  'sports-play': () => import('./packs/sports-play').then(m => m.sportsPlayPack),
+  'street-civic': () => import('./packs/street-civic').then(m => m.streetCivicPack),
+  'fantasy-arcane': () => import('./packs/fantasy-arcane').then(m => m.fantasyArcanePack),
+  'scifi-stations': () => import('./packs/scifi-stations').then(m => m.scifiStationsPack),
+  'buildings-world': () => import('./packs/buildings-world').then(m => m.buildingsWorldPack),
+  'buildings-civic': () => import('./packs/buildings-civic').then(m => m.buildingsCivicPack),
+  'buildings-fantasy-scifi': () => import('./packs/buildings-fantasy-scifi').then(m => m.buildingsFantasyScifiPack),
+  'terrain-biomes': () => import('./packs/terrain-biomes').then(m => m.terrainBiomesPack),
+  'terrain-structures': () => import('./packs/terrain-structures').then(m => m.terrainStructuresPack),
+  'vehicles-road': () => import('./packs/vehicles-road').then(m => m.vehiclesRoadPack),
+  'vehicles-sea-air': () => import('./packs/vehicles-sea-air').then(m => m.vehiclesSeaAirPack),
+  'vehicles-scifi-fantasy': () => import('./packs/vehicles-scifi-fantasy').then(m => m.vehiclesScifiFantasyPack),
+  'animals-wild': () => import('./packs/animals-wild').then(m => m.animalsWildPack),
+  'animals-ocean-myth': () => import('./packs/animals-ocean-myth').then(m => m.animalsOceanMythPack),
+  'characters-civilian': () => import('./packs/characters-civilian').then(m => m.charactersCivilianPack),
+  'characters-adventure': () => import('./packs/characters-adventure').then(m => m.charactersAdventurePack),
+  'handheld-tools': () => import('./packs/handheld-tools').then(m => m.handheldToolsPack),
+  'handheld-fantasy-scifi': () => import('./packs/handheld-fantasy-scifi').then(m => m.handheldFantasyScifiPack),
+  'attachments-wearables': () => import('./packs/attachments-wearables').then(m => m.attachmentsWearablesPack),
+};
 
 export interface ExpansionLazyLoader {
   ensurePackLoaded: (packId: string) => Promise<void>;
@@ -57,7 +82,10 @@ export function createExpansionLazyLoader(
   return { ensurePackLoaded, ensureTemplateLoaded, preloadAll };
 }
 
-const defaultLoader = createExpansionLazyLoader(packLoaders, expansionPackOf);
+const defaultLoader = createExpansionLazyLoader(
+  packLoaders,
+  id => (extraMetaById.has(id) ? COLLECTIONS_PACK_ID : expansionPackOf(id)),
+);
 
 /** Ensure the expansion pack owning `templateId` is dynamically loaded and registered (no-op for core templates). */
 export function ensureExpansionPackLoaded(templateId: string): Promise<void> {

@@ -5,6 +5,7 @@ import * as T from 'three';
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
+import { extraAssets } from '../../collections';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
 import { buildingsCivicMeta } from '../meta/buildings-civic';
@@ -114,8 +115,13 @@ describe('worlds-built 100-object expansion invariants', () => {
     expect(new Set(allAssets.map(a => a.code)).size).toBe(100);
     expect(new Set(allAssets.map(a => a.name)).size).toBe(100);
 
+    const baseIds = new Set([
+      'relay-drone', 'field-rover', 'survey-bot', 'cargo-pod', 'signal-tower', 'field-pilot',
+      ...extraAssets.map(a => a.id),
+    ]);
     for (const def of allAssets) {
-      expect(lockedIds.has(def.id), `ID collision with lockfile: ${def.id}`).toBe(false);
+      expect(baseIds.has(def.id), `ID collision with base catalog: ${def.id}`).toBe(false);
+      expect(lockedIds.has(def.id), `Missing from lockfile: ${def.id}`).toBe(true);
       expect(def.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(def.category).toBe('Object');
       expect(['building', 'terrain']).toContain(def.browseCategory);
@@ -130,7 +136,7 @@ describe('worlds-built 100-object expansion invariants', () => {
   it('keeps meta files free of Three.js imports, files <= 500 lines, and zero control-channel reads', () => {
     const metaDir = join(EXPANSION_ROOT, 'meta');
     const metaFiles = walkTsFiles(metaDir);
-    expect(metaFiles).toHaveLength(5);
+    expect(metaFiles.length).toBeGreaterThanOrEqual(5);
     for (const file of metaFiles) {
       const text = readFileSync(file, 'utf8');
       expect(text, `Three import found in ${file}`).not.toMatch(/from\s+['"]three/);

@@ -3,7 +3,7 @@ import {
   type ModelParamSpec,
   type ModelParamValues,
 } from '../capabilities/param-schema.ts';
-import { extraAssets } from '../models/collections/index.ts';
+import { extraAssetsMeta } from '../models/collections/meta.ts';
 import { expansionMeta } from '../models/expansion/meta.ts';
 import {
   DEFAULT_VARIATION_ID,
@@ -66,7 +66,7 @@ const starterCatalog: readonly CatalogEntry[] = [
 
 export const catalog: readonly CatalogEntry[] = [
   ...starterCatalog,
-  ...extraAssets.map(asset =>
+  ...extraAssetsMeta.map(asset =>
     starter(asset.id, asset.code, asset.category, asset.name, asset.primary, asset.accent, asset.description),
   ),
   ...expansionMeta.map(asset =>
@@ -95,7 +95,7 @@ function dimension(value: unknown, field: string): number {
 }
 
 const extraParamsById = new Map<string, readonly ModelParamSpec[] | undefined>([
-  ...extraAssets.map(asset => [asset.id, asset.params] as const),
+  ...extraAssetsMeta.map(asset => [asset.id, asset.params] as const),
   ...expansionMeta.map(asset => [asset.id, asset.params] as const),
 ]);
 

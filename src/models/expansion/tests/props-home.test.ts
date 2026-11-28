@@ -7,6 +7,7 @@ import { createAssetController } from '../../../capabilities/runtime';
 import { writeCapabilities } from '../../../capabilities/schema';
 import type { Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
+import { extraAssets } from '../../collections';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
 import { culinaryMarketMeta } from '../meta/culinary-market';
@@ -100,11 +101,16 @@ describe('props-home 5-pack expansion metadata & repo contracts', () => {
     expect(new Set(ALL_ASSETS.map(a => a.code)).size).toBe(100);
     expect(new Set(ALL_ASSETS.map(a => a.name)).size).toBe(100);
 
+    const baseIds = new Set([
+      'relay-drone', 'field-rover', 'survey-bot', 'cargo-pod', 'signal-tower', 'field-pilot',
+      ...extraAssets.map(a => a.id),
+    ]);
+    expect(ALL_ASSETS.filter(a => baseIds.has(a.id)).map(a => a.id)).toEqual([]);
+
     const lockRaw = readFileSync(join(REPO_ROOT, 'src/models/variations.lock.json'), 'utf8');
     const lockData = JSON.parse(lockRaw) as { entries: Record<string, { template: string }> };
-    const existingIds = new Set(Object.values(lockData.entries).map(e => e.template));
-    const collisions = ALL_ASSETS.filter(a => existingIds.has(a.id)).map(a => a.id);
-    expect(collisions).toEqual([]);
+    const lockedIds = new Set(Object.values(lockData.entries).map(e => e.template));
+    expect(ALL_ASSETS.filter(a => !lockedIds.has(a.id)).map(a => a.id)).toEqual([]);
 
     for (const { packId, prefix, meta, defs } of PACK_ENTRIES) {
       expect(meta).toHaveLength(20);

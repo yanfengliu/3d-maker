@@ -3,7 +3,7 @@ import { resolveModelParams } from '../capabilities/param-schema';
 import { getModelParamSpecs, type Recipe } from '../data/recipe';
 import { attachOriginalCapabilities } from './capabilities';
 import { character } from './character';
-import { extraAssets } from './collections';
+import { COLLECTIONS_PACK_ID, extraMetaById } from './collections/meta';
 import { drone } from './drone';
 import { cargo, rover, tower } from './equipment';
 import { ensureExpansionPackLoaded } from './expansion/lazy';
@@ -12,23 +12,25 @@ import { getExpansionAsset, isExpansionPackLoaded } from './expansion/registry';
 import { finishes } from './parts';
 import { findVariation } from './variations';
 
-const extraBuilders = new Map(extraAssets.map(asset => [asset.id, asset.build]));
+function studioPackOf(templateId: string): string | undefined {
+  return extraMetaById.has(templateId) ? COLLECTIONS_PACK_ID : expansionPackOf(templateId);
+}
 
-/** Report whether `templateId` belongs to an expansion pack that has not yet been loaded in the studio. */
+/** Report whether `templateId` belongs to a lazy pack that has not yet been loaded in the studio. */
 export function needsExpansionLoad(templateId: string): boolean {
-  const packId = expansionPackOf(templateId);
+  const packId = studioPackOf(templateId);
   return packId !== undefined && !isExpansionPackLoaded(packId);
 }
 
-/** Dynamically load the expansion pack for `templateId` if needed (no-op for core/existing or loaded packs). */
+/** Dynamically load the pack owning `templateId` if needed (no-op for core starters or already-loaded packs). */
 export async function ensureStudioTemplateLoaded(templateId: string): Promise<void> {
   if (!needsExpansionLoad(templateId)) return;
   await ensureExpansionPackLoaded(templateId);
 }
 
 /**
- * Browser-studio synchronous model builder for the 6 core starters, existing 100 collection
- * assets, and any already-loaded expansion pack assets. Never statically imports expansion packs.
+ * Browser-studio synchronous model builder for the 6 core starters and any already-loaded
+ * collection or expansion pack assets. Never statically imports lazy collection or expansion packs.
  */
 export function buildStudioModel(recipe: Recipe): T.Group {
   const root = new T.Group();
@@ -46,7 +48,7 @@ export function buildStudioModel(recipe: Recipe): T.Group {
       case 'survey-bot': character(root, palette, false, recipe.detail); break;
       case 'field-pilot': character(root, palette, true, recipe.detail); break;
       default: {
-        const build = extraBuilders.get(recipe.template) ?? getExpansionAsset(recipe.template)?.build;
+        const build = getExpansionAsset(recipe.template)?.build;
         if (!build) {
           if (needsExpansionLoad(recipe.template)) {
             throw new Error('Expansion pack not loaded for template: ' + recipe.template);
