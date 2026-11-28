@@ -95,6 +95,7 @@ function availableClips() {
 }
 
 function togglePlayback() {
+  stopPartPreviewAnimation();
   stage.play(!stage.playing);
   return stage.playing;
 }
@@ -464,6 +465,7 @@ const api = createAgentApi({
   listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
   playClip: index => {
     if (!availableClips()[index]) throw new Error('Unknown animation clip.');
+    stopPartPreviewAnimation();
     stage.setClip(index); stage.play(true); ui.renderControls();
   },
   syncRigEdits, refreshRig: ui.refreshRig, syncViewportTools: ui.syncViewportTools, applyPreset: ui.applyPreset, setProjection, setView,

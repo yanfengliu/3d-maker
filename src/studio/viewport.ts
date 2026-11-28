@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { clipFocusShift, expandedFrame, projectedBoxSize, sampleClipBounds } from './framing';
+import { clipFloorLift, projectedBoxSize, sampleClipBounds } from './framing';
 import {
   DEFAULT_PROJECTION,
   PERSPECTIVE_FOV,
@@ -54,10 +54,6 @@ export class Viewport {
   private host: HTMLElement;
   private renderSize = new T.Vector2();
   private radius = 1;
-  private baseFrameHeight = 4;
-  private baseFrameWidth = 4;
-  private baseFrameDepth = 2;
-  private baseAspect = 1;
   private frameHeight = 4;
   private frameWidth = 4;
   private frameDepth = 2;
@@ -65,7 +61,7 @@ export class Viewport {
   private restCenter = new T.Vector3();
   private bounds = new T.Box3();
   private center = new T.Vector3();
-  private appliedShift = new T.Vector3();
+  private modelStage = new T.Group();
   private clipBounds = new Map<T.AnimationClip, T.Box3>();
   private framedClip: T.AnimationClip | null = null;
   private mixer: T.AnimationMixer | null = null;
@@ -123,7 +119,7 @@ export class Viewport {
     this.key.castShadow = !thumbnail;
     this.key.shadow.mapSize.set(1024, 1024);
     this.key.shadow.normalBias = 0.015;
-    this.scene.add(this.key, this.key.target, this.shadow);
+    this.scene.add(this.key, this.key.target, this.shadow, this.modelStage);
     this.ground.rotation.x = -Math.PI / 2;
     this.ground.receiveShadow = true;
     if (!thumbnail) {
@@ -163,9 +159,6 @@ export class Viewport {
     this.orthoCamera.bottom = -half;
     this.orthoCamera.updateProjectionMatrix();
     this.perspectiveCamera.aspect = aspect;
-    const baseDist = perspectiveDistance(this.baseFrameWidth, this.baseFrameHeight, this.baseFrameDepth, this.baseAspect);
-    const activeDist = perspectiveDistance(this.frameWidth, this.frameHeight, this.frameDepth, aspect);
-    this.perspectiveCamera.zoom = Math.min(1, baseDist / Math.max(0.001, activeDist));
     this.perspectiveCamera.updateProjectionMatrix();
     // ResizeObserver runs after the frame callbacks. Resizing clears WebGL's buffer;
     // draw the new projection before this frame is presented when an inspector tab changes.
@@ -185,12 +178,9 @@ export class Viewport {
     const halfH = orthoHalfHeight(this.frameWidth, this.frameHeight, aspect);
     const reachRadius = Math.max(this.radius, this.bounds.isEmpty() ? 1 : this.bounds.getSize(new T.Vector3()).length() / 2);
     if (next === 'perspective') {
-      const baseDist = perspectiveDistance(this.baseFrameWidth, this.baseFrameHeight, this.baseFrameDepth, this.baseAspect);
-      const activeDist = perspectiveDistance(this.frameWidth, this.frameHeight, this.frameDepth, aspect);
-      const perspZoom = Math.min(1, baseDist / Math.max(0.001, activeDist));
       const matchedDist = Math.min(
         reachRadius * 24,
-        Math.max(reachRadius * 0.45, perspectiveDistanceForOrtho(halfH, this.orthoCamera.zoom) * perspZoom),
+        Math.max(reachRadius * 0.45, perspectiveDistanceForOrtho(halfH, this.orthoCamera.zoom) * this.perspectiveCamera.zoom),
       );
       this.perspectiveCamera.position.copy(target).addScaledVector(dir, matchedDist);
       this.perspectiveCamera.near = Math.max(0.01, reachRadius * 0.02);
@@ -217,10 +207,11 @@ export class Viewport {
     this.mixer?.stopAllAction();
     if (this.model) {
       this.mixer?.uncacheRoot(this.model);
-      this.scene.remove(this.model);
+      this.modelStage.remove(this.model);
     }
     this.model = model;
-    this.scene.add(model);
+    this.modelStage.position.set(0, 0, 0);
+    this.modelStage.add(model);
     this.wireMaterials.clear();
     model.traverse((node) => {
       if (node.userData.studioOverlay || !(node instanceof T.Mesh)) return;
@@ -237,20 +228,31 @@ export class Viewport {
     this.clipIndex = 0;
     this.clipBounds.clear();
     this.framedClip = null;
-    if (refit) this.appliedShift.set(0, 0, 0);
     this.place(refit);
     if (autoBind) this.bindClip(0);
     this.settled = 0;
     this.invalidate();
   }
   private atRest<R>(work: () => R): R {
-    if (!this.action) return work();
+    const prevLift = this.modelStage.position.y;
+    this.modelStage.position.y = 0;
+    this.modelStage.updateMatrixWorld(true);
+    if (!this.action) {
+      try {
+        return work();
+      } finally {
+        this.modelStage.position.y = prevLift;
+        this.modelStage.updateMatrixWorld(true);
+      }
+    }
     const time = this.action.time;
     const paused = this.action.paused;
     this.action.stop();
     try {
       return work();
     } finally {
+      this.modelStage.position.y = prevLift;
+      this.modelStage.updateMatrixWorld(true);
       this.action.play();
       this.action.time = time;
       this.action.paused = paused;
@@ -274,53 +276,17 @@ export class Viewport {
   private stageProps(box: T.Box3) {
     updateStageProps(box, this.radius, this.gridSize, this.shadow, this.grid, this.ground, this.key);
   }
-  private applyFraming(clip: T.AnimationClip | null, refit: boolean) {
+  private applyClipLift(clip: T.AnimationClip | null) {
     if (!this.model) return;
-    const sampled = clip ? this.clipBox(clip) : this.restBounds;
-    const shift = clip ? clipFocusShift(this.restBounds, sampled, this.radius) : new T.Vector3();
-    const active = clip ? sampled : this.restBounds;
     this.framedClip = clip;
-    this.bounds.copy(active);
-    this.stageProps(active);
-    const delta = shift.clone().sub(this.appliedShift);
-    this.appliedShift.copy(shift);
-    this.center.copy(this.restCenter).add(this.appliedShift);
-    if (refit) {
-      this.view('Perspective');
+    if (this.thumbnailMode || !clip) {
+      this.modelStage.position.y = 0;
+      this.modelStage.updateMatrixWorld(true);
       return;
     }
-    if (delta.lengthSq() > 0) {
-      this.controls.target.add(delta);
-      this.camera.position.add(delta);
-      this.controls.update();
-    }
-    const reachRadius = Math.max(this.radius, active.getSize(new T.Vector3()).length() / 2);
-    this.orthoCamera.near = reachRadius * 0.005;
-    this.orthoCamera.far = reachRadius * 120;
-    this.perspectiveCamera.near = Math.max(0.01, reachRadius * 0.02);
-    this.perspectiveCamera.far = Math.max(200, reachRadius * 120);
-    this.controls.minDistance = reachRadius * 0.45;
-    this.controls.maxDistance = reachRadius * 24;
-    this.camera.updateMatrixWorld();
-    const padW = this.thumbnailMode ? 1.07 : 1.18;
-    const padH = this.thumbnailMode ? 1.03 : 1.15;
-    const frame = expandedFrame(
-      this.baseFrameWidth,
-      this.baseFrameHeight,
-      this.restBounds,
-      this.bounds,
-      this.camera.matrixWorldInverse,
-      this.radius,
-      padW,
-      padH,
-    );
-    const currentRadius = Math.max(0.01, this.restBounds.getSize(new T.Vector3()).length() / 2);
-    const modelScale = currentRadius / Math.max(0.01, this.radius);
-    const activeSize = projectedBoxSize(this.bounds, this.camera.matrixWorldInverse);
-    this.frameWidth = frame.width;
-    this.frameHeight = frame.height;
-    this.frameDepth = Math.max(this.baseFrameDepth, activeSize.z / modelScale);
-    this.resize();
+    const sampled = this.clipBox(clip);
+    this.modelStage.position.y = clipFloorLift(this.restBounds, sampled, this.radius);
+    this.modelStage.updateMatrixWorld(true);
   }
   place(refit: boolean) {
     if (!this.model) return;
@@ -328,25 +294,31 @@ export class Viewport {
     this.measureRest();
     const size = this.restBounds.getSize(new T.Vector3());
     const center = this.restBounds.getCenter(new T.Vector3());
+    this.bounds.copy(this.restBounds);
     if (refit) {
       this.radius = Math.max(0.01, size.length() / 2);
       this.restCenter.copy(center);
+      this.center.copy(center);
       this.gridSize = this.radius / 2;
       this.grid.scale.setScalar(this.gridSize);
       this.ground.scale.setScalar(this.gridSize);
       if (this.scene.fog instanceof T.FogExp2) {
         this.scene.fog.density = (this.projection === 'perspective' ? 0.052 : 0.034) / this.radius;
       }
+      this.stageProps(this.restBounds);
+      this.applyClipLift(!this.thumbnailMode ? this.framedClip : null);
+      this.view('Perspective');
+      return;
     }
-    const activeClip = !this.thumbnailMode ? this.framedClip : null;
-    this.applyFraming(activeClip, refit);
+    this.stageProps(this.restBounds);
+    this.applyClipLift(!this.thumbnailMode ? this.framedClip : null);
+    this.invalidate();
   }
   view(view: View) {
     this.orthoCamera.zoom = 1;
     this.perspectiveCamera.zoom = 1;
     const { aspect } = this.viewportAspect();
-    this.baseAspect = aspect;
-    const reachRadius = Math.max(this.radius, this.bounds.getSize(new T.Vector3()).length() / 2);
+    const reachRadius = Math.max(this.radius, this.bounds.isEmpty() ? 1 : this.bounds.getSize(new T.Vector3()).length() / 2);
     const dir = new T.Vector3(...VIEW_DIRECTIONS[view]).normalize();
     this.controls.target.copy(this.center);
     this.orthoCamera.position.copy(this.center).addScaledVector(dir, reachRadius * 5.2);
@@ -357,24 +329,10 @@ export class Viewport {
     const padW = this.thumbnailMode ? 1.07 : 1.18;
     const padH = this.thumbnailMode ? 1.03 : 1.15;
     const restSize = projectedBoxSize(this.restBounds, this.orthoCamera.matrixWorldInverse);
-    const activeSize = projectedBoxSize(this.bounds, this.orthoCamera.matrixWorldInverse);
-    this.baseFrameWidth = Math.max(0.001, restSize.x) * padW;
-    this.baseFrameHeight = Math.max(0.001, restSize.y) * padH;
-    this.baseFrameDepth = Math.max(0.001, restSize.z);
-    const frame = expandedFrame(
-      this.baseFrameWidth,
-      this.baseFrameHeight,
-      this.restBounds,
-      this.bounds,
-      this.orthoCamera.matrixWorldInverse,
-      this.radius,
-      padW,
-      padH,
-    );
-    this.frameWidth = frame.width;
-    this.frameHeight = frame.height;
-    this.frameDepth = Math.max(this.baseFrameDepth, activeSize.z);
-    const baseDist = perspectiveDistance(this.baseFrameWidth, this.baseFrameHeight, this.baseFrameDepth, aspect);
+    this.frameWidth = Math.max(0.001, restSize.x) * padW;
+    this.frameHeight = Math.max(0.001, restSize.y) * padH;
+    this.frameDepth = Math.max(0.001, restSize.z);
+    const baseDist = perspectiveDistance(this.frameWidth, this.frameHeight, this.frameDepth, aspect);
     this.perspectiveCamera.position.copy(this.center).addScaledVector(dir, baseDist);
     this.perspectiveCamera.near = Math.max(0.01, reachRadius * 0.02);
     this.perspectiveCamera.far = Math.max(200, reachRadius * 120);
@@ -422,8 +380,8 @@ export class Viewport {
   }
   setClip(index: number) {
     this.bindClip(index);
-    if (!this.thumbnailMode) this.applyFraming(this.action?.getClip() ?? null, false);
-    else this.invalidate();
+    if (!this.thumbnailMode) this.applyClipLift(this.action?.getClip() ?? null);
+    this.invalidate();
   }
   /** Drop cached animation bindings without snapping manually posed rigged parts back to load-time transforms. */
   syncExternalPose() {
@@ -442,8 +400,7 @@ export class Viewport {
     if (this.action) this.action.paused = !this.playing;
     this.lastTime = 0;
     if (this.playing && !this.thumbnailMode && this.action && this.framedClip !== this.action.getClip()) {
-      this.applyFraming(this.action.getClip(), false);
-      return;
+      this.applyClipLift(this.action.getClip());
     }
     this.invalidate();
   }
@@ -451,7 +408,7 @@ export class Viewport {
     if (!this.action && this.model?.animations[this.clipIndex]) this.bindClip(this.clipIndex);
     if (!this.action || !this.mixer) return;
     if (!this.thumbnailMode && this.framedClip !== this.action.getClip()) {
-      this.applyFraming(this.action.getClip(), false);
+      this.applyClipLift(this.action.getClip());
     }
     this.action.time = this.action.getClip().duration * Math.min(frac, 0.99999);
     this.mixer.update(0);

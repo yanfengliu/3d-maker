@@ -2,7 +2,7 @@ import * as T from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalog } from '../data/recipe';
 import { createAsset } from '../sdk';
-import { clipFocusShift, expandedFrame, projectedBoxSize, sampleClipBounds } from './framing';
+import { clipFloorLift, clipFocusShift, expandedFrame, projectedBoxSize, sampleClipBounds } from './framing';
 import {
   DEFAULT_PROJECTION,
   orthoHalfHeight,
@@ -134,9 +134,38 @@ describe('clip preview framing', () => {
       expect(frame.width).toBeGreaterThanOrEqual(baseW - 1e-6);
       expect(frame.height).toBeGreaterThanOrEqual(baseH - 1e-6);
       expect(Number.isFinite(frame.width) && Number.isFinite(frame.height)).toBe(true);
+      const lift = clipFloorLift(rest, sampled, radius);
+      expect(Number.isFinite(lift) && lift >= 0, `Invalid floor lift for "${clip.name}"`).toBe(true);
+      expect(sampled.min.y + lift).toBeGreaterThanOrEqual(rest.min.y - Math.max(0.08, radius * 0.08) - 1e-6);
     }
     expect(hips.position.distanceTo(restHips)).toBeLessThan(1e-6);
   }, 15_000);
+
+  it('keeps grounded multi-clip models at zero floor lift while lifting submerged character poses', () => {
+    const doorRow = catalog.find((entry) => entry.id === 'dwarven-vault-door');
+    if (!doorRow) throw new Error('Missing Dwarven Vault Door template.');
+    const door = createAsset(doorRow.recipe);
+    const doorRest = new T.Box3().setFromObject(door, true);
+    const doorRadius = doorRest.getSize(new T.Vector3()).length() / 2;
+    expect(door.animations.length).toBeGreaterThanOrEqual(2);
+    for (const clip of door.animations) {
+      const sampled = sampleClipBounds(door, clip, doorRest);
+      expect(clipFloorLift(doorRest, sampled, doorRadius), `Unexpected lift for "${clip.name}"`).toBe(0);
+    }
+
+    const pilot = pilotModel();
+    const pilotRest = new T.Box3().setFromObject(pilot, true);
+    const pilotRadius = pilotRest.getSize(new T.Vector3()).length() / 2;
+    const idle = pilot.animations.find((clip) => clip.name === 'Idle');
+    const swimming = pilot.animations.find((clip) => clip.name === 'Swimming');
+    const treading = pilot.animations.find((clip) => clip.name === 'Treading water');
+    const slide = pilot.animations.find((clip) => clip.name === 'Slide');
+    if (!idle || !swimming || !treading || !slide) throw new Error('Missing pilot clips.');
+    expect(clipFloorLift(pilotRest, sampleClipBounds(pilot, idle, pilotRest), pilotRadius)).toBe(0);
+    expect(clipFloorLift(pilotRest, sampleClipBounds(pilot, swimming, pilotRest), pilotRadius)).toBeGreaterThan(0.9);
+    expect(clipFloorLift(pilotRest, sampleClipBounds(pilot, treading, pilotRest), pilotRadius)).toBeGreaterThan(1.4);
+    expect(clipFloorLift(pilotRest, sampleClipBounds(pilot, slide, pilotRest), pilotRadius)).toBeGreaterThan(0.7);
+  });
 });
 
 describe('camera projection and cross-port localhost persistence', () => {

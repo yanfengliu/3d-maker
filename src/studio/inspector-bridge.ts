@@ -6,7 +6,7 @@ import { el, notify } from '../ui/dom';
 import { showAnimation, showPlayback, showProperties } from '../ui/inspector';
 import { showModelPaint } from '../ui/model-paint';
 import { showModelParams } from '../ui/model-params';
-import { showModelPartsProperties, showRiggedParts } from '../ui/model-parts';
+import { showModelPartsProperties, showRiggedParts, stopPartPreviewAnimation } from '../ui/model-parts';
 import type { Viewport } from './viewport';
 
 export interface WorkspaceBridge {
@@ -162,17 +162,22 @@ export function createInspectorBridge(host: WorkspaceBridge) {
       host.stage.speed,
       host.stage.playAll,
       on => {
+        if (on) stopPartPreviewAnimation();
         host.stage.playAll = on;
         if (on) host.stage.play(true);
         return host.stage.playing;
       },
       index => {
+        stopPartPreviewAnimation();
         host.stage.setClip(index);
         host.stage.seek(0);
         host.stage.play(true);
         namePlaybackControl();
       },
-      fraction => { host.stage.seek(fraction); },
+      fraction => {
+        stopPartPreviewAnimation();
+        host.stage.seek(fraction);
+      },
       speed => { host.stage.speed = speed; },
     );
     host.stage.onAdvance = index => { namePlaybackControl(); markClip?.(index); };

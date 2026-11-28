@@ -205,6 +205,117 @@ export async function verifyClipFraming(browser, origin, site, out) {
       'Field Rover drifted vertically during Traverse: ' +
         JSON.stringify({ restMaxY: roverRest.maxY, traverseMaxY: roverTraverse.maxY }),
     );
+
+    // Playing, pausing, scrubbing, or switching clips must never alter the camera (example: Dwarven Vault Door).
+    await page.goto(origin + site + '?asset=dwarven-vault-door');
+    await page.waitForFunction(() => window.__shotReady);
+    assert.equal(await page.locator('#motionName').innerText(), 'Spin lock wheel');
+
+    const switchDoorClip = async (index, expectedName) => {
+      await page.locator(`[data-clip="${index}"]`).click();
+      assert.equal(await page.locator('#motionName').innerText(), expectedName);
+    };
+
+    for (const view of ['Front', 'Left']) {
+      await page.selectOption('#view', view);
+      await waitFrames(page, 4);
+      await switchDoorClip(0, 'Spin lock wheel');
+      await pauseAt(page, 0);
+      const beforeSwitch = await subjectBounds(page);
+      if (view === 'Front') await page.screenshot({ path: join(out, 'dwarven-vault-door-front-before.png') });
+      await switchDoorClip(1, 'Swing vault door');
+      await pauseAt(page, 0);
+      const afterSwitch = await subjectBounds(page);
+      if (view === 'Front') await page.screenshot({ path: join(out, 'dwarven-vault-door-front-after.png') });
+      const viewDiff = meanChannelDiff(beforeSwitch.pixels, afterSwitch.pixels);
+      assert.ok(
+        viewDiff < 0.25,
+        `Switching clips moved the camera in ${view} view (mean RGB diff ${viewDiff.toFixed(2)})`,
+      );
+    }
+
+    // Orbit and zoom manually in Perspective, then verify clip switches, play/pause, seek, and Play all clips keep the camera fixed.
+    await page.selectOption('#view', 'Perspective');
+    await waitFrames(page, 4);
+    const doorRect = await page.locator('#viewport').boundingBox();
+    await page.mouse.move(doorRect.x + doorRect.width * 0.5, doorRect.y + doorRect.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(doorRect.x + doorRect.width * 0.62, doorRect.y + doorRect.height * 0.44, { steps: 10 });
+    await page.mouse.up();
+    await page.mouse.wheel(0, -140);
+    await waitFrames(page, 6);
+
+    await switchDoorClip(0, 'Spin lock wheel');
+    await pauseAt(page, 0);
+    const orbitedSpin0 = await subjectBounds(page);
+    await page.screenshot({ path: join(out, 'dwarven-vault-door-orbited-closed.png') });
+
+    await switchDoorClip(1, 'Swing vault door');
+    await pauseAt(page, 0);
+    const orbitedSwing0 = await subjectBounds(page);
+    const orbitedSwitchDiff = meanChannelDiff(orbitedSpin0.pixels, orbitedSwing0.pixels);
+    assert.ok(
+      orbitedSwitchDiff < 0.25,
+      `Switching to Swing vault door moved the orbited Perspective camera (mean RGB diff ${orbitedSwitchDiff.toFixed(2)})`,
+    );
+
+    await pauseAt(page, 0.45);
+    const orbitedSwingOpen = await subjectBounds(page);
+    await page.screenshot({ path: join(out, 'dwarven-vault-door-orbited-open.png') });
+    assert.ok(
+      meanChannelDiff(orbitedSpin0.pixels, orbitedSwingOpen.pixels) > 2,
+      'Swing vault door did not visibly animate from the user-orbited camera',
+    );
+
+    // Play/pause toggle and Play all clips auto-advance must preserve the exact camera.
+    await page.click('#play');
+    await waitFrames(page, 4);
+    await page.click('#play');
+    await pauseAt(page, 0);
+    const afterPlayToggle = await subjectBounds(page);
+    const playToggleDiff = meanChannelDiff(orbitedSpin0.pixels, afterPlayToggle.pixels);
+    assert.ok(
+      playToggleDiff < 0.25,
+      `Playing/pausing clip moved the camera (mean RGB diff ${playToggleDiff.toFixed(2)})`,
+    );
+
+    await page.check('#playAllClips');
+    await pauseAt(page, 0.97);
+    await page.click('#play');
+    await page.waitForFunction(() => document.querySelector('#motionName')?.textContent === 'Spin lock wheel', undefined, {
+      timeout: 10000,
+    });
+    await page.uncheck('#playAllClips');
+    await pauseAt(page, 0);
+    const afterAutoAdvance = await subjectBounds(page);
+    const autoAdvanceDiff = meanChannelDiff(orbitedSpin0.pixels, afterAutoAdvance.pixels);
+    assert.ok(
+      autoAdvanceDiff < 0.25,
+      `Play all clips auto-advance moved the camera (mean RGB diff ${autoAdvanceDiff.toFixed(2)})`,
+    );
+
+    // Repeat custom orbit + zoom check in Orthographic projection.
+    await page.selectOption('#projection', 'orthographic');
+    await waitFrames(page, 4);
+    await page.mouse.move(doorRect.x + doorRect.width * 0.5, doorRect.y + doorRect.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(doorRect.x + doorRect.width * 0.62, doorRect.y + doorRect.height * 0.46, { steps: 10 });
+    await page.mouse.up();
+    await page.mouse.wheel(0, -120);
+    await waitFrames(page, 6);
+
+    await switchDoorClip(0, 'Spin lock wheel');
+    await pauseAt(page, 0);
+    const orthoSpin0 = await subjectBounds(page);
+    await switchDoorClip(1, 'Swing vault door');
+    await pauseAt(page, 0);
+    const orthoSwing0 = await subjectBounds(page);
+    const orthoDiff = meanChannelDiff(orthoSpin0.pixels, orthoSwing0.pixels);
+    assert.ok(
+      orthoDiff < 0.25,
+      `Switching clips moved the orbited Orthographic camera (mean RGB diff ${orthoDiff.toFixed(2)})`,
+    );
+    await page.selectOption('#projection', 'perspective');
     assert.deepEqual(errors, []);
   } finally {
     await context.close();

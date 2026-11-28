@@ -5,7 +5,7 @@ const sampleCount = 7;
 const maxSkinSamples = 400;
 
 export function fastBounds(root: T.Object3D): T.Box3 {
-  root.updateMatrixWorld(true);
+  root.updateWorldMatrix(true, true);
   const box = new T.Box3();
   const vertex = new T.Vector3();
   root.traverse((node) => {
@@ -79,6 +79,21 @@ export function clipFocusShift(restBounds: T.Box3, clipBounds: T.Box3, radius: n
     return new T.Vector3();
   }
   return shift;
+}
+
+/**
+ * Vertical lift keeping low-pose animations whose body drops below the rest floor
+ * (such as Swimming, Treading water, or Slide) above the floor grid and vertically
+ * centered in view without ever moving or zooming the camera.
+ */
+export function clipFloorLift(restBounds: T.Box3, clipBounds: T.Box3, radius: number): number {
+  const drop = restBounds.min.y - clipBounds.min.y;
+  const floorTolerance = Math.max(0.08, radius * 0.08);
+  if (drop <= floorTolerance) return 0;
+  const deepDrop = Math.max(0.25, radius * 0.25);
+  if (drop <= deepDrop) return drop;
+  const centerDrop = (restBounds.min.y + restBounds.max.y - (clipBounds.min.y + clipBounds.max.y)) / 2;
+  return Math.max(drop, centerDrop);
 }
 
 export function expandedFrame(
