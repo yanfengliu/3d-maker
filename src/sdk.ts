@@ -35,7 +35,20 @@ export type { DerivedSpatialMetadata } from './capabilities/spatial-derive';
 export { deriveIkMetadata } from './capabilities/ik-derive';
 export { resolveModelParams } from './capabilities/param-schema';
 export { applyVertexColorTone, mergeStaticParts } from './models/merge-static';
-export type { MergeStaticOptions, MergeStaticReport } from './models/merge-static';
+export type { MergeStaticOptions, MergeStaticReport, VertexColorShader } from './models/merge-static';
+export {
+  KitFrame,
+  bboxFrame,
+  createHingeOnFrame,
+  gridFrames,
+  jitterFrames,
+  localFrame,
+  placeOnFrame,
+  ringFrames,
+  varyValues,
+} from './models/kit-frames';
+export type { DirectionSpec, FrameHingeOptions, PlaceOnFrameOptions } from './models/kit-frames';
+export { grainShader, heightBandShader, upwardBlendShader } from './models/kit-materials';
 export type {
   AssetCapabilities,
   AssetDimensionsSpec,
