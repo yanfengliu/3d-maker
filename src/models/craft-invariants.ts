@@ -1,4 +1,7 @@
 import * as T from 'three'
+import { findRotatingRigSolidOverlaps, type RiggedSolidOverlap } from './craft-overlap'
+
+export type { RiggedSolidOverlap }
 
 export interface FloatingComponent {
   meshNames: string[]
@@ -32,6 +35,7 @@ export interface CraftAudit {
   leftRightBalance: number
   floatingComponents: FloatingComponent[]
   exposedZFightPairs: ExposedZFightPair[]
+  rotatingRigOverlaps: RiggedSolidOverlap[]
 }
 
 interface WorldTri {
@@ -399,7 +403,7 @@ function findExposedZFighting(records: readonly MeshRecord[], allTris: readonly 
   return result
 }
 
-export function auditModelCraft(root: T.Object3D): CraftAudit {
+export function auditModelCraft(root: T.Object3D, rotatingPartNames?: ReadonlySet<string>): CraftAudit {
   root.updateMatrixWorld(true)
   const records: MeshRecord[] = []
   const allTris: WorldTri[] = []
@@ -489,5 +493,6 @@ export function auditModelCraft(root: T.Object3D): CraftAudit {
     leftRightBalance: maxX > 0 ? Math.min(posX, negX) / maxX : 0,
     floatingComponents: findFloatingComponents(records, overall),
     exposedZFightPairs: findExposedZFighting(records, allTris),
+    rotatingRigOverlaps: findRotatingRigSolidOverlaps(root, rotatingPartNames),
   }
 }

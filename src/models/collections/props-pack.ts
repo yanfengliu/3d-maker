@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { archedVaultLid } from '../hollow-shells';
 import { box, group, mesh, ring, rotationTrack, shell, spinTrack, strut, tube } from '../parts';
 import type { Finish, Point } from '../parts';
 import { fastener } from '../hd-detail';
@@ -67,7 +68,7 @@ function treasureChest(root: T.Group, p: Finish, detail: boolean) {
   const body = group(root, 'ChestBody');
   for (const sx of [-0.66, 0.66]) for (const sz of [-0.4, 0.4]) shell(body, [sx, 0.06, sz], [0.18, 0.12, 0.18], p.dark, 0.3);
   shell(body, [0, 0.39, 0], [1.46, 0.62, 0.94], p.primary, 0.18);
-  shell(body, [0, 0.65, 0], [1.32, 0.12, 0.8], p.inset, 0.15);
+  shell(body, [0, 0.64, 0], [1.32, 0.1, 0.8], p.inset, 0.15);
   for (const x of [-0.62, -0.22, 0.22, 0.62]) box(body, [x, 0.39, 0], [0.085, 0.64, 0.98], p.accent);
   shell(body, [0, 0.48, 0.49], [0.22, 0.26, 0.055], p.accent, 0.3);
   box(body, [0, 0.46, 0.52], [0.042, 0.1, 0.025], p.inset);
@@ -83,12 +84,11 @@ function treasureChest(root: T.Group, p: Finish, detail: boolean) {
   orb(tray, [-0.28, 0.14, 0.08], 0.085, p.optic, p.hd, [1.2, 0.8, 1]);
   orb(tray, [0.28, 0.13, -0.12], 0.075, p.optic, p.hd);
   const lid = group(root, 'ChestLid', [0, 0.7, -0.47]);
-  cyl(lid, [0, 0.03, 0.47], 0.46, 0.46, 1.44, p.primary, 'x', 16).scale.set(0.68, 1, 1);
-  shell(lid, [0, 0.04, 0.47], [1.48, 0.11, 0.96], p.primary, 0.2);
+  // Hollow arched half-cylinder lid strictly above y = 0 (never cuts through GoldTray).
+  archedVaultLid(lid, [0, 0.01, 0.47], 1.44, 0.94, 0.32, 0.09, p.primary, p.hd);
+  for (const sx of [-0.69, 0.69]) archedVaultLid(lid, [sx, 0.01, 0.47], 0.06, 0.92, 0.31, 0.3, p.primary, p.hd);
   for (const x of [-0.62, -0.22, 0.22, 0.62]) {
-    const band = ring(lid, [x, 0.04, 0.47], 0.475, 0.045, 0.085, p.accent);
-    band.rotation.z = HPI;
-    band.scale.set(0.69, 1, 1);
+    archedVaultLid(lid, [x, 0.005, 0.47], 0.085, 0.98, 0.34, 0.045, p.accent, p.hd);
   }
   box(lid, [0, -0.02, 0.96], [0.12, 0.18, 0.05], p.accent);
   if (detail) {

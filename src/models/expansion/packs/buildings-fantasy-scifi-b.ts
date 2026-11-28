@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { ring } from '../../parts';
 import {
   det, glow, group, kboltring, kbox, kcone, kcyl, kdome, kdoor, kgable, khose, klathe,
   korb, kprism, kshell, kstrut, ktorus, kwin, matte, metal, rig, spinTrack, swingTrack,
@@ -274,13 +275,13 @@ function buildGroundedRuneSanctum(root: T.Group, p: Finish, detail: boolean) {
     // Upper stone crown rib reaching from obelisk elbow to upper collar
     kstrut(b, [s * 0.56, 1.92, c * 0.56], [s * 0.22, 2.66, c * 0.22], 0.07, darkStone, hd, 6);
   }
-  // Rotating RuneRing (y) physically spoked to central hub (ZERO floating!)
+  // Rotating RuneRing (y) mounted via hollow collar encircling the central core (zero solid-in-solid overlap).
   const runeRing = group(b, 'RuneRing', [0, 1.86, 0]);
-  kcyl(runeRing, [0, 0, 0], 0.7, 0.7, 0.08, gold, hd, 12);
+  ring(runeRing, [0, 0, 0], 0.68, 0.09, 0.08, gold);
   ktorus(runeRing, [0, 0, 0], 0.96, 0.056, p.accent, hd).rotation.x = Math.PI / 2;
   for (let i = 0; i < 4; i++) {
     const a = (i * Math.PI) / 2;
-    kstrut(runeRing, [0, 0, 0], [Math.sin(a) * 0.96, 0, Math.cos(a) * 0.96], 0.036, gold, hd, 6);
+    kstrut(runeRing, [Math.sin(a) * 0.62, 0, Math.cos(a) * 0.62], [Math.sin(a) * 0.96, 0, Math.cos(a) * 0.96], 0.036, gold, hd, 6);
     kbox(runeRing, [Math.sin(a) * 0.96, 0, Math.cos(a) * 0.96], [0.14, 0.22, 0.14], crystal, hd);
   }
   // Top twin-fork stone crown gimbal & tilting SanctumFocus (x) (ZERO floating!)

@@ -240,13 +240,15 @@ function buildPoptopCamper(root: T.Group, p: Finish, detail: boolean) {
       rbox(van, p, [s * 0.62, 1.24, z], [0.04, 0.32, 0.56], p.optic);
     }
   }
-  const roofBase: Point = [0, 1.48, -0.08];
+  const roofBase: Point = [0, 1.48, -1.16];
   const poptop = group(van, 'PopTopRoof', roofBase);
-  shell(poptop, [0, 0.08, 0], [1.14, 0.12, 2.18], p.stencil, 0.38);
-  shell(poptop, [0, -0.04, 0], [1.02, 0.14, 1.98], p.accent, 0.3);
-  const surf = group(van, 'Surfboard', [0.36, 1.62, -0.08]);
+  shell(poptop, [0, 0.07, 1.08], [1.14, 0.11, 2.18], p.stencil, 0.38);
+  for (const s of [-1, 1]) rbox(poptop, p, [s * 0.51, 0.015, 1.08], [0.05, 0.04, 2.02], p.accent);
+  for (const z of [0.1, 2.06]) rbox(poptop, p, [0, 0.015, z], [1.02, 0.04, 0.05], p.accent);
+  const surf = group(poptop, 'Surfboard', [0.32, 0.16, 1.08]);
   shell(surf, [0, 0, 0], [0.34, 0.06, 1.64], p.primary, 0.7);
   rbox(surf, p, [0, 0.036, 0], [0.06, 0.02, 1.36], p.stencil);
+  for (const z of [-0.46, 0.46]) rbox(surf, p, [0, -0.035, z], [0.28, 0.03, 0.05], p.dark);
   axleWheels(van, 0.6, 0.26, 0.86, 0.16, p, detail, p.stencil, 5, ['FrontWheelL', 'FrontWheelR']);
   axleWheels(van, 0.6, 0.26, -0.88, 0.16, p, detail, p.stencil, 5);
   if (detail) {

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { ring } from '../../parts';
 import {
   deg, glass, glow, group, kboltring, kbox, kcyl, kdome, kdoor, khose, korb, kprism, kshell,
   kstrut, ktorus, matte, metal, rig, slideTrack, spinTrack, swingTrack,
@@ -182,14 +183,14 @@ function buildStarportControlSpire(root: T.Group, p: Finish, detail: boolean) {
     const a = (i * Math.PI) / 4;
     kstrut(b, [Math.sin(a) * 1.04, 2.54, Math.cos(a) * 1.04], [Math.sin(a) * 1.22, 3.08, Math.cos(a) * 1.22], 0.036, alloy, hd, 6);
   }
-  // Rotating BeaconRing (y) encircling the upper telemetry deck
-  const ring = group(b, 'BeaconRing', [0, 3.28, 0]);
-  kcyl(ring, [0, 0, 0], 0.62, 0.62, 0.12, alloy, hd, 10);
-  ktorus(ring, [0, 0, 0], 0.96, 0.036, p.accent, hd).rotation.x = Math.PI / 2;
+  // Rotating BeaconRing (y) encircling the upper telemetry deck via hollow outer collar (zero solid-in-solid overlap).
+  const beacon = group(b, 'BeaconRing', [0, 3.28, 0]);
+  ring(beacon, [0, 0, 0], 0.86, 0.06, 0.09, alloy);
+  ktorus(beacon, [0, 0, 0], 0.96, 0.036, p.accent, hd).rotation.x = Math.PI / 2;
   for (let i = 0; i < 4; i++) {
     const a = (i * Math.PI) / 2;
-    kstrut(ring, [0, 0, 0], [Math.sin(a) * 0.96, 0, Math.cos(a) * 0.96], 0.026, alloy, hd, 6);
-    korb(ring, [Math.sin(a) * 0.96, 0.06, Math.cos(a) * 0.96], 0.065, strobe, hd, 8, 6);
+    kstrut(beacon, [Math.sin(a) * 0.82, 0, Math.cos(a) * 0.82], [Math.sin(a) * 0.96, 0, Math.cos(a) * 0.96], 0.026, alloy, hd, 6);
+    korb(beacon, [Math.sin(a) * 0.96, 0.06, Math.cos(a) * 0.96], 0.065, strobe, hd, 8, 6);
   }
   // Spinning primary ATC RadarBar (y) atop central spire mast
   kcyl(b, [0, 3.52, 0], 0.12, 0.18, 0.42, alloy, hd, 10);

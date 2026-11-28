@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { sphericalVisorShell } from '../../hollow-shells';
 import {
   HPI, addHarnessStand, addPlinth, box, cone, cyl, fastener, group, hose, lathe,
   orb, ring, rotationTrack, shell, spinTrack, strut, torus, tube, type Finish,
@@ -166,11 +167,17 @@ export function buildVisorAstronautHelmet(root: T.Group, p: Finish, detail: bool
   const eva = group(root, 'EvaHelmetBase');
   addPlinth(eva, p, detail, 0.82, 0.8, 0.12, 0.26);
   ring(eva, [0, 0.44, 0], 0.34, 0.065, 0.095, p.alloy);
-  orb(eva, [0, 0.8, -0.02], 0.38, p.primary, p.hd, [1.02, 1.02, 1.04]);
-  orb(eva, [0, 0.8, 0.16], 0.31, p.inset, p.hd, [0.95, 0.78, 0.72]);
-  const visor = group(root, 'EvaSunVisor', [0, 0.82, 0.02]);
-  orb(visor, [0, 0, 0.18], 0.33, p.accent, p.hd, [0.98, 0.78, 0.75]);
-  box(visor, [0, 0.25, 0.14], [0.46, 0.055, 0.16], p.dark);
+  orb(eva, [0, 0.8, -0.02], 0.38, p.primary, p.hd, [1.02, 1.02, 1.02]);
+  // Dark recessed viewport face-plate sitting cleanly inside the front aperture.
+  sphericalVisorShell(eva, [0, 0.8, -0.02], 0.376, 0.394, 0.92, -0.34, 0.4, p.inset, p.hd);
+  // Concentric curved EVA gold sun-shield gliding strictly OUTSIDE the helmet shell (zero solid overlap).
+  const visor = group(root, 'EvaSunVisor', [0, 0.8, -0.02]);
+  sphericalVisorShell(visor, [0, 0, 0], 0.402, 0.424, 1.06, -0.36, 0.48, p.accent, p.hd);
+  for (const s of [-1, 1]) {
+    cyl(visor, [s * 0.395, 0, 0], 0.048, 0.048, 0.044, p.dark, 'x', 12);
+    strut(visor, [s * 0.395, 0, 0], [s * 0.355, 0.04, 0.2], 0.018, p.dark, 8);
+  }
+  box(visor, [0, 0.21, 0.37], [0.42, 0.045, 0.08], p.dark);
   const cam = group(root, 'HelmCam', [0.39, 0.84, 0.04]);
   shell(cam, [0.04, 0, 0], [0.14, 0.14, 0.22], p.dark, 0.32);
   cyl(cam, [0.04, 0, 0.12], 0.045, 0.052, 0.05, p.optic, 'z', 12);

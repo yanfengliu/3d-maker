@@ -1845,8 +1845,8 @@
       "label": "Default",
       "situation": "Classic enameled spherical charcoal kettle grill on rolling tripod wheels with hinged domed vent lid.",
       "recipeHash": "sha256:68084fb09613d3355fddd60f879414ba04ab5980f1df8a0d482da23caa2b93e0",
-      "standardHash": "sha256:3a70b6d618adeae253072af57cb3487df7425f68d58ce64f929d9594bfc5f7ca",
-      "hdHash": "sha256:8d867f82aae5e8c3deccc153ddc5141e7e8068572083e5f2e76f93fd5d22a999",
+      "standardHash": "sha256:8a99b437d5811a5fdf5a560ef297f2e46f92459adc711ccc37d58e756f2cde09",
+      "hdHash": "sha256:64da781c10e1fa96000c081e97f2c2b688cfc5e7cb24387143eb146f36dd7d92",
       "clips": [
         "Lift grill lid",
         "Roll grill"
@@ -4688,8 +4688,8 @@
       "label": "Default",
       "situation": "Stepped stone plinth with four angled conduit obelisk struts cradling a faceted crystalline sanctum, rotating rune ring, and tilting focus prism.",
       "recipeHash": "sha256:81356405c9f4e6fdb633f71a891334a0260dc60ae65e5dcda27c9ceb5b5354b2",
-      "standardHash": "sha256:d0b7f0c44c04fbc937d00b8d667ffec04444c142d79fbf12640a5fc9b0c20346",
-      "hdHash": "sha256:f035855c5378a76b1524ef8c721dea827f3b3d2d1b679dea38cf969f9aacb644",
+      "standardHash": "sha256:66b9afd3f97a25929eabf03d954f028cd6acc422eed3d26243130a31008c9f15",
+      "hdHash": "sha256:c271d337d10ac0477223c8adb99efdf69d58bc9d796b7163aa148577b67619ea",
       "clips": [
         "Channel sanctum"
       ],
@@ -6605,8 +6605,8 @@
       "label": "Default",
       "situation": "Heavy horizontal steel-drum offset barbecue smoker with counterweighted barrel lid and opening side firebox door.",
       "recipeHash": "sha256:71c225be1d6edb0aed6cd53f7cbe940ab1b74930840753dde136e6f18186458d",
-      "standardHash": "sha256:18132b6836a0895f6ffde4a980d987cc2c0b802b2ae0031a1c4f09107c1eccc9",
-      "hdHash": "sha256:813b4843bb4fdc62f5c9be6114fc0784f2f913fffe8ec6bad50f1d6cbfac4d42",
+      "standardHash": "sha256:28007175244a79ee6b0685437e1f7b36b4c0dda1567008cbd874c7c70de3975e",
+      "hdHash": "sha256:7569ac596143e67b14ce3becd022a4e4a8c4f211bf86f651f29f92fa1339fbb8",
       "clips": [
         "Open smoker",
         "Stoke firebox"
@@ -7273,8 +7273,8 @@
       "label": "Default",
       "situation": "Retro camper van with an elevating canvas pop-top roof tent, nose-mounted spare wheel, and detachable roof surfboard.",
       "recipeHash": "sha256:cff42d037b5faa5b1972292746bbe0c3df7089c04f48745fc17e297288e370d9",
-      "standardHash": "sha256:006cfa8c08107966a8950204d15833c8725e0034353ff6f2b9451be8db605b4d",
-      "hdHash": "sha256:fb1e98b66912645119bfae5ed249b3eb4e51e2370d195245cc6aa8619f040d0a",
+      "standardHash": "sha256:b1f931f149e0a3adadcf24e471d593a617987cd417e0be24eb3f6986089934a1",
+      "hdHash": "sha256:5280baf892c40e3a71eb9fb60155d570a7e7c2d70c324cb93c04fd90a4b2b197",
       "clips": [
         "Camp setup"
       ],
@@ -8889,8 +8889,8 @@
       "label": "Default",
       "situation": "Flaring aerospace control spire with cantilevered tinted command deck, stabilizer fins, spinning radar bar, and rotating navigation beacon ring.",
       "recipeHash": "sha256:ccd8e3604be6d8a7b41d8f2c9d98b94f83633b54bafc636921f30daf1a703c2f",
-      "standardHash": "sha256:cde9344f376a78c8736a1ab45c64973e14f8b0801456967c520fd3208602f18f",
-      "hdHash": "sha256:2bdd3428629fc86c01ee1f29594f401c0906a3149ffd511a0a37cd28e7efffdf",
+      "standardHash": "sha256:41f25d11e7009fdddd7ff278051dcc185a12e01f77517b79e2eda1cb17b00a07",
+      "hdHash": "sha256:478ae520b956ba2208e6e598af26b3174ee1552ee3a536d60e034c49951373f3",
       "clips": [
         "Sweep airspace"
       ],
@@ -9807,8 +9807,8 @@
       "label": "Default",
       "situation": "Iron-banded dungeon chest with a snapping upper jaw lined with conical fangs, curling crimson tongue, and peering monster eyes.",
       "recipeHash": "sha256:1a3cbc7522cd8a4df08b4ecda43372a65b1cfeeeab72e0acc613b5743b9086c0",
-      "standardHash": "sha256:93eb48837b323e363c1c644d799ed12ab4629dca98f7d796d3d4d1794e2f7f39",
-      "hdHash": "sha256:98ac1706d9ae3f3237b69980c355e032624ac2265bb6fceaacbf830482223a97",
+      "standardHash": "sha256:ce53043f591394773aa60c6e5b84cae93918013fb4df7b5431e4cbaef17e0f05",
+      "hdHash": "sha256:a08e1b2e8585db0fcb72b87c1d2626e539f310801806a0bdb515192343440e8f",
       "clips": [
         "Snap mimic jaw"
       ],
@@ -9936,8 +9936,8 @@
       "label": "Default",
       "situation": "Iron-bound timber treasure chest with a vaulted hinged lid and removable gold tray.",
       "recipeHash": "sha256:66cae857e677c981a933f7b977a227d757cdadfd6ae1192008d6fde2f4d8e10f",
-      "standardHash": "sha256:6ca65fe122c2c63b56b29653ceb808e378b06763565fbe39a49d746fffbca4cc",
-      "hdHash": "sha256:ab342a992b0cb857c16e7814189bfc9c9b9e7e04790c10ad26e39a4ae00ee1d1",
+      "standardHash": "sha256:6ccdf89fa74d70f53cccf0d0b5a27e1108ec7b9b2fe57012499e0d5dfe4e264d",
+      "hdHash": "sha256:0770306c4ceb2fe472a5cea41e80059a8d08328c2aaf9527af7628689a40732b",
       "clips": [
         "Open chest"
       ],
@@ -10690,8 +10690,8 @@
       "label": "Default",
       "situation": "Orbital EVA dome helmet on a flight-deck neck ring with hinged gold reflective sun visor and detachable side telemetry camera.",
       "recipeHash": "sha256:738edf774aa178ab0b64820116bf8a873d0721304d68014cbc2a38754a723dd1",
-      "standardHash": "sha256:1f254daf77a3e659af4650efb88c37a4045e540ca808b077476c4809fe692d31",
-      "hdHash": "sha256:cf20cc7ad4c7e024d9ebf2c2ea92855d0b10036be8f27964c3f7ad42585750a9",
+      "standardHash": "sha256:27eef3e015d005cf245abd0f7865366cc8f0121e3b5cb1437c36116fc4b0ce15",
+      "hdHash": "sha256:1e532882330940f42c52f634d445d5143f84628f0b20a7233ee07f42f194197d",
       "clips": [
         "Raise sun visor"
       ],
@@ -11659,6 +11659,94 @@
       "toStandardHash": "sha256:c7eaf106e2246dbb4e8c348b83778a1628ac30c062ef7c611f1b7a8fb3fface4",
       "fromHdHash": "sha256:a3b50fa8c62bc27375e8af093db65b5266ae5318e257087d194b9e05af2e643c",
       "toHdHash": "sha256:eec672e574cd0e91d97ebdb8ce23be46341e60b7a859b9e14a9c68b1d9d2ab44"
+    },
+    {
+      "key": "treasure-chest@default",
+      "date": "2026-11-28",
+      "reason": "Replace full cylinder lid intersecting gold tray with hollow arched vault lid and resolve top-strap coplanar Z-fight",
+      "fromRecipeHash": "sha256:66cae857e677c981a933f7b977a227d757cdadfd6ae1192008d6fde2f4d8e10f",
+      "toRecipeHash": "sha256:66cae857e677c981a933f7b977a227d757cdadfd6ae1192008d6fde2f4d8e10f",
+      "fromStandardHash": "sha256:6ca65fe122c2c63b56b29653ceb808e378b06763565fbe39a49d746fffbca4cc",
+      "toStandardHash": "sha256:6ccdf89fa74d70f53cccf0d0b5a27e1108ec7b9b2fe57012499e0d5dfe4e264d",
+      "fromHdHash": "sha256:ab342a992b0cb857c16e7814189bfc9c9b9e7e04790c10ad26e39a4ae00ee1d1",
+      "toHdHash": "sha256:0770306c4ceb2fe472a5cea41e80059a8d08328c2aaf9527af7628689a40732b"
+    },
+    {
+      "key": "charcoal-kettle-grill@default",
+      "date": "2026-11-28",
+      "reason": "Replace overlapping full spheres with concave bowl, interior grate/coals, and hollow hinged dome lid",
+      "fromRecipeHash": "sha256:68084fb09613d3355fddd60f879414ba04ab5980f1df8a0d482da23caa2b93e0",
+      "toRecipeHash": "sha256:68084fb09613d3355fddd60f879414ba04ab5980f1df8a0d482da23caa2b93e0",
+      "fromStandardHash": "sha256:3a70b6d618adeae253072af57cb3487df7425f68d58ce64f929d9594bfc5f7ca",
+      "toStandardHash": "sha256:8a99b437d5811a5fdf5a560ef297f2e46f92459adc711ccc37d58e756f2cde09",
+      "fromHdHash": "sha256:8d867f82aae5e8c3deccc153ddc5141e7e8068572083e5f2e76f93fd5d22a999",
+      "toHdHash": "sha256:64da781c10e1fa96000c081e97f2c2b688cfc5e7cb24387143eb146f36dd7d92"
+    },
+    {
+      "key": "offset-barrel-smoker@default",
+      "date": "2026-11-28",
+      "reason": "Replace overlapping full cylinders with hollow open-top barrel chamber, interior grate, and hinged arc lid",
+      "fromRecipeHash": "sha256:71c225be1d6edb0aed6cd53f7cbe940ab1b74930840753dde136e6f18186458d",
+      "toRecipeHash": "sha256:71c225be1d6edb0aed6cd53f7cbe940ab1b74930840753dde136e6f18186458d",
+      "fromStandardHash": "sha256:18132b6836a0895f6ffde4a980d987cc2c0b802b2ae0031a1c4f09107c1eccc9",
+      "toStandardHash": "sha256:28007175244a79ee6b0685437e1f7b36b4c0dda1567008cbd874c7c70de3975e",
+      "fromHdHash": "sha256:813b4843bb4fdc62f5c9be6114fc0784f2f913fffe8ec6bad50f1d6cbfac4d42",
+      "toHdHash": "sha256:7569ac596143e67b14ce3becd022a4e4a8c4f211bf86f651f29f92fa1339fbb8"
+    },
+    {
+      "key": "toothed-mimic-chest@default",
+      "date": "2026-11-28",
+      "reason": "Replace full cylinder jaw plunging into chest body with watertight hollow arched vault lid",
+      "fromRecipeHash": "sha256:1a3cbc7522cd8a4df08b4ecda43372a65b1cfeeeab72e0acc613b5743b9086c0",
+      "toRecipeHash": "sha256:1a3cbc7522cd8a4df08b4ecda43372a65b1cfeeeab72e0acc613b5743b9086c0",
+      "fromStandardHash": "sha256:93eb48837b323e363c1c644d799ed12ab4629dca98f7d796d3d4d1794e2f7f39",
+      "toStandardHash": "sha256:ce53043f591394773aa60c6e5b84cae93918013fb4df7b5431e4cbaef17e0f05",
+      "fromHdHash": "sha256:98ac1706d9ae3f3237b69980c355e032624ac2265bb6fceaacbf830482223a97",
+      "toHdHash": "sha256:a08e1b2e8585db0fcb72b87c1d2626e539f310801806a0bdb515192343440e8f"
+    },
+    {
+      "key": "grounded-rune-sanctum@default",
+      "date": "2026-11-28",
+      "reason": "Replace solid rotating disk buried inside obelisk pillar with hollow encircling rune collar and outer spokes",
+      "fromRecipeHash": "sha256:81356405c9f4e6fdb633f71a891334a0260dc60ae65e5dcda27c9ceb5b5354b2",
+      "toRecipeHash": "sha256:81356405c9f4e6fdb633f71a891334a0260dc60ae65e5dcda27c9ceb5b5354b2",
+      "fromStandardHash": "sha256:d0b7f0c44c04fbc937d00b8d667ffec04444c142d79fbf12640a5fc9b0c20346",
+      "toStandardHash": "sha256:66b9afd3f97a25929eabf03d954f028cd6acc422eed3d26243130a31008c9f15",
+      "fromHdHash": "sha256:f035855c5378a76b1524ef8c721dea827f3b3d2d1b679dea38cf969f9aacb644",
+      "toHdHash": "sha256:c271d337d10ac0477223c8adb99efdf69d58bc9d796b7163aa148577b67619ea"
+    },
+    {
+      "key": "starport-control-spire@default",
+      "date": "2026-11-28",
+      "reason": "Replace solid rotating disk buried inside telemetry deck with hollow encircling beacon collar and outer arms",
+      "fromRecipeHash": "sha256:ccd8e3604be6d8a7b41d8f2c9d98b94f83633b54bafc636921f30daf1a703c2f",
+      "toRecipeHash": "sha256:ccd8e3604be6d8a7b41d8f2c9d98b94f83633b54bafc636921f30daf1a703c2f",
+      "fromStandardHash": "sha256:cde9344f376a78c8736a1ab45c64973e14f8b0801456967c520fd3208602f18f",
+      "toStandardHash": "sha256:41f25d11e7009fdddd7ff278051dcc185a12e01f77517b79e2eda1cb17b00a07",
+      "fromHdHash": "sha256:2bdd3428629fc86c01ee1f29594f401c0906a3149ffd511a0a37cd28e7efffdf",
+      "toHdHash": "sha256:478ae520b956ba2208e6e598af26b3174ee1552ee3a536d60e034c49951373f3"
+    },
+    {
+      "key": "poptop-camper-van@default",
+      "date": "2026-11-28",
+      "reason": "Replace roof block overlapping van cabin with rear-hinged fiberglass pop-top cap and roof-mounted surfboard",
+      "fromRecipeHash": "sha256:cff42d037b5faa5b1972292746bbe0c3df7089c04f48745fc17e297288e370d9",
+      "toRecipeHash": "sha256:cff42d037b5faa5b1972292746bbe0c3df7089c04f48745fc17e297288e370d9",
+      "fromStandardHash": "sha256:006cfa8c08107966a8950204d15833c8725e0034353ff6f2b9451be8db605b4d",
+      "toStandardHash": "sha256:b1f931f149e0a3adadcf24e471d593a617987cd417e0be24eb3f6986089934a1",
+      "fromHdHash": "sha256:fb1e98b66912645119bfae5ed249b3eb4e51e2370d195245cc6aa8619f040d0a",
+      "toHdHash": "sha256:5280baf892c40e3a71eb9fb60155d570a7e7c2d70c324cb93c04fd90a4b2b197"
+    },
+    {
+      "key": "visor-astronaut-helmet@default",
+      "date": "2026-11-28",
+      "reason": "Replace overlapping full spheres with concentric curved dark viewport and external hinged gold visor shell",
+      "fromRecipeHash": "sha256:738edf774aa178ab0b64820116bf8a873d0721304d68014cbc2a38754a723dd1",
+      "toRecipeHash": "sha256:738edf774aa178ab0b64820116bf8a873d0721304d68014cbc2a38754a723dd1",
+      "fromStandardHash": "sha256:1f254daf77a3e659af4650efb88c37a4045e540ca808b077476c4809fe692d31",
+      "toStandardHash": "sha256:27eef3e015d005cf245abd0f7865366cc8f0121e3b5cb1437c36116fc4b0ce15",
+      "fromHdHash": "sha256:cf20cc7ad4c7e024d9ebf2c2ea92855d0b10036be8f27964c3f7ad42585750a9",
+      "toHdHash": "sha256:1e532882330940f42c52f634d445d5143f84628f0b20a7233ee07f42f194197d"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { archedVaultLid } from '../../hollow-shells';
 import {
   arcanePalette, glassMat, glowMat, group, HPI, kArch, kBowl, kBox, kCandle, kChain, kCrystal, kCyl,
   kFlask, kGear, kOrb, kRing, kShell, kStrut, kTorus, rotationTrack, spinTrack, type Finish,
@@ -148,9 +149,12 @@ export function toothedMimicChest(root: T.Group, p: Finish, detail: boolean): vo
     kOrb(tongue, [0, ty, tz], r, p.accent, hd, [1.25, 0.65, 1.3]);
   }
   const jaw = group(root, 'MimicJaw', [0, 0.61, -0.43]);
-  kCyl(jaw, [0, 0.05, 0.43], 0.42, 0.42, 1.32, p.primary, hd, 'x', 12).scale.set(0.66, 1, 1);
-  kShell(jaw, [0, 0.04, 0.43], [1.34, 0.09, 0.88], p.primary, hd, 0.14);
-  for (const x of [-0.56, -0.2, 0.2, 0.56]) kRing(jaw, [x, 0.05, 0.43], 0.435, 0.045, 0.08, m.iron, hd, 'x').scale.set(0.67, 1, 1);
+  // Hollow arched half-cylinder chest lid strictly above y = 0 (zero cylinder bottom plunging into MimicBody).
+  archedVaultLid(jaw, [0, 0.01, 0.43], 1.32, 0.86, 0.3, 0.085, p.primary, hd);
+  for (const x of [-0.56, -0.2, 0.2, 0.56]) {
+    archedVaultLid(jaw, [x, 0.005, 0.43], 0.08, 0.9, 0.32, 0.04, m.iron, hd);
+  }
+  for (const sx of [-0.64, 0.64]) archedVaultLid(jaw, [sx, 0.01, 0.43], 0.05, 0.84, 0.29, 0.28, p.primary, hd);
   for (let i = 0; i < 6; i++) kCyl(jaw, [-0.375 + i * 0.15, -0.05, 0.8], 0.04, 0.008, 0.14, m.bone, hd, 'y', 6);
   for (const [ex, r] of [[-0.28, 0.075], [0, 0.095], [0.28, 0.075]] as const) {
     kOrb(jaw, [ex, 0.2, 0.72], r, m.bone, hd);

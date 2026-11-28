@@ -66,6 +66,48 @@ describe('craft-invariants synthetic defect detection', () => {
     expect(badAudit.doubleSidedMeshes.length).toBe(1)
     expect(badAudit.materialIssues.length).toBe(1)
   })
+
+  it('catches co-located full spheres/cylinders under rotating lids while allowing concave bowl + hollow lid', () => {
+    const broken = new T.Group()
+    const baseBall = new T.Mesh(new T.SphereGeometry(0.42, 12, 8), matA)
+    baseBall.position.set(0, 0.84, 0)
+    baseBall.scale.set(1, 0.74, 1)
+    const lidGroup = new T.Group()
+    lidGroup.name = 'KettleLid'
+    lidGroup.position.set(0, 0.9, -0.42)
+    const lidBall = new T.Mesh(new T.SphereGeometry(0.42, 12, 8), matA)
+    lidBall.position.set(0, 0.04, 0.42)
+    lidBall.scale.set(1, 0.68, 1)
+    lidGroup.add(lidBall)
+    broken.add(baseBall, lidGroup)
+
+    const brokenAudit = auditModelCraft(broken, new Set(['KettleLid']))
+    expect(brokenAudit.rotatingRigOverlaps.length).toBe(1)
+    expect(brokenAudit.rotatingRigOverlaps[0]?.rigPart).toBe('KettleLid')
+    expect(brokenAudit.rotatingRigOverlaps[0]?.jaccard).toBeGreaterThan(0.7)
+
+    // Properly crafted concave Lathe bowl (y <= 0.88) + hollow Lathe dome lid (y >= 0.90) has zero solid overlap.
+    const clean = new T.Group()
+    const bowlPts = [
+      new T.Vector2(0, 0.58), new T.Vector2(0.32, 0.64), new T.Vector2(0.42, 0.88),
+      new T.Vector2(0.38, 0.88), new T.Vector2(0.29, 0.67), new T.Vector2(0, 0.63),
+    ]
+    const bowl = new T.Mesh(new T.LatheGeometry(bowlPts, 12), matA)
+    const cleanLidGroup = new T.Group()
+    cleanLidGroup.name = 'KettleLid'
+    cleanLidGroup.position.set(0, 0.9, -0.42)
+    const lidPts = [
+      new T.Vector2(0.38, 0), new T.Vector2(0.42, 0), new T.Vector2(0.34, 0.2),
+      new T.Vector2(0, 0.27), new T.Vector2(0, 0.23), new T.Vector2(0.31, 0.17), new T.Vector2(0.38, 0),
+    ]
+    const lidDome = new T.Mesh(new T.LatheGeometry(lidPts, 12), matA)
+    lidDome.position.set(0, 0, 0.42)
+    cleanLidGroup.add(lidDome)
+    clean.add(bowl, cleanLidGroup)
+
+    const cleanAudit = auditModelCraft(clean, new Set(['KettleLid']))
+    expect(cleanAudit.rotatingRigOverlaps).toEqual([])
+  })
 })
 
 describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
@@ -102,6 +144,10 @@ describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
 
   it('has zero exposed coplanar Z-fighting faces', () => {
     expect(getAudit().exposedZFightPairs).toEqual([])
+  })
+
+  it('has zero rotating rigged solids buried inside stationary bodies', () => {
+    expect(getAudit().rotatingRigOverlaps).toEqual([])
   })
 
   it('stays connected and watertight when any detachable part is hidden', () => {

@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { fastener } from '../../hd-detail';
+import { concaveBowlLathe, curvedArcExtrudeX, hollowDomeLathe } from '../../hollow-shells';
 import { box, group, ring, rotationTrack, shell, spinTrack, strut, tube } from '../../parts';
 import type { Finish } from '../../parts';
 import { barHandle, cyl, glassPane, grillWheel, HPI, matte, orb, slideTrack, torus } from './kitchen-appliances-kit';
@@ -38,24 +39,37 @@ export function dualZoneWineCooler(root: T.Group, p: Finish, detail: boolean) {
 
 export function charcoalKettleGrill(root: T.Group, p: Finish, detail: boolean) {
   const gr = group(root, 'KettleGrill');
-  strut(gr, [0, 0.02, 0.36], [0, 0.72, 0.22], 0.026, p.alloy, 10);
+  strut(gr, [0, 0.02, 0.36], [0, 0.68, 0.22], 0.026, p.alloy, 10);
   tube(gr, [0, 0.03, 0.36], 0.036, 0.04, 0.06, p.tire, 10);
-  for (const sx of [-0.34, 0.34]) strut(gr, [sx, 0.14, -0.32], [sx * 0.65, 0.72, -0.2], 0.026, p.alloy, 10);
+  for (const sx of [-0.34, 0.34]) strut(gr, [sx, 0.14, -0.32], [sx * 0.65, 0.68, -0.2], 0.026, p.alloy, 10);
   strut(gr, [-0.36, 0.14, -0.32], [0.36, 0.14, -0.32], 0.02, p.alloy, 8);
   grillWheel(gr, 'GrillWheelL', [-0.4, 0.14, -0.32], 0.14, 0.05, p);
   grillWheel(gr, 'GrillWheelR', [0.4, 0.14, -0.32], 0.14, 0.05, p);
   tube(gr, [0, 0.28, 0], 0.26, 0.24, 0.035, p.alloy, 14);
   for (const pt of [[0, 0.28, 0.31], [-0.3, 0.28, -0.28], [0.3, 0.28, -0.28]] as const) strut(gr, [0, 0.28, 0], [...pt], 0.016, p.alloy, 8);
-  orb(gr, [0, 0.84, 0], 0.42, p.primary, p.hd, [1, 0.74, 1]);
-  ring(gr, [0, 0.88, 0], 0.43, 0.026, 0.045, p.alloy);
-  for (let i = 0; i < 6; i++) box(gr, [-0.25 + i * 0.1, 0.9, 0], [0.016, 0.016, 0.66], p.alloy);
-  for (const [cx, cz] of [[-0.12, 0.08], [0.1, -0.06], [0, 0.12]] as const) orb(gr, [cx, 0.82, cz], 0.09, p.accent, p.hd, [1.2, 0.6, 1]);
-  const lid = group(root, 'KettleLid', [0, 0.9, -0.42]);
-  orb(lid, [0, 0.04, 0.42], 0.42, p.primary, p.hd, [1, 0.68, 1]);
-  barHandle(lid, [0, 0.34, 0.38], 0.24, true, p.accent);
-  tube(lid, [0.18, 0.28, 0.32], 0.065, 0.065, 0.03, p.alloy, 12);
+  // Real concave lower kettle bowl (open at y = 0.89, bottom at y = 0.59, interior cavity visible when lid opens).
+  concaveBowlLathe(gr, [0, 0.89, 0], 0.42, 0.3, 0.034, p.primary, p.hd);
+  ring(gr, [0, 0.892, 0], 0.432, 0.024, 0.032, p.alloy);
+  tube(gr, [0, 0.655, 0], 0.22, 0.18, 0.03, p.dark, 12);
+  for (const [cx, cz] of [[-0.12, 0.07], [0.11, -0.06], [0, 0.1], [-0.04, -0.1]] as const) {
+    orb(gr, [cx, 0.695, cz], 0.055, p.accent, p.hd, [1.2, 0.65, 1]);
+  }
+  ring(gr, [0, 0.855, 0], 0.368, 0.014, 0.018, p.alloy);
+  for (let i = -3; i <= 3; i++) {
+    const gx = i * 0.095;
+    const chord = Math.max(0.16, 2 * Math.sqrt(Math.max(0.01, 0.358 * 0.358 - gx * gx)));
+    box(gr, [gx, 0.855, 0], [0.014, 0.014, chord], p.alloy);
+  }
+  box(gr, [0, 0.895, -0.428], [0.1, 0.055, 0.045], p.alloy);
+  // Hinged hollow domed lid sitting strictly above y = 0.896 (zero overlap with the bowl).
+  const lid = group(root, 'KettleLid', [0, 0.896, -0.42]);
+  hollowDomeLathe(lid, [0, 0, 0.42], 0.422, 0.275, 0.032, p.primary, p.hd);
+  ring(lid, [0, 0.008, 0.42], 0.43, 0.018, 0.024, p.dark);
+  barHandle(lid, [0, 0.29, 0.38], 0.24, true, p.accent);
+  const vent = tube(lid, [0.16, 0.256, 0.34], 0.056, 0.058, 0.028, p.alloy, 14);
+  vent.rotation.set(-0.16, 0, -0.32);
   if (detail) {
-    barHandle(gr, [0, 0.84, 0.44], 0.22, true, p.accent);
+    barHandle(gr, [0, 0.84, 0.43], 0.22, true, p.accent);
     if (p.hd) for (const sx of [-0.34, 0.34]) fastener(gr, [sx, 0.14, -0.32], p, 0.022).rotation.z = HPI;
   }
   root.animations = [
@@ -70,20 +84,32 @@ export function offsetBarrelSmoker(root: T.Group, p: Finish, detail: boolean) {
   box(sm, [-0.05, 0.28, 0], [0.98, 0.045, 0.56], p.edge);
   for (const sz of [-0.32, 0.32]) ring(sm, [-0.52, 0.16, sz], 0.16, 0.03, 0.05, p.tire).rotation.x = HPI;
   for (const sz of [-0.3, 0.3]) tube(sm, [0.42, 0.04, sz], 0.042, 0.048, 0.08, p.tire, 10);
-  cyl(sm, [-0.1, 1.0, 0], 0.34, 0.34, 1.18, p.primary, 'x', 16);
+  // Real concave open-front-top smoker barrel chamber + closed end caps + interior cooking grate.
+  const openStart = 0.06;
+  const openEnd = 1.98;
+  curvedArcExtrudeX(sm, [-0.1, 1.0, 0], 0.305, 0.342, 1.14, openEnd, openStart + Math.PI * 2, p.primary, p.hd);
+  for (const sx of [-0.67, 0.47]) cyl(sm, [sx, 1.0, 0], 0.342, 0.342, 0.045, p.primary, 'x', 16);
+  for (let i = -2; i <= 2; i++) box(sm, [-0.1, 1.01, i * 0.1], [1.06, 0.016, 0.018], p.alloy);
+  for (const sx of [-0.56, 0.36]) box(sm, [sx, 1.01, 0], [0.025, 0.02, 0.52], p.alloy);
   shell(sm, [-0.1, 0.88, 0.44], [0.96, 0.05, 0.26], p.accent, 0.14);
   for (const sx of [-0.42, 0.22]) strut(sm, [sx, 0.86, 0.32], [sx, 0.7, 0.22], 0.02, p.dark, 8);
   tube(sm, [-0.62, 1.56, 0], 0.072, 0.082, 0.78, p.dark, 12);
   tube(sm, [-0.62, 1.98, 0], 0.1, 0.09, 0.04, p.accent, 12);
   cyl(sm, [0.7, 0.84, 0], 0.24, 0.24, 0.54, p.dark, 'x', 14);
-  const lid = group(root, 'SmokerLid', [-0.1, 1.12, -0.28]);
-  cyl(lid, [0, -0.1, 0.28], 0.355, 0.355, 0.96, p.primary, 'x', 16).scale.set(1, 0.65, 1);
-  barHandle(lid, [0, -0.06, 0.62], 0.46, true, p.accent);
-  cyl(lid, [0, 0.12, 0.56], 0.06, 0.06, 0.035, p.stencil, 'z', 12);
+  // Hinged curved cylindrical-arc hood strictly covering the upper-front opening (zero overlap with chamber).
+  const hingeY = 1.0 + Math.sin(openEnd) * 0.345;
+  const hingeZ = Math.cos(openEnd) * 0.345;
+  const lid = group(root, 'SmokerLid', [-0.1, hingeY, hingeZ]);
+  curvedArcExtrudeX(lid, [0, 1.0 - hingeY, -hingeZ], 0.312, 0.352, 1.04, openStart, openEnd, p.primary, p.hd);
+  for (const sx of [-0.51, 0.51]) {
+    curvedArcExtrudeX(lid, [sx, 1.0 - hingeY, -hingeZ], 0.338, 0.364, 0.035, openStart, openEnd, p.dark, p.hd);
+  }
+  barHandle(lid, [0, 1.0 - hingeY + 0.08, -hingeZ + 0.34], 0.46, true, p.accent);
+  cyl(lid, [0, 1.0 - hingeY + 0.26, -hingeZ + 0.24], 0.06, 0.06, 0.035, p.stencil, 'z', 12);
   const fb = group(root, 'FireboxDoor', [0.98, 0.84, -0.22]);
   cyl(fb, [0.02, 0, 0.22], 0.22, 0.22, 0.05, p.accent, 'x', 14);
   if (detail) {
-    for (const sx of [-0.56, 0.36]) ring(sm, [sx, 1.0, 0], 0.355, 0.022, 0.045, p.accent).rotation.z = HPI;
+    for (const sx of [-0.58, 0.38]) ring(sm, [sx, 1.0, 0], 0.356, 0.018, 0.04, p.accent).rotation.z = HPI;
     if (p.hd) for (const sx of [-0.4, 0.2]) fastener(sm, [sx, 0.88, 0.58], p, 0.022).rotation.x = HPI;
   }
   root.animations = [
