@@ -1,6 +1,6 @@
 import * as T from 'three';
-import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, traverseOwnSubtree } from './compose-tree';
-import { axisTuple, listMimicFollowers, maxCoupledRotateSpan, propagateMimicValues, slideOffsetFactor } from './rig-math';
+import { findOwnNodeByName, getRiggedRestPose, hasHiddenAncestor, resolveLiveRiggedParts, traverseOwnSubtree } from './compose-tree';
+import { axisTuple, buildSweepSampleValues, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import { readSand3dCapabilities } from './sand3d';
 import {
   readCapabilities,
@@ -125,21 +125,27 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     list.push(col);
     colliderByNode.set(col.node, list);
   }
+  const liveRigged = resolveLiveRiggedParts(root, caps.riggedParts, prefix);
+  if (!liveRigged.length) return { valid: true, checkedParts: 0, issues: [] };
   const allDynamicNodes = new Map<string, T.Object3D>();
   for (const col of caps.colliders ?? []) {
     if (!col.node || col.layer === 'none') continue;
     const dn = findOwnNodeByName(root, col.node, prefix);
     if (dn) allDynamicNodes.set(col.node, dn);
   }
-  for (const rp of caps.riggedParts) {
+  for (const rp of liveRigged) {
     const dn = findOwnNodeByName(root, rp.name, prefix);
     if (dn) allDynamicNodes.set(rp.name, dn);
+  }
+  for (const dp of caps.detachableParts) {
+    const dn = findOwnNodeByName(root, dp.name, prefix);
+    if (dn) allDynamicNodes.set(dp.name, dn);
   }
 
   const issues: RiggedSweepIssue[] = [];
   let checkedParts = 0;
 
-  for (const part of caps.riggedParts) {
+  for (const part of liveRigged) {
     if (part.mimic) continue;
     const localName = prefix && part.name.startsWith(prefix) ? part.name.slice(prefix.length) : part.name;
     const node = findOwnNodeByName(root, part.name, prefix);
@@ -147,10 +153,10 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
     const leaderVisible = !hiddenSet.has(part.name) && !hiddenSet.has(localName)
       && isVisibleInTree(node) && !hasHiddenAncestor(node, root, hiddenSet, prefix);
 
-    const followerNames = listMimicFollowers(caps.riggedParts, part.name);
+    const followerNames = listMimicFollowers(liveRigged, part.name);
     const followers = followerNames
       .map(fname => {
-        const fSpec = caps.riggedParts.find(p => p.name === fname);
+        const fSpec = liveRigged.find(p => p.name === fname);
         const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
         if (!fSpec || !fNode) return null;
         const fLocal = prefix && fSpec.name.startsWith(prefix) ? fSpec.name.slice(prefix.length) : fSpec.name;
@@ -213,10 +219,11 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
       followerFallbacks.set(f.node, f.cols?.length ? null : measureLocalNodeBox(f.node, dynamicExclude));
     }
 
-    // Collect independently rigged/detachable descendant nodes carried rigidly inside active moving nodes.
+    // Collect independently rigged/detachable descendant nodes carried rigidly inside active moving nodes (tagged by deepest carrier).
     const carriedOwnDescendants: {
       name: string;
       carrierName: string;
+      zoneKey: string;
       node: T.Object3D;
       cols?: ColliderSpec[];
       fallback: { at: Vec3Tuple; halfExtents: Vec3Tuple } | null;
@@ -227,40 +234,48 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
       if (hiddenSet.has(dName) || hiddenSet.has(dLocal) || !isVisibleInTree(dNode) || hasHiddenAncestor(dNode, root, hiddenSet, prefix)) {
         continue;
       }
-      const carrier = activeMovingNodes.find(mn => isDescendantOf(dNode, mn, root));
+      let carrier: T.Object3D | undefined;
+      for (const mn of activeMovingNodes) {
+        if (!isDescendantOf(dNode, mn, root)) continue;
+        if (!carrier || isDescendantOf(mn, carrier, root)) carrier = mn;
+      }
       if (!carrier) continue;
+      const carrierFollower = visibleFollowers.find(f => f.node === carrier);
       const dCols = colliderByNode.get(dName) ?? colliderByNode.get(dLocal);
       carriedOwnDescendants.push({
         name: dName,
         carrierName: carrier.name || dName,
+        zoneKey: carrierFollower ? carrierFollower.spec.name : part.name,
         node: dNode,
         ...(dCols?.length ? { cols: dCols } : {}),
         fallback: dCols?.length ? null : measureLocalNodeBox(dNode, dynamicExclude),
       });
     }
 
-    const partClearanceSpecs = clearanceByPart.get(part.name) ?? clearanceByPart.get(localName) ?? [];
-    const clearanceZones = partClearanceSpecs.map(z =>
-      buildOrientedBox(root.matrixWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
-        id: `sweep:clearance:${z.name}`,
-        name: z.name,
-        ownerId: root.name || 'Asset',
-        kind: 'clearance',
-        layer: z.kind,
-        part: part.name,
-        ...(z.rotation ? { rotation: z.rotation } : {}),
-      }),
-    );
+    const buildZones = (zoneKey: string, localKey: string) =>
+      (clearanceByPart.get(zoneKey) ?? clearanceByPart.get(localKey) ?? []).map(z =>
+        buildOrientedBox(root.matrixWorld, z.at, [z.size[0] * 0.5, z.size[1] * 0.5, z.size[2] * 0.5], {
+          id: `sweep:clearance:${z.name}`, name: z.name, ownerId: root.name || 'Asset',
+          kind: 'clearance', layer: z.kind, part: zoneKey,
+          ...(z.rotation ? { rotation: z.rotation } : {}),
+        }),
+      );
+    const leaderZones = buildZones(part.name, localName);
+    const zonesByPart = new Map<string, OrientedBox[]>([[part.name, leaderZones]]);
+    for (const f of visibleFollowers) {
+      const fZones = buildZones(f.spec.name, f.localName);
+      zonesByPart.set(f.spec.name, fZones.length ? fZones : leaderZones);
+    }
     const obstacles = options.getObstaclesForPart ? options.getObstaclesForPart(localName, node, activeMovingNodes) : defaultObstacles;
-    const coupledDegSpan = maxCoupledRotateSpan(part, caps.riggedParts);
-    const steps = options.steps !== undefined
-      ? Math.max(2, options.steps)
-      : Math.min(73, Math.max(7, Math.ceil(coupledDegSpan / 30) + 1));
+    const sampleValues = buildSweepSampleValues(part, liveRigged, {
+      minSteps: 7,
+      degPerStep: 30,
+      maxTotalSteps: 96,
+      ...(options.steps !== undefined ? { exactSteps: options.steps } : {}),
+    });
 
     try {
-      for (let s = 0; s < steps; s++) {
-        const t = steps === 1 ? 0 : s / (steps - 1);
-        const value = part.range[0] + (part.range[1] - part.range[0]) * t;
+      for (const value of sampleValues) {
         node.position.copy(restPos);
         node.quaternion.copy(restQuat);
         if (part.type === 'slide') {
@@ -269,7 +284,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
           node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         }
         if (followers.length) {
-          const coupled = propagateMimicValues(caps.riggedParts, part.name, value);
+          const coupled = propagateMimicValues(liveRigged, part.name, value);
           for (const f of followers) {
             const fVal = coupled.get(f.spec.name) ?? 0;
             f.node.position.copy(f.restPos);
@@ -288,61 +303,80 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
           break;
         }
 
-        const partBoxes: OrientedBox[] = [];
+        const partBoxes: { box: OrientedBox; zoneKey: string }[] = [];
         const leaderTag = node.name || part.name;
         if (authoredColliders?.length) {
           for (const col of authoredColliders) {
-            partBoxes.push(buildOrientedBox(node.matrixWorld, col.at, colliderHalfExtents(col), {
-              id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
-              kind: 'collider', layer: col.layer ?? 'solid', part: leaderTag,
-              ...(col.rotation ? { rotation: col.rotation } : {}),
-            }));
+            partBoxes.push({
+              zoneKey: part.name,
+              box: buildOrientedBox(node.matrixWorld, col.at, colliderHalfExtents(col), {
+                id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
+                kind: 'collider', layer: col.layer ?? 'solid', part: leaderTag,
+                ...(col.rotation ? { rotation: col.rotation } : {}),
+              }),
+            });
           }
         } else if (fallbackBox) {
-          partBoxes.push(buildOrientedBox(node.matrixWorld, fallbackBox.at, fallbackBox.halfExtents, {
-            id: `sweep:${part.name}`, name: part.name, ownerId: root.name || 'Asset',
-            kind: 'collider', layer: 'solid', part: leaderTag,
-          }));
+          partBoxes.push({
+            zoneKey: part.name,
+            box: buildOrientedBox(node.matrixWorld, fallbackBox.at, fallbackBox.halfExtents, {
+              id: `sweep:${part.name}`, name: part.name, ownerId: root.name || 'Asset',
+              kind: 'collider', layer: 'solid', part: leaderTag,
+            }),
+          });
         }
         for (const f of visibleFollowers) {
           const fTag = f.node.name || f.spec.name;
           if (f.cols?.length) {
             for (const col of f.cols) {
-              partBoxes.push(buildOrientedBox(f.node.matrixWorld, col.at, colliderHalfExtents(col), {
-                id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
-                kind: 'collider', layer: col.layer ?? 'solid', part: fTag,
-                ...(col.rotation ? { rotation: col.rotation } : {}),
-              }));
+              partBoxes.push({
+                zoneKey: f.spec.name,
+                box: buildOrientedBox(f.node.matrixWorld, col.at, colliderHalfExtents(col), {
+                  id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
+                  kind: 'collider', layer: col.layer ?? 'solid', part: fTag,
+                  ...(col.rotation ? { rotation: col.rotation } : {}),
+                }),
+              });
             }
           } else {
             const fb = followerFallbacks.get(f.node);
             if (fb) {
-              partBoxes.push(buildOrientedBox(f.node.matrixWorld, fb.at, fb.halfExtents, {
-                id: `sweep:${f.spec.name}`, name: f.spec.name, ownerId: root.name || 'Asset',
-                kind: 'collider', layer: 'solid', part: fTag,
-              }));
+              partBoxes.push({
+                zoneKey: f.spec.name,
+                box: buildOrientedBox(f.node.matrixWorld, fb.at, fb.halfExtents, {
+                  id: `sweep:${f.spec.name}`, name: f.spec.name, ownerId: root.name || 'Asset',
+                  kind: 'collider', layer: 'solid', part: fTag,
+                }),
+              });
             }
           }
         }
         for (const cd of carriedOwnDescendants) {
           if (cd.cols?.length) {
             for (const col of cd.cols) {
-              partBoxes.push(buildOrientedBox(cd.node.matrixWorld, col.at, colliderHalfExtents(col), {
-                id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
-                kind: 'collider', layer: col.layer ?? 'solid', part: cd.carrierName,
-                ...(col.rotation ? { rotation: col.rotation } : {}),
-              }));
+              partBoxes.push({
+                zoneKey: cd.zoneKey,
+                box: buildOrientedBox(cd.node.matrixWorld, col.at, colliderHalfExtents(col), {
+                  id: `sweep:${col.name}`, name: col.name, ownerId: root.name || 'Asset',
+                  kind: 'collider', layer: col.layer ?? 'solid', part: cd.carrierName,
+                  ...(col.rotation ? { rotation: col.rotation } : {}),
+                }),
+              });
             }
           } else if (cd.fallback) {
-            partBoxes.push(buildOrientedBox(cd.node.matrixWorld, cd.fallback.at, cd.fallback.halfExtents, {
-              id: `sweep:${cd.name}`, name: cd.name, ownerId: root.name || 'Asset',
-              kind: 'collider', layer: 'solid', part: cd.carrierName,
-            }));
+            partBoxes.push({
+              zoneKey: cd.zoneKey,
+              box: buildOrientedBox(cd.node.matrixWorld, cd.fallback.at, cd.fallback.halfExtents, {
+                id: `sweep:${cd.name}`, name: cd.name, ownerId: root.name || 'Asset',
+                kind: 'collider', layer: 'solid', part: cd.carrierName,
+              }),
+            });
           }
         }
 
-        for (const box of partBoxes) {
-          if (clearanceZones.length && !clearanceZones.some(z => obbContainedIn(box, z, tolerance))) {
+        for (const { box, zoneKey } of partBoxes) {
+          const zones = zonesByPart.get(zoneKey) ?? leaderZones;
+          if (zones.length && !zones.some(z => obbContainedIn(box, z, tolerance))) {
             issues.push({
               part: part.name,
               kind: 'exceeds-clearance',
@@ -380,7 +414,6 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
               });
             }
           }
-          // Check opposing or independently moving carried loads against each other and non-host moving parts.
           for (let j = i + 1; j < carriedBoxes.length; j++) {
             const other = carriedBoxes[j];
             if (!other || box.ownerId === other.ownerId || (box.part && box.part === other.part)) continue;
@@ -394,7 +427,7 @@ export function checkRiggedSweep(root: T.Object3D, options: RiggedSweepOptions =
               });
             }
           }
-          for (const pBox of partBoxes) {
+          for (const { box: pBox } of partBoxes) {
             if (!box.part || !pBox.part || box.part === pBox.part) continue;
             const hit = obbOverlap(box, pBox, -tolerance);
             if (hit.overlaps) {

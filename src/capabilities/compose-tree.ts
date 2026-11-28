@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { CompositeChildSpec, CompositeMountSpec } from './compose-schema';
+import { sanitizeMimicLinks, type RiggedPartSpec } from './rig-math';
 import type { AssetCapabilities, AssetPhysicsSpec, AssetRuntimeState, SurfaceSpec } from './schema';
 
 export interface CompositeRigidBodySpec {
@@ -443,6 +444,15 @@ export function restoreCompatibleChildState(
   if ((prevDecalsVisible || prevState.decalText) && freshCaps.decals.length) {
     controller.setDecalsVisible(prevDecalsVisible, prevState.decalText);
   }
+}
+
+/** Filter `riggedParts` to nodes present under `root` and re-sanitize mimic links so pruned upstream leaders promote surviving followers. */
+export function resolveLiveRiggedParts(
+  root: T.Object3D,
+  parts: readonly RiggedPartSpec[],
+  prefix = '',
+): RiggedPartSpec[] {
+  return sanitizeMimicLinks(parts.filter(p => Boolean(findOwnNodeByName(root, p.name, prefix))));
 }
 
 export function splitFirstSegment(scopedPath: string): [string, string] {

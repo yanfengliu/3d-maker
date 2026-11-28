@@ -60,42 +60,10 @@ function readAxisTuple(value: unknown): [number, number, number] | null {
 }
 
 /**
- * Canonicalize any pivot carrying negative `scale.y` or `scale.z` into Three.js's exact `Matrix4.decompose()`
- * convention (only `scale.x` may be negative when `det < 0`) without altering its local transform matrix.
- * Also right-multiplies matching `.quaternion` tracks in `clips` by `qOld^-1 * qNew` so authored animations
- * produce bit-for-bit identical world matrices after canonicalization.
- */
-function canonicalizePivotTrs(node: T.Object3D, clips: readonly T.AnimationClip[]): void {
-  if (node.scale.y >= 0 && node.scale.z >= 0) return;
-  const oldQuat = node.quaternion.clone();
-  node.updateMatrix();
-  node.matrix.decompose(node.position, node.quaternion, node.scale);
-  node.updateMatrixWorld(true);
-  if (!clips.length) return;
-  const qDelta = oldQuat.invert().multiply(node.quaternion).normalize();
-  const qKey = new T.Quaternion();
-  for (const clip of clips) {
-    for (const track of clip.tracks) {
-      if (!(track instanceof T.QuaternionKeyframeTrack)) continue;
-      if (!track.name.endsWith('.quaternion')) continue;
-      const target = track.name.slice(0, -'.quaternion'.length);
-      if (target !== node.uuid && (!node.name || target !== node.name)) continue;
-      const vals = track.values;
-      for (let i = 0; i + 3 < vals.length; i += 4) {
-        qKey.set(vals[i] ?? 0, vals[i + 1] ?? 0, vals[i + 2] ?? 0, vals[i + 3] ?? 1).multiply(qDelta).normalize();
-        vals[i] = qKey.x;
-        vals[i + 1] = qKey.y;
-        vals[i + 2] = qKey.z;
-        vals[i + 3] = qKey.w;
-      }
-    }
-  }
-}
-
-/**
  * Convert Sand3D's node-local Y-up joint axis into Form Foundry's motion axis (plus optional `slideScale`
- * converting asset-root metres into `node.parent`'s local translation units for mm-scaled Sand3D GLBs):
- * - For `revolute`/`continuous`, conjugates across the canonicalized sign matrix (`det(S) * S_sign * rawAxis`).
+ * converting asset-root metres into `node.parent`'s local translation units for mm-scaled Sand3D GLBs)
+ * without mutating `node.quaternion` or `node.scale` (keeping authored scale/cubic-spline clips intact):
+ * - For `revolute`/`continuous`, conjugates across the node's scale sign matrix (`det(S) * S_sign * rawAxis`).
  * - For `prismatic`, maps the node's unit world direction back through `parent`'s linear inverse so
  *   `node.position = restPos + axis * (value * slideScale)` translates by exact metres in asset-root space.
  */
@@ -104,9 +72,7 @@ function convertSand3dAxis(
   rawAxis: [number, number, number],
   isSlide: boolean,
   baseInv: T.Matrix4,
-  clips: readonly T.AnimationClip[],
 ): { axis: Axis | AxisVector; slideScale?: number } | null {
-  canonicalizePivotTrs(node, clips);
   if (isSlide) {
     const nodeRel = new T.Matrix4().multiplyMatrices(baseInv, node.matrixWorld);
     const parentRel = node.parent
@@ -209,7 +175,6 @@ export function readSand3dCapabilities(
 
   root.updateMatrixWorld(true);
   const baseInv = root.parent ? root.parent.matrixWorld.clone().invert() : new T.Matrix4();
-  const clipPool = Array.from(new Set([...(options.animations ?? []), ...root.animations]));
 
   root.traverse(node => {
     const raw: unknown = node.userData.s3d_joint;
@@ -221,7 +186,7 @@ export function readSand3dCapabilities(
     const rawAxis = readAxisTuple(raw.axis);
     if (!rawAxis) return;
     const isSlide = raw.type === 'prismatic';
-    const converted = convertSand3dAxis(node, rawAxis, isSlide, baseInv, clipPool);
+    const converted = convertSand3dAxis(node, rawAxis, isSlide, baseInv);
     if (!converted) return;
 
     const extrasName = typeof raw.name === 'string' && raw.name.trim()
@@ -245,8 +210,8 @@ export function readSand3dCapabilities(
 
     const valueRaw = finiteNum(raw.value) ?? 0;
     const rawScaledVal = isSlide ? r4(valueRaw) : r3(valueRaw * scale);
-    const valueLimit = raw.type === 'continuous' ? 1e9 : boundLimit;
-    const value = Number.isFinite(rawScaledVal) && Math.abs(rawScaledVal) <= valueLimit ? rawScaledVal : 0;
+    // Defer finite-range clamping until after inherited `continuous` flags are resolved across mimic chains.
+    const value = Number.isFinite(rawScaledVal) && Math.abs(rawScaledVal) <= 1e9 ? rawScaledVal : 0;
 
     let mimicJoint: string | undefined;
     let mimicMultiplier: number | undefined;
@@ -356,14 +321,17 @@ export function readSand3dCapabilities(
   // Temporarily back out any posed initial values so derived spatial OBBs, clearance zones, and dimensions reflect rest pose.
   for (const spec of riggedParts) {
     const raw = rawBySpecName.get(spec.name);
-    if (!raw || Math.abs(raw.value) <= 1e-6) continue;
-    initialPose[spec.name] = raw.value;
+    if (!raw) continue;
+    const valueLimit = spec.continuous ? 1e9 : (spec.type === 'slide' ? MAX_SLIDE_M : MAX_ROTATE_DEG);
+    const effectiveVal = Math.abs(raw.value) <= valueLimit ? raw.value : 0;
+    if (Math.abs(effectiveVal) <= 1e-6) continue;
+    initialPose[spec.name] = effectiveVal;
     savedTransforms.push({ node: raw.node, pos: raw.node.position.clone(), quat: raw.node.quaternion.clone() });
     const axisVec = new T.Vector3(...axisTuple(spec.axis));
     if (spec.type === 'slide') {
-      raw.node.position.addScaledVector(axisVec, -raw.value * slideOffsetFactor(spec));
+      raw.node.position.addScaledVector(axisVec, -effectiveVal * slideOffsetFactor(spec));
     } else {
-      raw.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVec, -raw.value * DEG_TO_RAD)).normalize();
+      raw.node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axisVec, -effectiveVal * DEG_TO_RAD)).normalize();
     }
   }
 

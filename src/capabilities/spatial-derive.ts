@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { axisTuple, listMimicFollowers, maxCoupledRotateSpan, propagateMimicValues, slideOffsetFactor } from './rig-math';
+import { axisTuple, buildSweepSampleValues, listMimicFollowers, propagateMimicValues, slideOffsetFactor } from './rig-math';
 import type {
   ClearanceZoneSpec,
   ColliderLayer,
@@ -26,17 +26,45 @@ function roundVec3(x: number, y: number, z: number): [number, number, number] {
   return [r3(x), r3(y), r3(z)];
 }
 
-function isSpinnerPart(part: RiggedPartSpec, allParts?: readonly RiggedPartSpec[]): boolean {
-  if (allParts && listMimicFollowers(allParts, part.name).some(name => allParts.find(p => p.name === name)?.type === 'slide')) {
-    return false;
-  }
+function isSelfSpinner(part: RiggedPartSpec): boolean {
   return Boolean(part.continuous) || (part.type === 'rotate' && Math.abs(part.range[1] - part.range[0]) >= 350);
 }
 
-function colliderLayerForPart(part: RiggedPartSpec, allParts?: readonly RiggedPartSpec[]): ColliderLayer {
-  if (isSpinnerPart(part, allParts)) return 'none';
+function isEffectiveSpinner(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): boolean {
+  if (!isSelfSpinner(part)) return false;
+  if (!part.mimic) return true;
+  // A multi-turn follower (e.g. 3-turn spoke) driven by a bounded non-spinner leader sweeps a finite stroke and needs clearance.
+  const byName = new Map(allParts.map(p => [p.name, p]));
+  let cur: RiggedPartSpec | undefined = part;
+  const seen = new Set<string>();
+  while (cur?.mimic && !seen.has(cur.name)) {
+    seen.add(cur.name);
+    cur = byName.get(cur.mimic.part);
+  }
+  return !cur || isSelfSpinner(cur);
+}
+
+function hasNonSpinnerFollower(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): boolean {
+  return listMimicFollowers(allParts, part.name).some(name => {
+    const f = allParts.find(p => p.name === name);
+    return Boolean(f && !isEffectiveSpinner(f, allParts));
+  });
+}
+
+function colliderLayerForPart(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): ColliderLayer {
+  if (isEffectiveSpinner(part, allParts)) return 'none';
   if (/(door|gate|hatch|shutter|ramp|bridge|lid|drawer|flap|visor)/i.test(part.name)) return 'doorway';
   return 'solid';
+}
+
+function isStrictDescendant(candidate: T.Object3D, ancestor: T.Object3D, stopAtRoot: T.Object3D): boolean {
+  let cur: T.Object3D | null = candidate.parent;
+  while (cur) {
+    if (cur === ancestor) return true;
+    if (cur === stopAtRoot) return false;
+    cur = cur.parent;
+  }
+  return false;
 }
 
 function axisVector(axis: RiggedPartSpec['axis']): T.Vector3 {
@@ -76,26 +104,15 @@ function computeBoxInFrame(
 }
 
 function boxCorners(box: T.Box3): T.Vector3[] {
-  const { min, max } = box;
+  const { min: a, max: b } = box;
   return [
-    new T.Vector3(min.x, min.y, min.z),
-    new T.Vector3(max.x, min.y, min.z),
-    new T.Vector3(min.x, max.y, min.z),
-    new T.Vector3(max.x, max.y, min.z),
-    new T.Vector3(min.x, min.y, max.z),
-    new T.Vector3(max.x, min.y, max.z),
-    new T.Vector3(min.x, max.y, max.z),
-    new T.Vector3(max.x, max.y, max.z),
+    new T.Vector3(a.x, a.y, a.z), new T.Vector3(b.x, a.y, a.z), new T.Vector3(a.x, b.y, a.z), new T.Vector3(b.x, b.y, a.z),
+    new T.Vector3(a.x, a.y, b.z), new T.Vector3(b.x, a.y, b.z), new T.Vector3(a.x, b.y, b.z), new T.Vector3(b.x, b.y, b.z),
   ];
 }
 
-function p6(n: number): number {
-  return Number(Math.abs(n).toPrecision(6));
-}
-
-function r6(n: number): number {
-  return Math.round(n * 1e6) / 1e6 || 0;
-}
+const p6 = (n: number) => Number(Math.abs(n).toPrecision(6));
+const r6 = (n: number) => Math.round(n * 1e6) / 1e6 || 0;
 
 function isShearedMatrix(m: T.Matrix4): boolean {
   const e = m.elements;
@@ -267,14 +284,20 @@ export function deriveSpatialMetadata(
   const invRoot = root.matrixWorld.clone().invert();
   const dynamicNodes = new Set<T.Object3D>();
   const activeRigged: { part: RiggedPartSpec; node: T.Object3D }[] = [];
+  const sweepLeaders: { part: RiggedPartSpec; node: T.Object3D }[] = [];
   const activeDetachable: { part: DetachablePartSpec; node: T.Object3D }[] = [];
 
   for (const part of riggedParts) {
-    if (isSpinnerPart(part, riggedParts)) continue;
     const node = root.getObjectByName(part.name);
     if (!node) continue;
-    dynamicNodes.add(node);
-    activeRigged.push({ part, node });
+    const nonSpinner = !isEffectiveSpinner(part, riggedParts);
+    if (nonSpinner) {
+      dynamicNodes.add(node);
+      activeRigged.push({ part, node });
+    }
+    if (!part.mimic && (nonSpinner || hasNonSpinnerFollower(part, riggedParts))) {
+      sweepLeaders.push({ part, node });
+    }
   }
   for (const det of detachableParts) {
     const node = root.getObjectByName(det.name);
@@ -303,37 +326,41 @@ export function deriveSpatialMetadata(
     }
   }
 
-  // 2. Node-bound colliders + swept clearance zones for interactive doors, hatches, slides, and arms.
+  // 2a. Node-bound colliders for every non-spinner interactive rigged part (leaders and followers alike).
+  const localCornersByNode = new Map<T.Object3D, T.Vector3[]>();
   for (const { part, node } of activeRigged) {
     node.updateMatrixWorld(true);
     const invNode = node.matrixWorld.clone().invert();
     const localBox = computeBoxInFrame(node, invNode, dynamicNodes);
-    if (!localBox.isEmpty()) {
-      const localCenter = localBox.getCenter(new T.Vector3());
-      const localSize = localBox.getSize(new T.Vector3());
-      const restPose = computeRestPose(node, localCenter, invRoot);
-      const sx = restPose.scale?.[0] ?? 1, sy = restPose.scale?.[1] ?? 1, sz = restPose.scale?.[2] ?? 1;
-      const safeSize: [number, number, number] = [
+    if (localBox.isEmpty()) continue;
+    localCornersByNode.set(node, boxCorners(localBox));
+    const localCenter = localBox.getCenter(new T.Vector3());
+    const localSize = localBox.getSize(new T.Vector3());
+    const restPose = computeRestPose(node, localCenter, invRoot);
+    const sx = restPose.scale?.[0] ?? 1, sy = restPose.scale?.[1] ?? 1, sz = restPose.scale?.[2] ?? 1;
+    colliders.push({
+      name: part.name,
+      shape: 'box',
+      at: roundVec3(localCenter.x, localCenter.y, localCenter.z),
+      size: roundVec3(
         Math.max(0.01 / Math.max(1e-4, sx), localSize.x),
         Math.max(0.01 / Math.max(1e-4, sy), localSize.y),
         Math.max(0.01 / Math.max(1e-4, sz), localSize.z),
-      ];
-      colliders.push({
-        name: part.name,
-        shape: 'box',
-        at: roundVec3(localCenter.x, localCenter.y, localCenter.z),
-        size: roundVec3(safeSize[0], safeSize[1], safeSize[2]),
-        node: part.name,
-        restPose,
-        layer: colliderLayerForPart(part, riggedParts),
-        ...(part.describe ? { describe: part.describe } : {}),
-      });
-    }
+      ),
+      node: part.name,
+      restPose,
+      layer: colliderLayerForPart(part, riggedParts),
+      ...(part.describe ? { describe: part.describe } : {}),
+    });
+  }
+  for (const { node } of activeDetachable) {
+    node.updateMatrixWorld(true);
+    const dBox = computeBoxInFrame(node, node.matrixWorld.clone().invert(), dynamicNodes);
+    if (!dBox.isEmpty()) localCornersByNode.set(node, boxCorners(dBox));
+  }
 
-    // Skip deriving an independent clearance zone for a mimic follower (swept with its leader below).
-    if (part.mimic) continue;
-
-    // Sweep the leader + every mimic follower bounding box across evenly spaced poses in lockstep.
+  // 2b. Per-part swept clearance zones (tagged with each part's own name so hiding leader or follower independently updates placement).
+  for (const { part, node } of sweepLeaders) {
     const restPos = node.position.clone();
     const restQuat = node.quaternion.clone();
     const axis = axisVector(part.axis);
@@ -344,47 +371,50 @@ export function deriveSpatialMetadata(
         const fSpec = riggedParts.find(p => p.name === fname);
         const fNode = root.getObjectByName(fname);
         if (!fSpec || !fNode) return null;
-        fNode.updateMatrixWorld(true);
-        const fBox = computeBoxInFrame(fNode, fNode.matrixWorld.clone().invert(), dynamicNodes);
         return {
-          spec: fSpec,
-          node: fNode,
-          restPos: fNode.position.clone(),
-          restQuat: fNode.quaternion.clone(),
-          axis: axisVector(fSpec.axis),
-          slideScale: slideOffsetFactor(fSpec),
-          corners: fBox.isEmpty() ? [] : boxCorners(fBox),
+          spec: fSpec, node: fNode, restPos: fNode.position.clone(), restQuat: fNode.quaternion.clone(),
+          axis: axisVector(fSpec.axis), slideScale: slideOffsetFactor(fSpec),
         };
       })
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
-    const corners = localBox.isEmpty() ? [] : boxCorners(localBox);
-    const sweptRoots = new Set<T.Object3D>([node, ...followerStates.map(fs => fs.node)]);
-    // Include independently rigged/detachable descendants carried along rigidly by this leader or its followers.
-    const carriedDescendants: { node: T.Object3D; corners: T.Vector3[] }[] = [];
-    for (const dn of dynamicNodes) {
-      if (sweptRoots.has(dn) || !isDescendantOfAny(dn, sweptRoots, root)) continue;
-      dn.updateMatrixWorld(true);
-      const dBox = computeBoxInFrame(dn, dn.matrixWorld.clone().invert(), dynamicNodes);
-      if (!dBox.isEmpty()) carriedDescendants.push({ node: dn, corners: boxCorners(dBox) });
-    }
-    if (!corners.length && !followerStates.some(fs => fs.corners.length > 0) && !carriedDescendants.length) continue;
 
-    const sweepBox = new T.Box3();
+    interface TrackedZone { spec: RiggedPartSpec; host: T.Object3D; boxes: { node: T.Object3D; corners: T.Vector3[] }[]; sweepBox: T.Box3 }
+    const movingCarriers: { spec: RiggedPartSpec; node: T.Object3D }[] = [
+      ...(!isEffectiveSpinner(part, riggedParts) ? [{ spec: part, node }] : []),
+      ...followerStates.filter(fs => !isEffectiveSpinner(fs.spec, riggedParts)).map(fs => ({ spec: fs.spec, node: fs.node })),
+    ];
+    const trackedByNode = new Map<T.Object3D, TrackedZone>();
+    for (const c of movingCarriers) {
+      const ownCorners = localCornersByNode.get(c.node) ?? [];
+      trackedByNode.set(c.node, {
+        spec: c.spec, host: c.node, sweepBox: new T.Box3(),
+        boxes: ownCorners.length ? [{ node: c.node, corners: ownCorners }] : [],
+      });
+    }
+    const sweptNodeSet = new Set<T.Object3D>([node, ...followerStates.map(fs => fs.node)]);
+    for (const dn of dynamicNodes) {
+      if (sweptNodeSet.has(dn)) continue;
+      const dnCorners = localCornersByNode.get(dn);
+      if (!dnCorners?.length) continue;
+      let carrier: T.Object3D | undefined;
+      for (const c of movingCarriers) {
+        if (!isStrictDescendant(dn, c.node, root)) continue;
+        if (!carrier || isStrictDescendant(c.node, carrier, root)) carrier = c.node;
+      }
+      if (carrier) trackedByNode.get(carrier)?.boxes.push({ node: dn, corners: dnCorners });
+    }
+    const activeTracked = [...trackedByNode.values()].filter(tz => tz.boxes.length > 0);
+    if (!activeTracked.length) continue;
+
+    const sampleValues = buildSweepSampleValues(part, riggedParts, { minSteps: 13, degPerStep: 15, maxTotalSteps: 144 });
     const rel = new T.Matrix4();
     const pt = new T.Vector3();
-    const span = maxCoupledRotateSpan(part, riggedParts);
-    const sampleCount = Math.min(145, Math.max(13, span > 180 ? Math.ceil(span / 15) + 1 : 13));
     try {
-      for (let i = 0; i < sampleCount; i++) {
-        const t = i / (sampleCount - 1);
-        const value = part.range[0] + (part.range[1] - part.range[0]) * t;
+      for (const value of sampleValues) {
         node.position.copy(restPos);
         node.quaternion.copy(restQuat);
-        if (part.type === 'slide') {
-          node.position.addScaledVector(axis, value * leaderSlideScale);
-        } else {
-          node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
-        }
+        if (part.type === 'slide') node.position.addScaledVector(axis, value * leaderSlideScale);
+        else node.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, T.MathUtils.degToRad(value)));
         if (followerStates.length) {
           const coupled = propagateMimicValues(riggedParts, part.name, value);
           for (const fs of followerStates) {
@@ -396,17 +426,15 @@ export function deriveSpatialMetadata(
           }
         }
         root.updateMatrixWorld(true);
-        const expandCorners = (n: T.Object3D, cs: readonly T.Vector3[]) => {
-          if (!cs.length) return;
-          rel.multiplyMatrices(invRoot, n.matrixWorld);
-          for (const corner of cs) {
-            pt.copy(corner).applyMatrix4(rel);
-            if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) sweepBox.expandByPoint(pt);
+        for (const tz of activeTracked) {
+          for (const item of tz.boxes) {
+            rel.multiplyMatrices(invRoot, item.node.matrixWorld);
+            for (const corner of item.corners) {
+              pt.copy(corner).applyMatrix4(rel);
+              if (Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z)) tz.sweepBox.expandByPoint(pt);
+            }
           }
-        };
-        expandCorners(node, corners);
-        for (const fs of followerStates) expandCorners(fs.node, fs.corners);
-        for (const cd of carriedDescendants) expandCorners(cd.node, cd.corners);
+        }
       }
     } finally {
       node.position.copy(restPos);
@@ -417,17 +445,18 @@ export function deriveSpatialMetadata(
       }
       root.updateMatrixWorld(true);
     }
-    if (!sweepBox.isEmpty()) {
-      sweepBox.expandByScalar(0.01); // Account for discrete arc-chord sagitta
-      const sc = sweepBox.getCenter(new T.Vector3());
-      const ss = sweepBox.getSize(new T.Vector3());
+    for (const tz of activeTracked) {
+      if (tz.sweepBox.isEmpty()) continue;
+      tz.sweepBox.expandByScalar(0.01);
+      const sc = tz.sweepBox.getCenter(new T.Vector3());
+      const ss = tz.sweepBox.getSize(new T.Vector3());
       clearanceZones.push({
-        name: `${part.name}Clearance`,
-        kind: part.type === 'slide' ? 'slide' : 'swing',
+        name: `${tz.spec.name}Clearance`,
+        kind: tz.spec.type === 'slide' ? 'slide' : 'swing',
         at: roundVec3(sc.x, sc.y, sc.z),
         size: roundVec3(Math.max(0.02, ss.x), Math.max(0.02, ss.y), Math.max(0.02, ss.z)),
-        part: part.name,
-        describe: `Swept ${part.type} clearance volume for ${part.label}`,
+        part: tz.spec.name,
+        describe: `Swept ${tz.spec.type} clearance volume for ${tz.spec.label}`,
       });
     }
   }

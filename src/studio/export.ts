@@ -3,6 +3,7 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import type { CompositeChildSpec } from '../capabilities/compose-schema';
 import { splitTrackTargetAndProperty } from '../capabilities/compose-scope';
 import { findOwnNodeByName, getLiveController, traverseOwnSubtree, type ExportPoseProvider } from '../capabilities/compose-tree';
+import { axisTuple, parseAxisSpec, type RiggedPartSpec } from '../capabilities/rig-math';
 import { inspectAsset, isSynthesizedClip, synthesizeRigClips, type AssetController } from '../capabilities/runtime';
 import { readCapabilities, writeCapabilities } from '../capabilities/schema';
 
@@ -113,6 +114,39 @@ function rebindUnscopedChildTracks(
         ?? findOwnNodeByName(inner, targetPart, child.nodePrefix);
       if (resolved) track.name = `${resolved.uuid}${propPart}`;
     }
+  }
+}
+
+/**
+ * Canonicalize untargeted mirrored rotate pivots (`scale.y < 0 || scale.z < 0`) ONLY on the temporary export clone
+ * so clip-less GLTFExporter matrix serialization (`Matrix4.decompose` -> negative `scale.x` only) reloads with the
+ * exact same basis and conjugated axis, while never mutating pivots targeted by authored scale/quaternion tracks.
+ */
+function canonicalizeExportMirroredPivots(
+  scopeRoot: Object3D,
+  riggedParts: RiggedPartSpec[],
+  prefix: string,
+  animatedTargets: ReadonlySet<string>,
+): void {
+  for (const part of riggedParts) {
+    if (part.type !== 'rotate') continue;
+    const node = findOwnNodeByName(scopeRoot, part.name, prefix);
+    if (!node || (node.scale.y >= 0 && node.scale.z >= 0)) continue;
+    if (animatedTargets.has(node.uuid) || (node.name && animatedTargets.has(node.name)) || animatedTargets.has(part.name)) {
+      continue;
+    }
+    const oldSx = node.scale.x < 0 ? -1 : 1;
+    const oldSy = node.scale.y < 0 ? -1 : 1;
+    const oldSz = node.scale.z < 0 ? -1 : 1;
+    node.updateMatrix();
+    node.matrix.decompose(node.position, node.quaternion, node.scale);
+    node.updateMatrixWorld(true);
+    const newSx = node.scale.x < 0 ? -1 : 1;
+    const newSy = node.scale.y < 0 ? -1 : 1;
+    const newSz = node.scale.z < 0 ? -1 : 1;
+    const [ax, ay, az] = axisTuple(part.axis);
+    const updated = parseAxisSpec([oldSx * newSx * ax, oldSy * newSy * ay, oldSz * newSz * az]);
+    if (updated) part.axis = updated;
   }
 }
 
@@ -283,6 +317,17 @@ export function cloneForExport(
       };
     });
   } else delete capabilities.clips;
+  const exportTargets = collectAnimatedTargets(root.animations).targets;
+  if (capabilities.riggedParts.length) {
+    canonicalizeExportMirroredPivots(root, capabilities.riggedParts, '', exportTargets);
+  }
+  if (capabilities.children?.length) {
+    walkChildren(capabilities.children, root, '', (child, inner) => {
+      if (child.capabilities.riggedParts.length) {
+        canonicalizeExportMirroredPivots(inner, child.capabilities.riggedParts, child.nodePrefix ?? '', exportTargets);
+      }
+    });
+  }
   writeCapabilities(root, capabilities);
   return {
     root,

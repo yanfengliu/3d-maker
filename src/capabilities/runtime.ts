@@ -4,6 +4,7 @@ import {
   findOwnNodeByName,
   registerLiveController,
   registerRiggedRestPose,
+  resolveLiveRiggedParts,
   unregisterLiveController,
 } from './compose-tree';
 import { buildDecalMesh, buildNightOverlays, type DecalOverlay } from './overlays';
@@ -188,23 +189,24 @@ export function synthesizeRigClips(
 ): T.AnimationClip[] {
   const caps = capabilities ?? inspectAsset(root);
   const prefix = nodePrefix ?? '';
+  const liveParts = resolveLiveRiggedParts(root, caps.riggedParts, prefix);
   const clips: T.AnimationClip[] = [];
   const resolveTrackNode = (node: T.Object3D, partName: string) => {
     const candidateName = node.name || (prefix ? `${prefix}${partName}` : partName);
     return exportRoot && exportRoot.getObjectByName(candidateName) !== node ? node.uuid : candidateName;
   };
-  for (const part of caps.riggedParts) {
+  for (const part of liveParts) {
     if (part.mimic) continue;
     const node = findOwnNodeByName(root, part.name, prefix);
     if (!node) continue;
     const current = caps.state?.pose?.[part.name] ?? 0;
-    const { times, leaderValues, followerValues } = buildClipPoseSchedule(part, caps.riggedParts);
+    const { times, leaderValues, followerValues } = buildClipPoseSchedule(part, liveParts);
     const tracks: T.KeyframeTrack[] = [
       buildPartTrack(part, node, resolveTrackNode(node, part.name), current, times, leaderValues),
     ];
-    const currentCoupled = propagateMimicValues(caps.riggedParts, part.name, current);
+    const currentCoupled = propagateMimicValues(liveParts, part.name, current);
     for (const [fName, fVals] of followerValues) {
-      const fSpec = caps.riggedParts.find(p => p.name === fName);
+      const fSpec = liveParts.find(p => p.name === fName);
       const fNode = fSpec ? findOwnNodeByName(root, fSpec.name, prefix) : undefined;
       if (!fSpec || !fNode) continue;
       const fCur = caps.state?.pose?.[fSpec.name] ?? currentCoupled.get(fSpec.name) ?? 0;
@@ -233,6 +235,7 @@ export function createAssetController(
   const capabilities = structuredClone(initialCapabilities ?? inspectAsset(root));
   const initialState = capabilities.state ? structuredClone(capabilities.state) : undefined;
   const prefix = nodePrefix ?? '';
+  capabilities.riggedParts = resolveLiveRiggedParts(root, capabilities.riggedParts, prefix);
   const findNode = (name: string) => findOwnNodeByName(root, name, prefix);
   const bindings = new Map<string, PartBinding>();
   for (const spec of capabilities.riggedParts) {

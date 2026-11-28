@@ -306,7 +306,7 @@ export function validateComposite(
   for (const entry of entries) {
     if (!entry.spec.capabilities.riggedParts.length) continue;
     sweeps[entry.id] = checkRiggedSweep(entry.inner, {
-      steps: options.sweepSteps ?? 7,
+      ...(options.sweepSteps !== undefined ? { steps: options.sweepSteps } : {}),
       tolerance: Math.max(0.015, margin),
       capabilities: entry.spec.capabilities,
       ...(entry.spec.nodePrefix ? { nodePrefix: entry.spec.nodePrefix } : {}),

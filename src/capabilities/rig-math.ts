@@ -207,7 +207,7 @@ export function propagateMimicValues(
   return out;
 }
 
-const MAX_CLIP_LEG_STEPS = 64;
+const MAX_CLIP_LEG_STEPS = 256;
 const MAX_CLIP_SPIN_STEPS = 128;
 const MAX_CLIP_SPIN_DEG = 3600;
 
@@ -226,7 +226,8 @@ function collectMimicBreakpoints(
   const loBound = Math.min(startVal, endVal);
   const hiBound = Math.max(startVal, endVal);
   const span = hiBound - loBound;
-  if (span < 1e-9) return [];
+  if (span < 1e-12) return [];
+  const eps = Math.min(1e-9, span * 1e-9);
   const byName = new Map(allParts.map(p => [p.name, p]));
   const cumMult = new Map<string, number>([[part.name, 1]]);
   const breaks: number[] = [];
@@ -240,7 +241,7 @@ function collectMimicBreakpoints(
     if (fSpec.continuous || Math.abs(mult) < 1e-12) continue;
     for (const lim of fSpec.range) {
       const bp = lim / mult;
-      if (Number.isFinite(bp) && bp > loBound + span * 1e-6 && bp < hiBound - span * 1e-6) {
+      if (Number.isFinite(bp) && bp > loBound + eps && bp < hiBound - eps) {
         breaks.push(bp);
       }
     }
@@ -250,37 +251,71 @@ function collectMimicBreakpoints(
   const deduped: number[] = [];
   for (const bp of breaks) {
     const prev = deduped[deduped.length - 1];
-    if (prev === undefined || Math.abs(bp - prev) > span * 1e-5) deduped.push(bp);
+    if (prev === undefined || Math.abs(bp - prev) > eps) deduped.push(bp);
   }
   return deduped;
 }
 
-/** Return the maximum total angular excursion (in degrees) across `part` and all of its rotating mimic followers. */
-export function maxCoupledRotateSpan(part: RiggedPartSpec, allParts: readonly RiggedPartSpec[]): number {
+/**
+ * Generate breakpoint-aware and angle-aware sweep sample values for `part` across `part.range`, ensuring
+ * narrow early follower-stop segments and multi-turn coupled rotations are densely sampled.
+ */
+export function buildSweepSampleValues(
+  part: RiggedPartSpec,
+  allParts: readonly RiggedPartSpec[],
+  opts: { minSteps: number; degPerStep: number; maxTotalSteps: number; exactSteps?: number },
+): number[] {
   const [r0, r1] = part.range;
+  const totalSpan = Math.abs(r1 - r0);
+  if (totalSpan < 1e-12) return [r0];
+  const knots = [r0, ...collectMimicBreakpoints(part, allParts, r0, r1), r1];
   const byName = new Map(allParts.map(p => [p.name, p]));
   const followerNames = listMimicFollowers(allParts, part.name);
-  const pts = [r0, ...collectMimicBreakpoints(part, allParts, r0, r1), r1];
-  let maxDeg = part.type === 'rotate' ? Math.abs(r1 - r0) : 0;
-  for (const fName of followerNames) {
-    const fSpec = byName.get(fName);
-    if (!fSpec || fSpec.type !== 'rotate') continue;
-    let total = 0;
-    let prev = propagateMimicValues(allParts, part.name, pts[0] ?? r0).get(fName) ?? 0;
-    for (let i = 1; i < pts.length; i++) {
-      const cur = propagateMimicValues(allParts, part.name, pts[i] ?? r1).get(fName) ?? 0;
-      total += Math.abs(cur - prev);
-      prev = cur;
-    }
-    if (total > maxDeg) maxDeg = total;
+
+  if (opts.exactSteps !== undefined && knots.length === 2) {
+    const n = Math.max(2, opts.exactSteps);
+    return Array.from({ length: n }, (_, i) => r0 + ((r1 - r0) * i) / (n - 1));
   }
-  return maxDeg;
+
+  const segs: { a: number; b: number; steps: number }[] = [];
+  const baseSteps = Math.max(1, (opts.exactSteps ?? opts.minSteps) - 1);
+  let prevCoupled = propagateMimicValues(allParts, part.name, r0);
+  for (let i = 0; i < knots.length - 1; i++) {
+    const a = knots[i] ?? r0;
+    const b = knots[i + 1] ?? r1;
+    const nextCoupled = propagateMimicValues(allParts, part.name, b);
+    let segDeg = part.type === 'rotate' ? Math.abs(b - a) : 0;
+    for (const fName of followerNames) {
+      const fSpec = byName.get(fName);
+      if (!fSpec || fSpec.type !== 'rotate') continue;
+      const d = Math.abs((nextCoupled.get(fName) ?? 0) - (prevCoupled.get(fName) ?? 0));
+      if (d > segDeg) segDeg = d;
+    }
+    const fracSteps = Math.round(baseSteps * (Math.abs(b - a) / totalSpan));
+    const angSteps = segDeg > 1e-6 ? Math.ceil(segDeg / opts.degPerStep) : 0;
+    segs.push({ a, b, steps: Math.max(1, fracSteps, angSteps) });
+    prevCoupled = nextCoupled;
+  }
+
+  const totalSteps = segs.reduce((acc, s) => acc + s.steps, 0);
+  if (totalSteps > opts.maxTotalSteps) {
+    const scale = opts.maxTotalSteps / totalSteps;
+    for (const s of segs) s.steps = Math.max(1, Math.round(s.steps * scale));
+  }
+
+  const values: number[] = [r0];
+  for (const seg of segs) {
+    for (let i = 1; i <= seg.steps; i++) {
+      values.push(seg.a + ((seg.b - seg.a) * i) / seg.steps);
+    }
+  }
+  return values;
 }
 
 /**
  * Build synchronized keyframe times and pose curves for a leader joint plus all transitive mimic followers.
  * Inserts exact breakpoints at every follower mechanical stop and subdivides every segment so consecutive
- * quaternion keys never exceed 45° (preventing 360° collapse or >180° reverse slerp), while keeping key counts bounded.
+ * quaternion keys stay <= 45° (widening up to 90° only above 32 turns) while keeping key counts bounded.
  */
 export function buildClipPoseSchedule(
   part: RiggedPartSpec,
@@ -322,17 +357,22 @@ export function buildClipPoseSchedule(
 
   const initial = buildSegments(target);
   let segs = initial.segs;
+  let stepDeg = 45;
   if (initial.totalDeg > maxBudget * 45) {
-    const shrink = (maxBudget * 45) / initial.totalDeg;
-    target *= shrink;
-    segs = buildSegments(target).segs;
+    if (initial.totalDeg <= maxBudget * 90) {
+      stepDeg = Math.min(90, initial.totalDeg / maxBudget);
+    } else {
+      stepDeg = 90;
+      target *= (maxBudget * 90) / initial.totalDeg;
+      segs = buildSegments(target).segs;
+    }
   }
 
   const legValues: number[] = [0];
   const legFracs: number[] = [0];
   const targetSpan = Math.abs(target) > 1e-12 ? target : 1;
   for (const seg of segs) {
-    const steps = Math.max(1, Math.ceil(seg.deg / 45));
+    const steps = Math.max(1, Math.ceil(seg.deg / stepDeg));
     for (let i = 1; i <= steps; i++) {
       const v = seg.a + ((seg.b - seg.a) * i) / steps;
       legValues.push(v);
