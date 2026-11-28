@@ -1,6 +1,7 @@
 import { Viewport, disposeModel } from './viewport';
 import { catalog, type Recipe } from '../data/recipe';
-import { buildModel } from '../models';
+import { preloadAllExpansionPacks } from '../models/expansion/lazy';
+import { buildStudioModel } from '../models/studio-build';
 
 let stage: Viewport | undefined;
 export function thumbnail(recipe: Recipe) {
@@ -11,10 +12,13 @@ export function thumbnail(recipe: Recipe) {
     stage = new Viewport(host, true);
   }
   const old = stage.model;
-  stage.setModel(buildModel(recipe));
+  stage.setModel(buildStudioModel(recipe));
   if (old) disposeModel(old);
   return stage.snapshot();
 }
-export function starterPosters() {
-  return catalog.map((row) => ({ id: row.id, image: thumbnail(row.recipe) }));
+export async function starterPosters(skipIds?: readonly string[]) {
+  await preloadAllExpansionPacks();
+  const skip = skipIds?.length ? new Set(skipIds) : null;
+  const rows = skip ? catalog.filter((row) => !skip.has(row.id)) : catalog;
+  return rows.map((row) => ({ id: row.id, image: thumbnail(row.recipe) }));
 }

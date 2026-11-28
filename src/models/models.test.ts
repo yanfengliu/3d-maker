@@ -4,6 +4,7 @@ import { characterRig } from '../animation/rig'
 import { inspectAsset } from '../capabilities/runtime'
 import { listVariations } from '../data/recipe'
 import { extraAssets } from './collections'
+import { getExpansionAsset } from './expansion/registry'
 import { buildModel } from './index'
 import { DEFAULT_VARIATION_ID, findVariation } from './variations'
 
@@ -91,7 +92,7 @@ describe.each(allModelVariants)('$key ($recipe.name)', ({ recipe, category, id }
     const detailed = getNormal()
     const simple = getSimple()
     const caps = inspectAsset(detailed)
-    const def = extraAssets.find(asset => asset.id === recipe.template)
+    const def = extraAssets.find(asset => asset.id === recipe.template) ?? getExpansionAsset(recipe.template)
     const variationDef = findVariation(recipe.template, recipe.variation)
     if (def) {
       const expectedRigged = [...new Set([...def.riggedParts.map(p => p.name), ...(variationDef?.riggedParts ?? []).map(p => p.name)])]

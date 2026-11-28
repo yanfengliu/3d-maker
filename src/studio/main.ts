@@ -10,17 +10,10 @@ import { catalog, parseRecipe, resolveVariationRecipe, type Recipe } from '../da
 import { findVariation } from '../models/variations';
 import { saveAsset } from '../data/inventory';
 import {
-  applyImportEdits,
-  listPaintSlots,
-  openLocalGlb,
-  openPolyforkGlb,
-  openSavedImport,
-  saveImport,
-  subscribeImportChanges,
-  type ImportedAsset,
-  type ImportEdits,
+  applyImportEdits, listPaintSlots, openLocalGlb, openPolyforkGlb, openSavedImport,
+  saveImport, subscribeImportChanges, type ImportedAsset, type ImportEdits,
 } from '../imports';
-import { buildModel } from '../models';
+import { buildStudioModel, ensureStudioTemplateLoaded, needsExpansionLoad } from '../models/studio-build';
 import { el, notify, report } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { layout } from '../ui/layout';
@@ -43,13 +36,8 @@ const autoplay = params.get('shot') !== '1';
 let recipe: Recipe | null = null;
 let imported: ImportedAsset | null = null;
 let originalController: AssetController | null = null;
-function newSelection(id?: string, remixDraft = false) {
-  return { id, remixDraft, write: Promise.resolve() };
-}
-let selection = newSelection();
-let grid = true,
-  wire = false,
-  openSequence = 0;
+const newSelection = (id?: string, remixDraft = false) => ({ id, remixDraft, write: Promise.resolve() });
+let selection = newSelection(), grid = true, wire = false, openSequence = 0;
 const first = catalog[0];
 if (!first) throw new Error('The starter catalog is empty.');
 const initial = first.recipe;
@@ -70,7 +58,9 @@ function syncRigEdits() {
 
 const ui = createInspectorBridge({
   stage, getRecipe: () => recipe, getImported: () => imported, getController: activeController,
-  edit, selectVariation, setImportEdits, syncRigEdits,
+  edit,
+  selectVariation: v => { try { const p = selectVariation(v); if (p) void p.catch(report); } catch (e) { report(e); } },
+  setImportEdits, syncRigEdits,
 });
 
 function toolbar() {
@@ -170,12 +160,28 @@ function applyOriginalState(ctrl: AssetController, state?: ReturnType<AssetContr
   stage.invalidate();
 }
 
-function selectVariation(variation: string, template?: string) {
+function runForTemplate(template: string, commit: () => void, signal?: AbortSignal): Promise<void> | void {
+  const seq = ++openSequence;
+  const apply = () => { if (seq === openSequence && !signal?.aborted) commit(); };
+  if (!needsExpansionLoad(template)) { apply(); return; }
+  return ensureStudioTemplateLoaded(template).then(apply);
+}
+
+function replaceOriginal(next: Recipe, prevState?: ReturnType<AssetController['getState']>) {
+  const built = buildStudioModel(next);
+  originalController?.dispose();
+  originalController = createAssetController(built);
+  recipe = next;
+  swap(built, false);
+  applyOriginalState(originalController, prevState);
+}
+
+function selectVariation(variation: string, template?: string): Promise<void> | void {
   const id = template ?? recipe?.template;
   if (!id) throw new Error('Open a studio original to switch variations.');
-  applyRecipe(resolveVariationRecipe(id, variation), false);
-  const init = findVariation(id, variation)?.state;
-  if (init && originalController) {
+  const applyInit = () => {
+    const init = findVariation(id, variation)?.state;
+    if (!init || !originalController || recipe?.template !== id) return;
     applyOriginalState(originalController, {
       ...(init.pose ? { pose: { ...init.pose } } : {}),
       ...(init.hiddenParts ? { hiddenParts: [...init.hiddenParts] } : {}),
@@ -184,21 +190,25 @@ function selectVariation(variation: string, template?: string) {
     });
     ui.syncViewportTools();
     ui.refreshRig();
-  }
+  };
+  const pending = applyRecipe(resolveVariationRecipe(id, variation), false);
+  if (pending) return pending.then(applyInit);
+  applyInit();
 }
 
 function edit(patch: Partial<Recipe & ImportEdits>) {
   try {
     if (recipe) {
-      const prevState = originalController?.getState();
-      recipe = parseRecipe({ ...recipe, ...patch });
-      const built = buildModel(recipe);
-      originalController?.dispose();
-      originalController = createAssetController(built);
-      swap(built, false);
-      applyOriginalState(originalController, prevState);
-      ui.refreshRig();
-    } else if (imported) {
+      const next = parseRecipe({ ...recipe, ...patch });
+      const pending = runForTemplate(next.template, () => {
+        replaceOriginal(next, originalController?.getState());
+        ui.refreshRig();
+        toolbar();
+      });
+      if (pending) void pending.catch((error: unknown) => { report(error); ui.renderControls(); });
+      return;
+    }
+    if (imported) {
       applyImportEdits(imported, { ...imported.edits, ...patch });
       if (patch.scale !== undefined || patch.proportion !== undefined) stage.place(false);
       else stage.invalidate();
@@ -208,20 +218,21 @@ function edit(patch: Partial<Recipe & ImportEdits>) {
   } catch (error) { report(error); ui.renderControls(); }
 }
 
-function choose(next: Recipe, id?: string) {
+function choose(next: Recipe, id?: string, signal?: AbortSignal): Promise<void> | void {
   const valid = parseRecipe(next);
-  const model = buildModel(valid);
-  openSequence++;
-  imported?.controller.dispose();
-  originalController?.dispose();
-  recipe = valid;
-  imported = null;
-  originalController = createAssetController(model);
-  selection = newSelection(id);
-  swap(model, true);
-  toolbar();
-  ui.renderControls();
-  shelf.markSelection();
+  return runForTemplate(valid.template, () => {
+    const model = buildStudioModel(valid);
+    imported?.controller.dispose();
+    originalController?.dispose();
+    recipe = valid;
+    imported = null;
+    originalController = createAssetController(model);
+    selection = newSelection(id);
+    swap(model, true);
+    toolbar();
+    ui.renderControls();
+    shelf.markSelection();
+  }, signal);
 }
 
 async function openImport(load: () => Promise<ImportedAsset>, id?: string, signal?: AbortSignal) {
@@ -301,11 +312,11 @@ const shelf = setupShelf({
     return null;
   },
   open: async (item, signal) => {
-    if (item.source === 'original') choose(item.recipe);
+    if (item.source === 'original') await choose(item.recipe, undefined, signal);
     else if (item.source === 'polyfork') {
       const { id, title, category, remixable } = item.asset;
       await openImport(() => openPolyforkGlb(id, title, signal, category, undefined, remixable), undefined, signal);
-    } else if ('recipe' in item.entry) choose(item.entry.recipe, item.entry.id);
+    } else if ('recipe' in item.entry) await choose(item.entry.recipe, item.entry.id, signal);
     else await openImport(() => openSavedImport(item.entry.id, signal), item.entry.id, signal);
   },
   deleted: id => {
@@ -317,19 +328,14 @@ const shelf = setupShelf({
   },
 });
 
-function applyRecipe(input: unknown, carryPose = true) {
+function applyRecipe(input: unknown, carryPose = true): Promise<void> | void {
   const next = parseRecipe(input);
-  if (!recipe || next.template !== recipe.template) { choose(next); return; }
-  openSequence++;
-  const prevState = carryPose ? originalController?.getState() : undefined;
-  const model = buildModel(next);
-  originalController?.dispose();
-  originalController = createAssetController(model);
-  recipe = next;
-  swap(model, false);
-  applyOriginalState(originalController, prevState);
-  toolbar();
-  ui.renderControls();
+  if (!recipe || next.template !== recipe.template) return choose(next);
+  return runForTemplate(next.template, () => {
+    replaceOriginal(next, carryPose ? originalController?.getState() : undefined);
+    toolbar();
+    ui.renderControls();
+  });
 }
 
 const openRemote = (id: string, title: string, signal?: AbortSignal) =>
@@ -400,7 +406,11 @@ el('pickColor').onclick = () => { ui.togglePickMode(); };
 el('reset').onclick = () => {
   if (recipe) {
     const row = catalog.find(v => v.id === recipe?.template);
-    if (row) { applyRecipe(row.recipe, false); stage.place(true); }
+    if (row) {
+      const pending = applyRecipe(row.recipe, false);
+      if (pending) void pending.then(() => { stage.place(true); }).catch(report);
+      else stage.place(true);
+    }
   } else if (imported) {
     stopPartPreviewAnimation();
     imported.controller.setDecalsVisible(false, {});
@@ -449,7 +459,7 @@ stage.onReady = () => {
 
 const api = createAgentApi({
   stage, getRecipe: () => (recipe ? { ...recipe } : null), getImported: () => imported, getController: activeController,
-  applyRecipe: input => { applyRecipe(input); }, selectVariation, remix, save, exportGLB, openPolyfork: openRemote,
+  applyRecipe: input => applyRecipe(input), selectVariation, remix, save, exportGLB, openPolyfork: openRemote,
   listPaintSlots: paintSlots, getImportEdits, setImportEdits,
   listClips: () => availableClips().map(({ name, duration }) => ({ name, duration })),
   playClip: index => {
@@ -461,17 +471,15 @@ const api = createAgentApi({
 declare global { interface Window { forgeStudio: ForgeStudioApi; __shotReady: boolean; } }
 window.forgeStudio = api;
 window.__shotReady = false;
-if (params.get('grid') === '0') {
-  grid = false;
-  stage.showGrid(false);
-  el('grid').setAttribute('aria-pressed', 'false');
-}
+if (params.get('grid') === '0') { grid = false; stage.showGrid(false); el('grid').setAttribute('aria-pressed', 'false'); }
 const startId = params.get('asset');
 const startVariation = params.get('variation') ?? undefined;
 const startRow = catalog.find(row => row.id === startId);
-choose(startRow ? resolveVariationRecipe(startRow.id, startVariation) : initial);
 const shotView = parseView(params.get('view'));
-if (params.get('shot') === '1' && shotView) setView(shotView);
+const applyShotView = () => { if (params.get('shot') === '1' && shotView) setView(shotView); };
+const initialLoad = choose(startRow ? resolveVariationRecipe(startRow.id, startVariation) : initial);
+if (initialLoad) void initialLoad.then(applyShotView).catch(report);
+else applyShotView();
 if (!document.body.classList.contains('shot-only')) {
   shelf.start();
   const refreshInventory = () => { void shelf.refreshSaved().catch(report); };

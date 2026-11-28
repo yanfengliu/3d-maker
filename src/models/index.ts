@@ -6,8 +6,12 @@ import { attachOriginalCapabilities } from './capabilities'
 import { extraAssets } from './collections'
 import { drone } from './drone'
 import { cargo, rover, tower } from './equipment'
+import { ensureAllExpansionPacks } from './expansion/all'
+import { getExpansionAsset } from './expansion/registry'
 import { finishes } from './parts'
 import { findVariation } from './variations'
+
+ensureAllExpansionPacks()
 
 const extraBuilders = new Map(extraAssets.map(asset => [asset.id, asset.build]))
 
@@ -28,7 +32,7 @@ export function buildModel(recipe: Recipe): T.Group {
       case 'survey-bot': character(root, palette, false, recipe.detail); break
       case 'field-pilot': character(root, palette, true, recipe.detail); break
       default: {
-        const build = extraBuilders.get(recipe.template)
+        const build = extraBuilders.get(recipe.template) ?? getExpansionAsset(recipe.template)?.build
         if (!build) throw new Error('Unknown template: ' + recipe.template)
         build(root, palette, recipe.detail, resolvedParams)
         break

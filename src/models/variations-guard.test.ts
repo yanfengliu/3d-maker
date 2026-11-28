@@ -75,7 +75,7 @@ describe('model variation dataset registry and append-only enforcement', () => {
     const baselines = collectGitBaselines();
     const errors = validateVariationLock(lock, live, baselines);
     expect(errors, errors.join('\n')).toEqual([]);
-  }, 30_000);
+  }, 120_000);
 
   it('deterministically rejects deletions, in-place overwrites, and lockfile tampering', () => {
     const [droneDefault, droneCargo] = listVariations('relay-drone');

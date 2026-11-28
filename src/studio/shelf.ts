@@ -9,6 +9,7 @@ import { listImports, deleteImport } from '../imports';
 import { el, escapeHtml, report, notify } from '../ui/dom';
 import { icon, type Icon } from '../ui/icons';
 import { buildActiveFilterChips, formatListingTitle, formatSourceBadge } from './filter-state';
+import { ensureStudioTemplateLoaded, needsExpansionLoad } from '../models/studio-build';
 import { thumbnail } from './thumbnails';
 
 const sources: { id: BrowseSource; label: string; icon: Icon }[] = [
@@ -52,7 +53,16 @@ export function setupShelf(actions: Actions) {
     if (item.source === 'saved' && 'recipe' in item.entry) {
       const cached = previews.get(item.key);
       if (cached?.revision === item.entry.updatedAt) image = cached.image;
-      else {
+      else if (needsExpansionLoad(item.entry.recipe.template)) {
+        const entry = item.entry;
+        const itemKey = item.key;
+        void ensureStudioTemplateLoaded(entry.recipe.template).then(() => {
+          const rendered = thumbnail(entry.recipe);
+          previews.set(itemKey, { revision: entry.updatedAt, image: rendered });
+          const img = grid.querySelector<HTMLImageElement>(`.inv-card[data-key="${CSS.escape(itemKey)}"] img`);
+          if (img) { img.src = rendered; img.hidden = false; }
+        }).catch(report);
+      } else {
         image = thumbnail(item.entry.recipe);
         previews.set(item.key, {revision:item.entry.updatedAt,image});
       }

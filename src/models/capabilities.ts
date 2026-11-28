@@ -4,6 +4,8 @@ import { deriveIkMetadata } from '../capabilities/ik-derive';
 import { writeCapabilities, type AssetCapabilities, type RiggedPartSpec } from '../capabilities/schema';
 import { deriveSpatialMetadata } from '../capabilities/spatial-derive';
 import { extraAssets } from './collections';
+import { expansionMetaById } from './expansion/meta';
+import { getExpansionAsset } from './expansion/registry';
 import { DEFAULT_VARIATION_ID, findVariation, variationsForTemplate } from './variations';
 
 const starterDescriptions: Record<string, string> = {
@@ -63,9 +65,10 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
   const box = new T.Box3().setFromObject(root);
   const size = box.isEmpty() ? new T.Vector3(1, 1, 1) : box.getSize(new T.Vector3());
   const round = (n: number) => Math.round(n * 1000) / 1000;
-  const extra = extraById.get(recipe.template);
+  const extra = extraById.get(recipe.template) ?? getExpansionAsset(recipe.template);
+  const meta = expansionMetaById.get(recipe.template);
   const variation = findVariation(recipe.template, recipe.variation);
-  const baseDescription = extra?.description ?? starterDescriptions[recipe.template];
+  const baseDescription = extra?.description ?? meta?.description ?? starterDescriptions[recipe.template];
   const description = variation ? `${variation.label}: ${variation.situation}` : baseDescription;
   const riggedSource = uniqueByName([
     ...(extra?.riggedParts ?? starterParts[recipe.template] ?? []),
@@ -89,8 +92,8 @@ export function attachOriginalCapabilities(root: T.Group, recipe: Recipe): Asset
   const clearanceZones = authoredClearance ? [...authoredClearance] : (derivedSpatial?.clearanceZones ?? []);
   const surfaces = authoredSurfaces ? [...authoredSurfaces] : (derivedSpatial?.surfaces ?? []);
   const ik = variation?.ik ?? extra?.ik ?? deriveIkMetadata(root, riggedParts);
-  const kit = variation?.kit ?? extra?.kit;
-  const paramSpecs = variation?.paramSpecs ?? extra?.params;
+  const kit = variation?.kit ?? extra?.kit ?? meta?.kit;
+  const paramSpecs = variation?.paramSpecs ?? extra?.params ?? meta?.params;
   const siblingDefs = variationsForTemplate(recipe.template);
   const variations = siblingDefs.length
     ? [

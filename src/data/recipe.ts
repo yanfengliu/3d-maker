@@ -4,6 +4,7 @@ import {
   type ModelParamValues,
 } from '../capabilities/param-schema.ts';
 import { extraAssets } from '../models/collections/index.ts';
+import { expansionMeta } from '../models/expansion/meta.ts';
 import {
   DEFAULT_VARIATION_ID,
   findVariation,
@@ -68,6 +69,9 @@ export const catalog: readonly CatalogEntry[] = [
   ...extraAssets.map(asset =>
     starter(asset.id, asset.code, asset.category, asset.name, asset.primary, asset.accent, asset.description),
   ),
+  ...expansionMeta.map(asset =>
+    starter(asset.id, asset.code, asset.category, asset.name, asset.primary, asset.accent, asset.description),
+  ),
 ];
 
 const templateIds = new Set<string>(catalog.map(entry => entry.id));
@@ -90,7 +94,10 @@ function dimension(value: unknown, field: string): number {
   return value;
 }
 
-const extraParamsById = new Map(extraAssets.map(asset => [asset.id, asset.params]));
+const extraParamsById = new Map<string, readonly ModelParamSpec[] | undefined>([
+  ...extraAssets.map(asset => [asset.id, asset.params] as const),
+  ...expansionMeta.map(asset => [asset.id, asset.params] as const),
+]);
 
 /** Return declared model-specific structural parameter specs for a template/variation pair. */
 export function getModelParamSpecs(template: TemplateId, variation?: string): readonly ModelParamSpec[] | undefined {

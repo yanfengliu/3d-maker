@@ -11,7 +11,7 @@ import './dialogs.css';
 
 interface DialogActions {
   recipe: () => Recipe | null;
-  apply: (recipe: Recipe) => void;
+  apply: (recipe: Recipe) => Promise<void> | void;
   importEdits: () => ImportEdits | null;
   applyImportEdits: (edits: ImportEdits) => void;
   paintSlots: () => SlotName[];
@@ -126,7 +126,7 @@ export function setupDialogs(actions: DialogActions) {
         if (/\.glb$/i.test(file.name)) return actions.openLocal(file, signal);
         if (!/\.json$/i.test(file.name)) throw new Error('Choose a .glb model or a .json recipe.');
         const recipe = parseRecipe(JSON.parse(await file.text()) as unknown);
-        if (!signal.aborted) actions.apply(recipe);
+        if (!signal.aborted) await actions.apply(recipe);
       }, 'Opening asset…', 'Asset opened in the studio.');
       opening = false;
     };
@@ -169,11 +169,17 @@ export function setupDialogs(actions: DialogActions) {
             throw new Error('The active model changed. Reopen AI tools for the new model.');
           }
           const value: unknown = JSON.parse(text.value);
+          let pending: Promise<void> | void = undefined;
           if (imported && !(value && typeof value === 'object' && 'template' in value)) {
             actions.applyImportEdits(parseImportedSettings(value, slots, caps));
-          } else actions.apply(parseRecipe(value));
-          close();
-          notify('Edits applied.');
+          } else pending = actions.apply(parseRecipe(value));
+          const finish = () => {
+            if (signal.aborted) return;
+            close();
+            notify('Edits applied.');
+          };
+          if (pending) void pending.then(finish, (error: unknown) => { if (!signal.aborted) status(message(error)); });
+          else finish();
         } catch (error) { status(message(error)); }
       };
       button('copyRecipe').onclick = () => {
@@ -222,14 +228,16 @@ export function setupDialogs(actions: DialogActions) {
       const apply = button('applyPrompt');
       apply.disabled = true;
       status('Applying edit…');
-      void edit.then(result => {
-        if (signal.aborted) return;
+      void edit.then(async result => {
+        const aborted = () => signal.aborted;
+        if (aborted()) return;
         if (actions.selectionKey() !== selection || JSON.stringify(actions.recipe() ?? actions.importEdits()) !== snapshot || prompt.value !== input) {
           status('The asset or instruction changed. Apply the edit again.');
           return;
         }
-        if ('recipe' in result) actions.apply(result.recipe);
+        if ('recipe' in result) await actions.apply(result.recipe);
         else actions.applyImportEdits(result.edits);
+        if (aborted()) return;
         close();
         notify(`Edit applied · ${result.engine}`);
       }).catch((error: unknown) => { if (!signal.aborted) status(message(error)); }).finally(() => { apply.disabled = false; });

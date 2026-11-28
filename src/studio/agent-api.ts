@@ -22,8 +22,8 @@ export interface StudioHost {
   getRecipe: () => Recipe | null;
   getImported: () => ImportedAsset | null;
   getController: () => AssetController | null;
-  applyRecipe: (input: unknown) => void;
-  selectVariation: (variation: string, template?: string) => void;
+  applyRecipe: (input: unknown) => Promise<void> | void;
+  selectVariation: (variation: string, template?: string) => Promise<void> | void;
   remix: (name?: string) => void;
   save: () => Promise<string>;
   exportGLB: (options?: ExportOptions) => Promise<ArrayBuffer>;

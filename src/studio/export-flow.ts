@@ -2,7 +2,7 @@ import { ensureCharacterAnimations } from '../animation/lazy';
 import { createAssetController, type AssetController } from '../capabilities/runtime';
 import type { Recipe } from '../data/recipe';
 import type { ImportedAsset } from '../imports';
-import { buildModel } from '../models';
+import { buildStudioModel, ensureStudioTemplateLoaded } from '../models/studio-build';
 import type { ExportOptions } from './export';
 import { disposeModel } from './stage-env';
 import type { Viewport } from './viewport';
@@ -21,7 +21,8 @@ export async function exportStudioGlb(target: ExportTarget, options?: ExportOpti
   ]);
   const source = target.imported?.group;
   const snapshot = source ? target.stage.restClone(() => cloneForExport(source, options, target.imported?.controller)) : null;
-  const builtOriginal = target.recipe ? buildModel(target.recipe) : null;
+  if (target.recipe) await ensureStudioTemplateLoaded(target.recipe.template);
+  const builtOriginal = target.recipe ? buildStudioModel(target.recipe) : null;
   let exportCtrl: AssetController | null = null;
   if (builtOriginal) {
     const origState = target.originalController?.getState();
