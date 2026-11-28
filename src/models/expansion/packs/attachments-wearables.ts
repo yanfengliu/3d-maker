@@ -1,0 +1,88 @@
+import type { ProceduralAssetDef } from '../../collection-types';
+import { attachmentsWearablesMeta, type ExpansionMetaItem } from '../meta/attachments-wearables';
+import { det, gearAsset, rig } from './attachments-wearables-kit';
+import {
+  buildAlpineHikingRucksack, buildArticulatedMechanicalWings, buildBrassDivingHelmet,
+  buildHornedSamuraiKabuto, buildJeweledCrownCushion, buildPlumedKnightHelm,
+  buildPointedWizardHat, buildScaledDragonWings, buildTwinScubaTankRig, buildVisorAstronautHelmet,
+} from './attachments-wearables-a';
+import {
+  buildCyberneticExoSpine, buildFalconerArmoredGauntlet, buildFieldMedicBackpack,
+  buildIridescentFairyWings, buildMountedRailCannon, buildRangerQuiverHarness,
+  buildRoyalHeraldicCape, buildSteampunkBoilerPack, buildTacticalRadioPack, buildVigilanteUtilityBelt,
+} from './attachments-wearables-b';
+
+function metaAt(id: string): ExpansionMetaItem {
+  const found = attachmentsWearablesMeta.find(item => item.id === id);
+  if (!found) throw new Error('Missing attachments-wearables meta: ' + id);
+  return found;
+}
+
+export const attachmentsWearablesPack: readonly ProceduralAssetDef[] = [
+  gearAsset(metaAt('twin-scuba-tank-rig'),
+    [rig('ValveDial', 'Manifold valve', 'y', [0, 360], 'Spins the twin scuba cylinder regulator valve wheel')],
+    [det('WeightPouch', 'Weight pouch', 'Quick-release front diving ballast weight pouch')], buildTwinScubaTankRig),
+  gearAsset(metaAt('alpine-hiking-rucksack'),
+    [rig('RucksackLid', 'Top pocket lid', 'x', [0, -82], 'Flips open the hinged alpine rucksack brain pocket')],
+    [det('TrekPoles', 'Trekking poles', 'Side-strapped pair of collapsible hiking poles')], buildAlpineHikingRucksack),
+  gearAsset(metaAt('articulated-mechanical-wings'),
+    [rig('MechWingL', 'Left mech wing', 'y', [0, -48], 'Sweeps the left bladed mechanical wing'),
+      rig('MechWingR', 'Right mech wing', 'y', [0, 48], 'Sweeps the right bladed mechanical wing')],
+    [], buildArticulatedMechanicalWings),
+  gearAsset(metaAt('scaled-dragon-wings'),
+    [rig('DragonWingL', 'Left dragon wing', 'y', [0, -45], 'Beats the left armored dragon wing membrane'),
+      rig('DragonWingR', 'Right dragon wing', 'y', [0, 45], 'Beats the right armored dragon wing membrane')],
+    [], buildScaledDragonWings),
+  gearAsset(metaAt('horned-samurai-kabuto'),
+    [rig('KabutoCrest', 'Kuwagata horns', 'x', [-15, 20], 'Tilts the gilded samurai helmet horn crest')],
+    [det('CrestBadge', 'Clan emblem', 'Removable central gold clan crest medallion')], buildHornedSamuraiKabuto),
+  gearAsset(metaAt('brass-diving-helmet'),
+    [rig('ViewportHatch', 'Viewport hatch', 'y', [0, -95], 'Swings open the grilled brass front porthole hatch'),
+      rig('ExhaustValve', 'Exhaust valve', 'y', [0, 360], 'Spins the top brass air exhaust valve wheel')],
+    [], buildBrassDivingHelmet),
+  gearAsset(metaAt('visor-astronaut-helmet'),
+    [rig('EvaSunVisor', 'Gold sun visor', 'x', [0, -58], 'Lifts the reflective gold EVA helmet sun shield')],
+    [det('HelmCam', 'Helmet camera', 'Side-mounted orbital telemetry camera pod')], buildVisorAstronautHelmet),
+  gearAsset(metaAt('pointed-wizard-hat'),
+    [rig('HatSpire', 'Crooked spire', 'z', [-18, 18], 'Sways the bent arcane wizard hat cone')],
+    [det('HatBuckle', 'Arcane buckle', 'Removable front brass and crystal hatband buckle')], buildPointedWizardHat),
+  gearAsset(metaAt('plumed-knight-helm'),
+    [rig('ArmetVisor', 'Armet visor', 'x', [0, -58], 'Raises the pointed steel knight visor plate')],
+    [det('HelmPlume', 'Crest plume', 'Sweeping ceremonial horsehair helmet plume')], buildPlumedKnightHelm),
+  gearAsset(metaAt('jeweled-crown-cushion'),
+    [rig('RoyalCrown', 'Imperial crown', 'y', [0, 360], 'Rotates the jeweled gilded crown atop its velvet cushion')],
+    [], buildJeweledCrownCushion),
+  gearAsset(metaAt('mounted-rail-cannon'),
+    [rig('RailYaw', 'Turret azimuth', 'y', [-65, 65], 'Pans the shoulder-mounted railgun horizontally'),
+      rig('RailPitch', 'Rail elevation', 'x', [-28, 40], 'Elevates and depresses the electromagnetic rails')],
+    [], buildMountedRailCannon),
+  gearAsset(metaAt('field-medic-backpack'),
+    [rig('MedicLid', 'Triage lid', 'x', [0, -88], 'Opens the hard-shell trauma backpack top hatch')],
+    [det('DefibUnit', 'Defibrillator pod', 'Quick-detach front portable defibrillator case')], buildFieldMedicBackpack),
+  gearAsset(metaAt('tactical-radio-pack'),
+    [rig('RadioMast', 'Whip antenna', 'y', [0, 0.36], 'Extends the telescoping field radio antenna mast', 'slide')],
+    [det('RadioHandset', 'Radio handset', 'Detachable side-docked communications handset')], buildTacticalRadioPack),
+  gearAsset(metaAt('iridescent-fairy-wings'),
+    [rig('FairyWingL', 'Left fairy wing', 'y', [0, -42], 'Flutters the left iridescent double-lobed wing'),
+      rig('FairyWingR', 'Right fairy wing', 'y', [0, 42], 'Flutters the right iridescent double-lobed wing')],
+    [], buildIridescentFairyWings),
+  gearAsset(metaAt('steampunk-boiler-pack'),
+    [rig('BoilerGear', 'Brass flywheel', 'z', [0, 360], 'Spins the geared brass pressure flywheel')],
+    [det('CoalCanister', 'Reserve canister', 'Removable side reserve coal fuel cylinder')], buildSteampunkBoilerPack),
+  gearAsset(metaAt('ranger-quiver-harness'),
+    [rig('HeroArrow', 'Hero arrow', 'y', [0, 0.24], 'Draws the feathered center arrow from the quiver', 'slide')],
+    [det('BeltPouch', 'Belt pouch', 'Detachable leather field supply pouch')], buildRangerQuiverHarness),
+  gearAsset(metaAt('vigilante-utility-belt'),
+    [rig('GadgetPouch', 'Center pouch', 'x', [0, -78], 'Opens the central tactical utility belt compartment')],
+    [det('BeltGrapple', 'Grapple clip', 'Removable side grappling hook holstered on the belt')], buildVigilanteUtilityBelt),
+  gearAsset(metaAt('cybernetic-exo-spine'),
+    [rig('ExoFlex', 'Upper spine', 'x', [-22, 22], 'Flexes the upper cybernetic shoulder actuator'),
+      rig('SpineCore', 'Neural core', 'z', [0, 360], 'Spins the glowing dorsal neural stabilizer core')],
+    [], buildCyberneticExoSpine),
+  gearAsset(metaAt('royal-heraldic-cape'),
+    [rig('CapeHem', 'Cape hem', 'x', [0, 26], 'Billows the lower trimmed royal cloak panel')],
+    [det('CapeClasp', 'Gilded clasp', 'Removable twin-medallion chained cape clasp')], buildRoyalHeraldicCape),
+  gearAsset(metaAt('falconer-armored-gauntlet'),
+    [rig('CuffGuard', 'Cuff guard', 'x', [0, -45], 'Lifts the hinged brass falconer wrist guard')],
+    [det('HawkLure', 'Wrist lure', 'Detachable leather hawking lure hung on the cuff ring')], buildFalconerArmoredGauntlet),
+];

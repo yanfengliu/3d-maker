@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { characterRig } from '../../../animation/rig';
 import { createAssetController } from '../../../capabilities/runtime';
 import { writeCapabilities } from '../../../capabilities/schema';
-import type { Recipe } from '../../../data/recipe';
+import { catalog, type Recipe } from '../../../data/recipe';
 import type { ProceduralAssetDef } from '../../collection-types';
 import { auditModelCraft } from '../../craft-invariants';
 import { finishes } from '../../parts';
@@ -15,6 +15,7 @@ import { charactersAdventureMeta } from '../meta/characters-adventure';
 import { charactersCivilianMeta } from '../meta/characters-civilian';
 import { handheldFantasyScifiMeta } from '../meta/handheld-fantasy-scifi';
 import { handheldToolsMeta } from '../meta/handheld-tools';
+import { attachmentsWearablesPack } from '../packs/attachments-wearables';
 import { charactersCivilianPack } from '../packs/characters-civilian';
 
 type PaintedMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
@@ -39,6 +40,7 @@ const allMeta = [
 
 const allPacks: readonly ProceduralAssetDef[] = [
   ...charactersCivilianPack,
+  ...attachmentsWearablesPack,
 ];
 
 const requiredBones = [
@@ -109,8 +111,12 @@ describe('chars-gear expansion metadata and repo conventions', () => {
       entries: Record<string, { template: string }>;
     };
     const lockedIds = new Set(Object.values(lock.entries).map(e => e.template));
+    const existingCodes = new Set(catalog.map(c => c.code));
+    const existingNames = new Set(catalog.map(c => c.recipe.name));
     for (const item of allMeta) {
       expect(lockedIds.has(item.id), `ID collision with variations.lock.json: ${item.id}`).toBe(false);
+      expect(existingCodes.has(item.code), `Code collision with existing catalog: ${item.code}`).toBe(false);
+      expect(existingNames.has(item.name), `Name collision with existing catalog: ${item.name}`).toBe(false);
       expect(item.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(item.primary).toMatch(/^#[\da-f]{6}$/i);
       expect(item.accent).toMatch(/^#[\da-f]{6}$/i);
