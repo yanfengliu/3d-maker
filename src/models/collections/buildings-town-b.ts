@@ -187,14 +187,14 @@ function domeObservatory(root: T.Group, p: Finish, detail: boolean) {
   domeShell(dome, 0.82, 0.075, 0.32, Math.PI - 0.32, p.accent, p.hd);
   domeShell(dome, 0.82, 0.075, Math.PI, Math.PI - 0.32, p.accent, p.hd);
   for (const s of [-1, 1]) box(dome, [s * 0.25, 0.42, 0.38], [0.06, 0.68, 0.08], p.stencil).rotation.x = -0.62;
-  box(dome, [0, 0.14, 0], [0.34, 0.22, 0.28], p.dark);
-  const scope = group(dome, 'Telescope', [0, 0.36, 0.02]);
+  box(dome, [0, 0.18, 0.02], [0.34, 0.3, 0.28], p.dark);
+  const scope = group(dome, 'Telescope', [0, 0.44, 0.04]);
   const aim = group(scope, '', [0, 0, 0]);
   aim.rotation.x = -0.56;
-  tube(aim, [0, 0, 0.26], 0.115, 0.13, 0.92, p.stencil, 14).rotation.x = Math.PI / 2;
+  tube(aim, [0, 0, 0.3], 0.115, 0.13, 0.84, p.stencil, 14).rotation.x = Math.PI / 2;
   tube(aim, [0, 0, 0.76], 0.132, 0.125, 0.14, p.accent, 14).rotation.x = Math.PI / 2;
   tube(aim, [0, 0, 0.83], 0.11, 0.11, 0.04, p.optic, 14).rotation.x = Math.PI / 2;
-  tube(aim, [0, 0, -0.24], 0.075, 0.09, 0.14, p.alloy, 12).rotation.x = Math.PI / 2;
+  tube(aim, [0, 0, -0.14], 0.075, 0.09, 0.12, p.alloy, 12).rotation.x = Math.PI / 2;
   if (detail) {
     for (let i = 0; i < 8; i++) {
       const a = (i * Math.PI) / 4 + Math.PI / 8;
@@ -210,8 +210,8 @@ function domeObservatory(root: T.Group, p: Finish, detail: boolean) {
     ring(dome, [0, 0.14, 0], 0.83, 0.022, 0.04, p.alloy);
   }
   root.animations = [
-    new T.AnimationClip('Stargaze sweep', 4.4, [spinTrack('ObservatoryDome', 'y', 4.4, 1), swingTrack('Telescope', 'x', 4.4, 24, true)]),
-    new T.AnimationClip('Aim telescope', 3, [swingTrack('Telescope', 'x', 3, 26, true)]),
+    new T.AnimationClip('Stargaze sweep', 4.4, [spinTrack('ObservatoryDome', 'y', 4.4, 1), swingTrack('Telescope', 'x', 4.4, 16, true)]),
+    new T.AnimationClip('Aim telescope', 3, [swingTrack('Telescope', 'x', 3, 16, true)]),
   ];
 }
 
@@ -436,7 +436,7 @@ export const buildingsTownB: readonly TownBuildingDef[] = [
     [], stoneWatermill),
   entry('dome-observatory', 'BT-11', 'Dome Observatory', '#d8d4c8', '#3b647d',
     'Hilltop masonry observatory with buttressed drum, rotating slotted dome, and tilting refractor telescope.',
-    [rot('ObservatoryDome', 'Observatory dome', 'y', [0, 360], 'Rotates the slotted observatory dome in azimuth'), rot('Telescope', 'Telescope', 'x', [-30, 30], 'Tilts the refractor telescope through the viewing slit')],
+    [rot('ObservatoryDome', 'Observatory dome', 'y', [0, 360], 'Rotates the slotted observatory dome in azimuth'), rot('Telescope', 'Telescope', 'x', [-16, 16], 'Tilts the refractor telescope through the viewing slit')],
     [], domeObservatory),
   entry('desert-adobe-house', 'BT-12', 'Desert Adobe House', '#d49a6a', '#3e848d',
     'Stepped terracotta adobe house with projecting cedar vigas, roof ladder, hinged door, and louvered turquoise shutter.',

@@ -42,7 +42,7 @@ export const workshopMachineryPack: readonly ProceduralAssetDef[] = [
       rig('PumpHandle', 'Pump handle', 'z', [-35, 10], 'Pumps the side hydraulic jack handle')],
     [], hydraulicShopPress),
   makeMachineryDef(metaAt(6), 'static',
-    [rig('PowerHammer', 'Power hammer', 'z', [-22, 18], 'Strikes the mechanical helve hammer onto the anvil')],
+    [rig('PowerHammer', 'Power hammer', 'z', [-22, 9], 'Strikes the mechanical helve hammer onto the anvil')],
     [det('TongRack', 'Forging tongs', 'Detachable side rack of blacksmith tongs')], anvilHammerStation),
   makeMachineryDef(metaAt(7), 'static',
     [rig('WheelHead', 'Wheel head', 'y', [0, 360], 'Spins the potter\'s wheelhead and clay vessel'),

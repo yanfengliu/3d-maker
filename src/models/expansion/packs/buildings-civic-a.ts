@@ -107,7 +107,7 @@ function municipalCourthouse(root: T.Group, p: Finish, detail: boolean): void {
   bBox(b, [0, 1.07, -0.22], [2.66, 1.42, 1.24], p.primary, p.hd);
   bBox(b, [0, 1.82, -0.22], [2.82, 0.12, 1.38], trim, p.hd);
   bBox(b, [0, 1.98, -0.22], [2.52, 0.24, 1.12], slate, p.hd);
-  for (const x of [-0.66, -0.22, 0.22, 0.66]) {
+  for (const x of [-0.74, -0.38, 0.38, 0.74]) {
     bBox(b, [x, 0.43, 0.66], [0.19, 0.1, 0.19], trim, p.hd);
     bCyl(b, [x, 1.08, 0.66], 0.068, 0.082, 1.22, p.primary, p.hd, 12);
     bCyl(b, [x, 1.7, 0.66], 0.095, 0.072, 0.07, trim, p.hd, 12);

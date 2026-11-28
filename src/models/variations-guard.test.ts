@@ -151,5 +151,35 @@ describe('model variation dataset registry and append-only enforcement', () => {
       [{ ref: 'main', lock: auditedRepairLock }],
     );
     expect(erasedAuditErrors.some(msg => msg.includes('Repair audit record'))).toBe(true);
+
+    // 7. Sequential audited bug-fix repairs across consecutive commits form a valid chain, while a gap fails.
+    const mutatedB2 = { ...mutatedB, hdHash: 'sha256:mutated-twice' };
+    const chainedRepairLock: VariationLockfile = {
+      version: 1,
+      entries: { [keyA]: sampleA, [keyB]: mutatedB2 },
+      repairs: [
+        ...auditedRepairLock.repairs,
+        {
+          key: keyB,
+          date: '2026-11-28',
+          reason: 'Fixed mid-motion collision clearance on cargo-lifter',
+          fromRecipeHash: mutatedB.recipeHash,
+          toRecipeHash: mutatedB2.recipeHash,
+          fromStandardHash: mutatedB.standardHash,
+          toStandardHash: mutatedB2.standardHash,
+          fromHdHash: mutatedB.hdHash,
+          toHdHash: mutatedB2.hdHash,
+        },
+      ],
+    };
+    expect(validateVariationLock(chainedRepairLock, [sampleA, mutatedB2], [{ ref: 'HEAD~1', lock: baseLock }])).toEqual([]);
+    const secondRepair = chainedRepairLock.repairs[1];
+    if (!secondRepair) throw new Error('Expected second repair record');
+    const brokenChainLock: VariationLockfile = {
+      ...chainedRepairLock,
+      repairs: [secondRepair],
+    };
+    const brokenChainErrors = validateVariationLock(brokenChainLock, [sampleA, mutatedB2], [{ ref: 'HEAD~1', lock: baseLock }]);
+    expect(brokenChainErrors.some(msg => msg.includes('without a matching audited repair record'))).toBe(true);
   });
 });

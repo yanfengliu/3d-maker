@@ -187,24 +187,41 @@ function sameHashes(a: VariationLockEntry, b: VariationLockEntry): boolean {
   return a.recipeHash === b.recipeHash && a.standardHash === b.standardHash && a.hdHash === b.hdHash;
 }
 
+function hashTupleKey(recipeHash: string, standardHash: string, hdHash: string): string {
+  return `${recipeHash}|${standardHash}|${hdHash}`;
+}
+
 function repairMatches(
   repairs: readonly VariationRepairRecord[],
   key: string,
   prev: VariationLockEntry,
   next: VariationLockEntry,
 ): boolean {
-  return repairs.some(
+  const target = hashTupleKey(next.recipeHash, next.standardHash, next.hdHash);
+  const start = hashTupleKey(prev.recipeHash, prev.standardHash, prev.hdHash);
+  const edges = repairs.filter(
     record =>
       record.key === key &&
-      record.fromRecipeHash === prev.recipeHash &&
-      record.toRecipeHash === next.recipeHash &&
-      record.fromStandardHash === prev.standardHash &&
-      record.toStandardHash === next.standardHash &&
-      record.fromHdHash === prev.hdHash &&
-      record.toHdHash === next.hdHash &&
       record.reason.trim().length >= 12 &&
       Number.isFinite(Date.parse(record.date)),
   );
+  const visited = new Set<string>([start]);
+  const queue: string[] = [start];
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    if (!cur) continue;
+    for (const record of edges) {
+      const from = hashTupleKey(record.fromRecipeHash, record.fromStandardHash, record.fromHdHash);
+      if (from !== cur) continue;
+      const to = hashTupleKey(record.toRecipeHash, record.toStandardHash, record.toHdHash);
+      if (to === target) return true;
+      if (!visited.has(to)) {
+        visited.add(to);
+        queue.push(to);
+      }
+    }
+  }
+  return false;
 }
 
 /**

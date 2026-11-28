@@ -34,7 +34,7 @@ function buildStarfighter(root: T.Group, p: Finish, detail: boolean) {
   }
   cyl(sf, p, [0, 0.64, -1.24], 0.16, 0.2, 0.38, p.dark, [Math.PI / 2, 0, 0], 12);
   dome(sf, p, [0, 0.64, -1.42], [0.14, 0.14, 0.08], glow, 8);
-  const canopy = group(sf, 'CockpitCanopy', [0, 0.82, 0.56]);
+  const canopy = group(sf, 'CockpitCanopy', [0, 0.84, 0.56]);
   dome(canopy, p, [0, 0.04, -0.34], [0.28, 0.22, 0.56], p.optic, 12);
   rbox(canopy, p, [0, 0.02, -0.34], [0.46, 0.07, 0.94], p.accent);
   if (detail) {
@@ -45,7 +45,7 @@ function buildStarfighter(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Launch check', 3.0, [
-      rotationTrack('CockpitCanopy', 'x', [0, 0.9, 2.1, 3.0], [0, -0.78, -0.78, 0]),
+      rotationTrack('CockpitCanopy', 'x', [0, 0.9, 2.1, 3.0], [0, 0.78, 0.78, 0]),
     ]),
   ];
 }
@@ -291,7 +291,7 @@ export const vehiclesScifiA: readonly SciFiSpec[] = [
     id: 'delta-wing-starfighter',
     physicsBody: 'dynamic',
     riggedParts: [
-      rp('CockpitCanopy', 'Cockpit canopy', 'rotate', 'x', [-55, 0], 'Hinges the forward starfighter glass canopy open'),
+      rp('CockpitCanopy', 'Cockpit canopy', 'rotate', 'x', [0, 55], 'Hinges the forward starfighter glass canopy open'),
     ],
     build: buildStarfighter,
   },

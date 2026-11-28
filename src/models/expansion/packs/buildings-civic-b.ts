@@ -90,9 +90,9 @@ function timberGrainSilo(root: T.Group, p: Finish, detail: boolean): void {
   root.animations = [
     new T.AnimationClip('Grain mill cycle', 4, [
       spinTrack('VentTurbine', 'y', 4, 1),
-      swingTrack('ChuteGate', 'x', 4, 56),
+      swingTrack('ChuteGate', 'x', 4, -56),
     ]),
-    new T.AnimationClip('Open chute gate', 3, [swingTrack('ChuteGate', 'x', 3, 58)]),
+    new T.AnimationClip('Open chute gate', 3, [swingTrack('ChuteGate', 'x', 3, -58)]),
   ];
 }
 
@@ -333,7 +333,7 @@ function victorianConservatory(root: T.Group, p: Finish, detail: boolean): void 
   }
   root.animations = [
     new T.AnimationClip('Ventilate conservatory', 3.4, [
-      swingTrack('CrownVent', 'x', 3.4, 40),
+      swingTrack('CrownVent', 'x', 3.4, -40),
       swingTrack('EntryDoor', 'y', 3.4, 78),
     ]),
     new T.AnimationClip('Open entry door', 3, [swingTrack('EntryDoor', 'y', 3, 82)]),
@@ -405,7 +405,7 @@ export const buildingsCivicB: readonly CivicBuildDef[] = [
     id: 'timber-grain-silo',
     riggedParts: [
       rot('VentTurbine', 'Vent turbine', 'y', [0, 360], 'Rotates the rooftop grain silo ventilator turbine'),
-      rot('ChuteGate', 'Chute gate', 'x', [0, 58], 'Swings the hopper discharge chute gate open'),
+      rot('ChuteGate', 'Chute gate', 'x', [-58, 0], 'Swings the hopper discharge chute gate open'),
     ],
     detachableParts: [],
     build: timberGrainSilo,
@@ -432,7 +432,7 @@ export const buildingsCivicB: readonly CivicBuildDef[] = [
     id: 'victorian-conservatory',
     riggedParts: [
       rot('EntryDoor', 'Entry door', 'y', [0, 82], 'Swings the arched botanical entry door open'),
-      rot('CrownVent', 'Crown vent', 'x', [0, 42], 'Tilts the octagonal lantern dome cap open'),
+      rot('CrownVent', 'Crown vent', 'x', [-42, 0], 'Tilts the octagonal lantern dome cap open'),
     ],
     detachableParts: [],
     build: victorianConservatory,

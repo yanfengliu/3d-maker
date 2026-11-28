@@ -139,12 +139,12 @@ function buildFunicularCar(root: T.Group, p: Finish, detail: boolean) {
   const door = group(fun, 'CabinDoor', doorBase);
   rbox(door, p, [0, 0, 0], [0.05, 0.92, 0.46], p.accent);
   rbox(door, p, [0.025, 0.2, 0], [0.025, 0.38, 0.32], p.optic);
-  const clamp = group(fun, 'CableClamp', [0, 2.08, 0.86]);
-  strut(clamp, [0, -0.16, 0], [0, 0.24, 0], 0.04, p.alloy, 8);
-  cyl(clamp, p, [0, 0.26, 0], 0.12, 0.12, 0.08, p.dark, [0, 0, Math.PI / 2], 12);
+  strut(fun, [0, 1.92, 0.86], [0, 2.34, 0.86], 0.04, p.alloy, 8);
+  const clamp = group(fun, 'CableClamp', [0, 2.34, 0.86]);
+  cyl(clamp, p, [0, 0, 0], 0.12, 0.12, 0.08, p.dark, [0, 0, Math.PI / 2], 12);
   if (detail) {
     for (const s of [-1, 1]) light(fun, [s * 0.4, 1.16, 1.34], [0.16, 0.12, 0.06], p);
-    if (p.hd) fastener(clamp, [0, 0.26, 0], p, 0.024).rotation.z = Math.PI / 2;
+    if (p.hd) fastener(clamp, [0, 0, 0], p, 0.024).rotation.z = Math.PI / 2;
   }
   root.animations = [
     new T.AnimationClip('Alpine climb', 3.0, [

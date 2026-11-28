@@ -130,8 +130,8 @@
       "label": "Default",
       "situation": "Terraced mountain incline rail coach with stepped panoramic bays, sliding boarding doors, and roof cable clamp.",
       "recipeHash": "sha256:799702572c9250de69329781c9e68487499d5496478ee29b6d3a279f38c101eb",
-      "standardHash": "sha256:63f786f8f85340edebe3999e7794b43fc7348c556e828906b41bd9b73313eff0",
-      "hdHash": "sha256:548fac5db6031099a8cd468d31682de7f4cc9969c36042abe68084c1067d82e7",
+      "standardHash": "sha256:68b3527997fbb23920c8b8081b1cfa995b33f9990fdfd8f9eb1c9775b2a6b822",
+      "hdHash": "sha256:4d2285fe6114d650fbdeed13b47d7f41a84917cb6e5f3800e86ed0da17914185",
       "clips": [
         "Alpine climb"
       ],
@@ -310,8 +310,8 @@
       "label": "Default",
       "situation": "Oak-stump anvil and mechanical helve-hammer station with pivoting striker arm and detachable forging tong rack.",
       "recipeHash": "sha256:db6b4ae6d91e4cf306f28508851e9761c6812dd3a6905d83c976989af525e520",
-      "standardHash": "sha256:d64faa0d6a36d53a54393262bfc1f433b844580fc75f9893a5c372bea61a6932",
-      "hdHash": "sha256:c15b7400f6218dc310afd32daa6f8173a0a20c90b41ffaa91aab7ae8a49c4687",
+      "standardHash": "sha256:11399914cc2c584cd6867ffdbcb493ea9b133920938f9bcad9acd88da768aa60",
+      "hdHash": "sha256:8f11f085381b813aed5e46b761c14780743f4f8733f9d07a3c90cad30a8c77ef",
       "clips": [
         "Strike anvil"
       ],
@@ -891,8 +891,8 @@
       "label": "Default",
       "situation": "Reinforced cash-in-transit armored truck with heavy bullbar, recessed view slits, and a hinged rear vault door.",
       "recipeHash": "sha256:4928f361bcb25d5cba06631359315b3a5f37776c43a799594d8ee6de97d4f2df",
-      "standardHash": "sha256:3174aa60b913e31fee00497fd87131e2db1fb742e23ed6bf89bb28d62763fa5b",
-      "hdHash": "sha256:c3fd13bc11880a711487c36696e6a2bcb00c96fffd33d77506a78ffeb9b91f46",
+      "standardHash": "sha256:d68f3e8f24d3a67cebd8617f558b4e986d7f0553746170b8d88682f27672e189",
+      "hdHash": "sha256:ab91daee43dd3625056f3c2b07071fe633bcb7bf2d61c616afa01e98c81ed6ac",
       "clips": [
         "Vault inspect"
       ],
@@ -1436,8 +1436,8 @@
       "label": "Default",
       "situation": "Domed K6 red telephone kiosk with multi-pane mullioned glazing, interior payphone console, and hinged entry door.",
       "recipeHash": "sha256:8c1360f9e43b8539ad1fe4e5aad5d422668cc769d366a400aaf755645bde80b5",
-      "standardHash": "sha256:948825cc8c5df04a8ef94548b187916882cfd90df490e6056dbf41fb9f993e2c",
-      "hdHash": "sha256:5681e48cd556a15479ad84c8dc7c423d860c39f4aad2260d8ba141b0615af380",
+      "standardHash": "sha256:940f9bc1e4fd91ffe119599ee1a2ce502959ff68e87c853d4b046ade259b746e",
+      "hdHash": "sha256:24a7edf3c86ae8f7b2a55a579b842c7838b9c10bdde06847cc85f11ad16c23fa",
       "clips": [
         "Open phone door"
       ],
@@ -3002,8 +3002,8 @@
       "label": "Default",
       "situation": "Swept delta interceptor on tripod landing struts with wingtip laser cannons and a hinged cockpit canopy.",
       "recipeHash": "sha256:9e7accc997f08565133ef62af9a2aca24089952a60949a02ffbb7fab2f7e7870",
-      "standardHash": "sha256:1bf091dd823ca35cca4006b013cdd0a93a444678b9d8510ebfde1e5831631bf9",
-      "hdHash": "sha256:4dfe9b01a7400296dc2b1964bc67d9a4319f2089faabb1644413c30489278b09",
+      "standardHash": "sha256:f16c06d85d14c3ff9f411c8f066fddeaf87905a4c6d11232f745859f3514b144",
+      "hdHash": "sha256:aca9a3617230afee4498ee2100c8a58a555c215ec8f252fedf9791f15a02caf4",
       "clips": [
         "Launch check"
       ],
@@ -3090,8 +3090,8 @@
       "label": "Default",
       "situation": "Armored desert listening bunker with a rotating roof phased-array radar and hinged blast hatch.",
       "recipeHash": "sha256:92c09145589e99d11b3fd6cad986d018fd0e981417529be11645d183a4f7a9b9",
-      "standardHash": "sha256:8cf7782a8d68a1efddbaf44fedb4541082779c9ff7ac906989b4f0c62b75aa84",
-      "hdHash": "sha256:521b7961b76d4547d968f5e86f82a02697c74bd002cfc8af700f64150aee1d2a",
+      "standardHash": "sha256:6c6531c15c74c6651200253190917a5db4558478a94caa19c771304cb0419859",
+      "hdHash": "sha256:e95463830787e9e46114de660dbffe54919ad97dde22bbb552c573a4ff50e7fd",
       "clips": [
         "Radar sweep",
         "Open blast hatch"
@@ -3235,8 +3235,8 @@
       "label": "Default",
       "situation": "Hilltop masonry observatory with buttressed drum, rotating slotted dome, and tilting refractor telescope.",
       "recipeHash": "sha256:470e9683445414158e8bb22a7b8d63b4370e79122a5cf6e8f5047e1287833f52",
-      "standardHash": "sha256:6fad8f4fea2dd7edcfc9a4d2b2573637d589a4db7caba5456c24856931bb9938",
-      "hdHash": "sha256:b701f5a954b6f4b72eb257318f2452a8a28ec934aa4c6747afdb5dc4db74238e",
+      "standardHash": "sha256:c0b6122007ce9d3e664835499f2006d719b8956c8248f346b9dfe5845392b78b",
+      "hdHash": "sha256:7b35e19ad006211cad84acf6831df64f67bd57b9f347d061e99e4bc5e6f0eefa",
       "clips": [
         "Stargaze sweep",
         "Aim telescope"
@@ -3429,8 +3429,8 @@
       "label": "Default",
       "situation": "Heavy grounded timber-and-iron gallows gibbet frame with a solid linked chain supporting a swinging barred iron dungeon cage.",
       "recipeHash": "sha256:6d8a7bd00c6e5b75e231200010f3e22ec7a59d2e655ebeea4c818ff4d2d74a21",
-      "standardHash": "sha256:9e7a54587edb82756bce2019c9d5c2dc762b0fa6bdb98dcd264947dd86d2e3ab",
-      "hdHash": "sha256:5ba0e696c5cdf8d65b76a02ae487596aa388e36238dc520d5c8c35cbc9c1b02e",
+      "standardHash": "sha256:460c9e72d72b52a53f594748656b1b2ca1dfbb8e0c6a23e0a0bc118f82271dbc",
+      "hdHash": "sha256:809016596662f1312589350ff3e3643323a2b0f63b77b3f818ae1c5d2576a15b",
       "clips": [
         "Sway gibbet cage"
       ],
@@ -3783,8 +3783,8 @@
       "label": "Default",
       "situation": "Utility farm tractor with heavy rear drive tires and a tilting front-end loader bucket.",
       "recipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
-      "standardHash": "sha256:d90cbf6642651376baad8b39f4ef786d0109ba1b7f689cafa481dc6a801ae9e3",
-      "hdHash": "sha256:d1bf1696e5c30df436012971617f77b6343b525d96767659aaad4fedb905e38b",
+      "standardHash": "sha256:be960da07fa3c31b78947e9bc9f2ac3c4c9dffd65c6d456420eb8fd6e6ac9976",
+      "hdHash": "sha256:bfedf132e5047b72f94e81d45b2f353762547855e365743b1c18268442953350",
       "clips": [
         "Field work",
         "Dump bucket"
@@ -3912,8 +3912,8 @@
       "label": "Default",
       "situation": "Cross-braced forestry fire lookout tower with catwalk, glazed cab, hinged floor trap hatch, and rotating spotter scope.",
       "recipeHash": "sha256:bad1bb385efb9c769f1768a91aeee7c585d986cf148ad9d6412db425d3a86d81",
-      "standardHash": "sha256:5adfef1bee88ff0bfe8245c58d18eafca285ed785d8d985e9089da8e34dd7e9e",
-      "hdHash": "sha256:3621a040b396021fb16da0b2e7ca427785137c01473709ee070517e233624ec6",
+      "standardHash": "sha256:3c856ceda73c9cf5faebef9408c23a4470f3f5a782d171c56cfdf0a371edb841",
+      "hdHash": "sha256:48da583d3ec2e0c0c01925b5d2e8701e65061f0fd443f33a1d59cfd4fc77f3ff",
       "clips": [
         "Horizon scan",
         "Open trap hatch"
@@ -4347,8 +4347,8 @@
       "label": "Default",
       "situation": "Industrial steam power generator with an exposed vertical turbine rotor and tilting exhaust louver.",
       "recipeHash": "sha256:edb4e892dbd1bf5a0f8da6b79442147e3cd73f5cc69d4cdbe455788bec86cee1",
-      "standardHash": "sha256:6e54c71c641a4d4cdc1bfcc095aa71a64cac68852dfb3512ed4fcf4dbc5e1efe",
-      "hdHash": "sha256:e5aa397f38284a102d2bd9ff95db9af2009811e2de0b3d852af3b0a35146342b",
+      "standardHash": "sha256:a30f68a613103c7d27de9038f209fa635e10bbd0385a4074ebb5d929164f1a00",
+      "hdHash": "sha256:2690299bd4fc69ed863fbf4288c7f98ea38cdbe460307aa963f0b8ff54e012fc",
       "clips": [
         "Spin turbine",
         "Vent steam"
@@ -4384,8 +4384,8 @@
       "label": "Default",
       "situation": "A monumental fluted coastal redwood with flared buttress roots, fern ring, high layered needle boughs, and a fallen log.",
       "recipeHash": "sha256:64cce8c19feb293bcddfe13eb6610cadd8f6e23a9cf39dcad169f952fcc86a7e",
-      "standardHash": "sha256:812f8f43cc678597689fe98b592d9e5054b2366b3be0c26207367bd88eca4cb9",
-      "hdHash": "sha256:d93ae54ae941101cf81228d8b9cf7613769e796cca0a2057fccc87dfbdc01443",
+      "standardHash": "sha256:ff93df09400e6987895203fe4ef870fd73a8edd10190f8aecd8a69fb464bd51c",
+      "hdHash": "sha256:97fd0b5f4c1fc8e8ec40bbd742d822b6d7486557407261e21f48b5eddd0a39dd",
       "clips": [
         "Coastal wind"
       ],
@@ -4419,8 +4419,8 @@
       "label": "Default",
       "situation": "Bulbous-mantled octopus gripping seafloor rocks with eight curling tentacles and articulated sweeping front arms.",
       "recipeHash": "sha256:af65f17e72e80aae3c984ebbed8fdfeb9845a90bb4eaf9707efce73d12d69730",
-      "standardHash": "sha256:129cf010ddae62b5c7ef35d970eb3492648c8f7b9adbc01cf07747cc4920b87a",
-      "hdHash": "sha256:1e7312bce7011719987a20b0f97997074ce5f6edb8b88e4cebeebbfd6f62feff",
+      "standardHash": "sha256:ea67da6656120edc321fc50d500bc5c231a6dd2f3157b50b0ce32b218ee17631",
+      "hdHash": "sha256:62ec52a6f40bcda386b59f8305a29f256eaf24a96f321213463202b9a6b79ca6",
       "clips": [
         "Tentacle wave"
       ],
@@ -4581,8 +4581,8 @@
       "label": "Default",
       "situation": "Tall mahogany longcase clock with a swinging brass pendulum and opening glass cabinet door.",
       "recipeHash": "sha256:fa669828e4da7435e36ca922a95f0b5a4ca028daddedd466151ae64bec9861f6",
-      "standardHash": "sha256:0a7c5db1f40deb63f551932ac8c95bb4e9df50a508f947d1fc09c913360cba8b",
-      "hdHash": "sha256:150135e6be30d81b5ba6bd1205973ba65902381186377e4cc78cf744833027f5",
+      "standardHash": "sha256:4f0fd29ce189b889c56194b245ae75942e4208459319b154e0a70d10d4c1971c",
+      "hdHash": "sha256:c1277504e0d2dc8161f05573f7b1a5e5762ba541038abb2148facab1b9f0caef",
       "clips": [
         "Tick pendulum",
         "Open door"
@@ -4635,8 +4635,8 @@
       "label": "Default",
       "situation": "Tall gothic arched oak bookcase packed with varied leather tomes, bone skull, and scrolls with a hinged secret book compartment door.",
       "recipeHash": "sha256:53306ffb7852d9c8102880602f28a55cc8a0a0d1175da2ce196a769abb3105db",
-      "standardHash": "sha256:935761a74b9f4d23acc7c05fcc79ff7999c930db9ae533f86e88b5b202946572",
-      "hdHash": "sha256:8a3e2e98e9f9dd1ed6fb8c52ed4471c1cf3a1bda48a6fe81fdfe4b3211ce69e1",
+      "standardHash": "sha256:4e002a7d89a3104c896d6fc1c66253cd745a2bb3c436db156bd3e27f39a8e631",
+      "hdHash": "sha256:73168cc7edc6c3fdba6831f5215bee6de0518f35e60a041f2f510fc38f469b72",
       "clips": [
         "Open secret books"
       ],
@@ -4928,8 +4928,8 @@
       "label": "Default",
       "situation": "Heavy armored tripod base and vertical field-coil mast topped by a tilting, spinning hexagonal phased-array energy projector.",
       "recipeHash": "sha256:81d3f0335f6161e48ceaa360cb05f18ca9cdde376493799aa919c81ad01d473c",
-      "standardHash": "sha256:3c451c658a53ab54c5c8f979073e098fd654949bdc10d8702639a43e06ad005d",
-      "hdHash": "sha256:7ab96a336049494a2488f675eaf34de488b88fe46b492727362f1c5bd5034039",
+      "standardHash": "sha256:15953546dc07e52cd14e002c2fd097272819e3da7c9988ee70480cedf7be748c",
+      "hdHash": "sha256:2802271e817910691edee83d215664a8f733fa82cc51dbed64132270e196b1c0",
       "clips": [
         "Project shield array"
       ],
@@ -5659,8 +5659,8 @@
       "label": "Default",
       "situation": "Heavy industrial regolith ore-processing rig with spherical storage silos, inclined hopper conveyor, spinning crusher drum, and tilting ore chute.",
       "recipeHash": "sha256:067203fca8a24f6d1d1d103604eaabc583fa264762800e12cb4d5bded113cae2",
-      "standardHash": "sha256:a7d9e5a3749c96133cfffba3052c6d1bdae96874654824ea08fba2336836ccaf",
-      "hdHash": "sha256:bced7eab01aa28544105f56c32cd5ca0229c612b23cf1d93d80ae869b1138e3a",
+      "standardHash": "sha256:3a533f0ff79915ad5afb2b44eb1918d05d17155c41f60c26842770109604166e",
+      "hdHash": "sha256:c1bdbfec0de74a90942b429262013d35bc7b9077a3c4e4c33ab5db2a256cd72e",
       "clips": [
         "Refine regolith"
       ],
@@ -5896,8 +5896,8 @@
       "label": "Default",
       "situation": "Cantilevered biometric examination bed with a curved diagnostic gantry arch sliding along floor rails and an articulated holo-monitor arm.",
       "recipeHash": "sha256:b8438d1edae06d47a984ae7cfa6a9979985f495b456f3fe27b550a908eb41caa",
-      "standardHash": "sha256:ad89cfd1ad2f99cb76d8f91134332cea8bddcc009ae0cdf7f3e43b29392ab75a",
-      "hdHash": "sha256:6391a7d6c86bee950247bb4ad951fadfb7d0fa6ff79fd0701cf6ec2d941e46d0",
+      "standardHash": "sha256:b73d8ae97b93ad09085942c6a4f65d1b38badde2d498790f2e38d15a8c8916dd",
+      "hdHash": "sha256:e6e2e5752c4f40bab1edc44a9b9da313cc01f210b17bbc9b683d5fe359bbd536",
       "clips": [
         "Run diagnostic scan"
       ],
@@ -6077,8 +6077,8 @@
       "label": "Default",
       "situation": "Multi-deck riverboat with twin crowned smokestacks, ornate pilothouse, and a spinning stern paddlewheel.",
       "recipeHash": "sha256:3561e592acfdc369245c1ae4482c41c6813404bdee7a4521d734a04bc930dff2",
-      "standardHash": "sha256:b9b5d0165f71a6e08ed5a8e1b985ee59c4bc6fbc69a07388e733beed8335c73c",
-      "hdHash": "sha256:c4aeb66e4e8fa8d91ca55a0b1dd37e1b498c56b4c7e41bc563820bf4fb7e14bf",
+      "standardHash": "sha256:4c20907fa0230e6bb676899d6e2d0785b980c06057220f9fae527ea489d549dc",
+      "hdHash": "sha256:fd71f9f341ea41146842c968d7da8e189b2f60c14cb85ac00d9b18db93932d7d",
       "clips": [
         "River cruise"
       ],
@@ -6293,8 +6293,8 @@
       "label": "Default",
       "situation": "Superconducting hospital MRI gantry scanner with toroidal tunnel bore, spinning bore collar, and sliding patient table.",
       "recipeHash": "sha256:fff78742b484d4993e8e54be2d51d49925271ee415afd82bb2f6d6012a76ac05",
-      "standardHash": "sha256:eaca19cb5da36bd3f50b3c2014f79b0c4f1620cc0aa0c04c8389dffa00e29b8e",
-      "hdHash": "sha256:c0e6f113c29446963e3a95f4c5f7b13638af04b3f0b124c30ad8bbf9749b7e76",
+      "standardHash": "sha256:22da2ebe8f1dd5cfadc403527d4f65327344bd63830b9385b31cdeee8a6346dd",
+      "hdHash": "sha256:b0b5693ec511ef8dc018963823ab412d1be2dcf35f071762cc81c2c1e8309a2c",
       "clips": [
         "Scan cycle"
       ],
@@ -6310,8 +6310,8 @@
       "label": "Default",
       "situation": "Neoclassical limestone courthouse with grand entrance steps, four fluted portico columns, triangular pediment, clock cupola, and rotating scale vane.",
       "recipeHash": "sha256:44e7601027770f5738fcfeda64be3760a09735f5b8543b551f9130a60eff4e7e",
-      "standardHash": "sha256:23772b5e1e4df5118e5c2c12fd1f08f09bec700735bb4c4956f471e05a6c95a8",
-      "hdHash": "sha256:37d14f0ed593c6a0d35259babd7597a5ce3a0f43c1aee0d191bb47ad10a3cb33",
+      "standardHash": "sha256:ab9a402ba6b6ea75fe48915bdca046e4034c5ca8d8d96e02d8a596bba54c07ca",
+      "hdHash": "sha256:c57dcdecf416702a420b26d58a619ed4ba554d323e96fc9d00ef7a149de7b9df",
       "clips": [
         "Session and vane",
         "Open court door"
@@ -6365,8 +6365,8 @@
       "label": "Default",
       "situation": "Stepped obsidian dais with high arched rib-and-horn backrest, skull armrests, hinged secret seat chest, and spinning crowned orb finial.",
       "recipeHash": "sha256:308d5b92141858d5d3b5c24dbd27bde865a3b222374af66854f45ec927fd8330",
-      "standardHash": "sha256:c3b9c44b51888d6b31037d669a4e82325ba19195d13a56f7af3f2bd0a469632e",
-      "hdHash": "sha256:dfc77b40e4b7ae74084daa74e12712d5df2b087068eb438ddcd732a34a344922",
+      "standardHash": "sha256:3d552dd90c4badc0e8200a163c187be5bbeb2ca68bc0d2f76bc60dd88e9865ab",
+      "hdHash": "sha256:806b24c0cf60a1e61b9ef181c316311c2552315ca01e7f43cc82eb970d736bc7",
       "clips": [
         "Spin throne orb",
         "Open seat chest"
@@ -6439,8 +6439,8 @@
       "label": "Default",
       "situation": "Swivel pedestal captain interface seat with armrest touchpads and an articulated overhead neural-visor helmet arm lowering into position.",
       "recipeHash": "sha256:d0007dfb5ece31cecd3aa45d469bba88ea0b27ec4676f757dbdf64e26c28a90a",
-      "standardHash": "sha256:9dadf6970b13a7f2349485b0918bbcfacf1da5c21cea70cf799f9a37381121b8",
-      "hdHash": "sha256:8c8c58df42609139eccf88707fd1569b3cc79f8db74b61877546193ea5ac94cb",
+      "standardHash": "sha256:8d836119ba38fd0b47f39885a449826b89ac6fb08f3a947aaa3cc14c0d53a515",
+      "hdHash": "sha256:38b60ac0d07ed21367169f214d981157bf1755a36152a05b0f24ff1ee80fa331",
       "clips": [
         "Engage neural link"
       ],
@@ -6712,8 +6712,8 @@
       "label": "Default",
       "situation": "Armored sloped bunker ring carrying a rotating turret housing, elevating twin heavy railgun barrels, and detachable ordnance pod.",
       "recipeHash": "sha256:6389243822ca702eca8a925449da352a877a4dcfba03fc74ab24ead581796081",
-      "standardHash": "sha256:eb48a60309612b98fbb7118bca6140ddadd80a9cfe7bcfa4987665acd96e4bd1",
-      "hdHash": "sha256:d32c8cced92b78035e48daf3923ab6b74e38de040f6d5b2a00b06a84d0ad8edd",
+      "standardHash": "sha256:cda34d64fdfd0b02f541cd38560f2a9100e5c85f34c142e82335dfb0473c500e",
+      "hdHash": "sha256:34c0757cb1d9365a5ee968610ca63ab3cbcfd09ac76ddbb2400e78e50f97a4b1",
       "clips": [
         "Track orbital target"
       ],
@@ -7077,8 +7077,8 @@
       "label": "Default",
       "situation": "Sculpted cast-metal planetary stand mixer with latched stainless bowl, tilting motor head, and spinning wire whisk.",
       "recipeHash": "sha256:c8b422b35435cead60557783c35c26873bcec806ba040275e28c005623ec202b",
-      "standardHash": "sha256:5e0519c796abbaae80e831d6b8dc1ecce750def1da47da3e4fd05f6a8a768d20",
-      "hdHash": "sha256:bd4d9d8930b224e8661ba01872769a52c1eebdb2817c8331be29f986976e072f",
+      "standardHash": "sha256:9bb34b8c00261c7006e3f1b75673e637d35a549e78767c9f32fc333c9fde6274",
+      "hdHash": "sha256:acea0cacc78a159b7eb6873ef0cdfdea511a37571da68b541d92a19bf70cd180",
       "clips": [
         "Whip mix",
         "Tilt head"
@@ -7222,8 +7222,8 @@
       "label": "Default",
       "situation": "Wide-brimmed arcane sorcerer hat resting on a turned wooden block stand with swaying crooked spire tip and detachable front buckle.",
       "recipeHash": "sha256:3f6d90fa6ab27014c6667610dce150f42e52a3759a2e6de53a7cf2e06d12ce58",
-      "standardHash": "sha256:40e544c71850d31ecee0de852919f477b55ccec6ec550748c3629a6a26d357ea",
-      "hdHash": "sha256:b8ea3a262af3e4b4c9213e3691d18987a7c2bda5c35078f8089993eb9e6c0d24",
+      "standardHash": "sha256:ebc83f92487dc6d502cad227738cd874afb2311a11b9dca758bca4b48192b9b4",
+      "hdHash": "sha256:7b068845a67d13fe42947c810db11a5f17686c7ac29345114430fc97fd121738",
       "clips": [
         "Sway hat spire"
       ],
@@ -7546,8 +7546,8 @@
       "label": "Default",
       "situation": "Counterweighted railway crossing barrier with a lifting striped boom arm and detachable flasher lamps.",
       "recipeHash": "sha256:28779ac80d1e7fac40fe010b6803256b087604818e6ce5fae860ef71c2462bb0",
-      "standardHash": "sha256:a32829261a2870445029b8a71559cf1fda1e06345a7d8188fc0991269f9fb511",
-      "hdHash": "sha256:ee05a9f2b576b44a51f902dc2be9bf9c3f2e8530737a40f080f07d071f7e99a2",
+      "standardHash": "sha256:c314ce8d1e380b7fe3461db69ee65aee1bcf664ca194c9ee7a78db4ded1a3644",
+      "hdHash": "sha256:815b27e8a131b9c79912fdfdbcc8dcaa2ec7da850138998dc82c08721ca4ba07",
       "clips": [
         "Raise barrier"
       ],
@@ -7831,8 +7831,8 @@
       "label": "Default",
       "situation": "Classic upright CRT arcade machine with a tilting ball-top joystick and hinged coin service door.",
       "recipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
-      "standardHash": "sha256:07b749407eca69449474c125e727bf0cf24fdfe9f6e5cbd6bb4ee0cf20ae4c25",
-      "hdHash": "sha256:c95d9e1678b239a70a1707667d1fcdbf4b0e3806874fea0a5ecc2b5bd1241ac2",
+      "standardHash": "sha256:9bec22fe11984d92a927c57d330e5c9a4775fce795bdf8f7aa63e05c7d7b90e3",
+      "hdHash": "sha256:9e2189ff88c5feb60dbff8f28ef576bfd19ae02ebfa423b0f8311d69d2fe852d",
       "clips": [
         "Play joystick",
         "Open coin door"
@@ -7936,8 +7936,8 @@
       "label": "Default",
       "situation": "Twin-pedestal study desk with pigeonhole gallery, pivoting tambour rolltop hood, and sliding center drawer.",
       "recipeHash": "sha256:0f2c97a6edea78f3b3b7594397674ccd86848d178890cb90770b2495b0fde94e",
-      "standardHash": "sha256:4b4ab36183cbf9acb95f0dee50afc01fcba180bf4208adf6a58ac59636403035",
-      "hdHash": "sha256:8403524e3693290c4ed154a7d44295bc8f835fa9f842978aabd1011188e0695f",
+      "standardHash": "sha256:3f374c7bd70f6cad064c85820e385c9781b550d93995feb09aab73500bdb3737",
+      "hdHash": "sha256:b97a45a98286be8ee55716ea1b123b057bc95d5651e5784a9c65c8e08e6b2820",
       "clips": [
         "Roll hood",
         "Open drawer"
@@ -9371,8 +9371,8 @@
       "label": "Default",
       "situation": "A mossy stone hillside patch of staggered segmented bamboo culms, feathery leaf clusters, and a garden boulder.",
       "recipeHash": "sha256:0d4c54b944b87f16628786941f553404846e36f5309e525f8fb1b9fc340182b3",
-      "standardHash": "sha256:5415af70aa6c716f40e0c61a6b63ab0f81b831845d8d499d1c345fde961b04b0",
-      "hdHash": "sha256:de7838e46bb17378370b9d268887ffb79858f89d50fc46e9b3b058ce4dba2e45",
+      "standardHash": "sha256:7e3a5028e3d28beeab2ddfe195559dd2ec8605bfed9dbf4b267bc0ccad8ba146",
+      "hdHash": "sha256:823004f1adfd5b017d003f9334cb58f34baa74f3849d6bda8d355b7dc6d30773",
       "clips": [
         "Bamboo rustle"
       ],
@@ -9771,8 +9771,8 @@
       "label": "Default",
       "situation": "Tall iron-banded timber-stave cylindrical grain silo with conical headhouse roof, angled auger chute, side hopper shed, rotating turbine, and chute gate.",
       "recipeHash": "sha256:fff35acfad7c78cff7b1dfc344208d5ade95b942807de31aa98c4b584e483415",
-      "standardHash": "sha256:34e583075cec583fadc07d11a337eec427abae43180725b9a30cc388a2e5ecb3",
-      "hdHash": "sha256:7269956ae686703066f7b6ec6c5e5dd84c119e7493adeadc52d0a64bdff81a4a",
+      "standardHash": "sha256:a545d4ae41828fd519f866db43ce59060f7d7ca1460f73e6be8e9b7b1b8a8b5d",
+      "hdHash": "sha256:87d6692407022e0163830841b356c3d01158638a88ba4232d70cb51b6d57de92",
       "clips": [
         "Grain mill cycle",
         "Open chute gate"
@@ -9807,8 +9807,8 @@
       "label": "Default",
       "situation": "Iron-banded dungeon chest with a snapping upper jaw lined with conical fangs, curling crimson tongue, and peering monster eyes.",
       "recipeHash": "sha256:1a3cbc7522cd8a4df08b4ecda43372a65b1cfeeeab72e0acc613b5743b9086c0",
-      "standardHash": "sha256:ce53043f591394773aa60c6e5b84cae93918013fb4df7b5431e4cbaef17e0f05",
-      "hdHash": "sha256:a08e1b2e8585db0fcb72b87c1d2626e539f310801806a0bdb515192343440e8f",
+      "standardHash": "sha256:80e52c078d33fa69ba5ccdac74ee24f4c3548220de579c507ba1aea4b3fa086d",
+      "hdHash": "sha256:455cb2060ab03f5c56b1bd9a866b3aa423a73aa918d0ff8a79b260560800b830",
       "clips": [
         "Snap mimic jaw"
       ],
@@ -9972,8 +9972,8 @@
       "label": "Default",
       "situation": "Deep-tufted rolled-arm leather Chesterfield sofa with pop-out reclining footrest and detachable accent cushions.",
       "recipeHash": "sha256:fec6bcf16c2b004d1c3b0776da81da7a3dc9812dcca94509f5eacb73cc4c4373",
-      "standardHash": "sha256:e486a033fa7fc48185453145aeb8baac1087bfbd434b79b7426741daec59118d",
-      "hdHash": "sha256:42ed342e495c65da2011f93f2be2d785e6f6e8b2c05212f8e83fc415780323f0",
+      "standardHash": "sha256:acd3934b8f2834ed7b849cba4e1210bdc425c34dc827d83a66a047fbcd731e78",
+      "hdHash": "sha256:3fc08a63b68b9d43cf38a2e1ea8aa0c01413f672c665f9c1467aa2f15e8f718d",
       "clips": [
         "Extend footrest"
       ],
@@ -10294,8 +10294,8 @@
       "label": "Default",
       "situation": "High-voltage physics Van de Graaff dome generator with clear belt column, spinning roller, and pivoting discharge wand.",
       "recipeHash": "sha256:56d03b424706ed6a286d09bbe6c1a1cef116385cccbd2c43730b01f85b0f9556",
-      "standardHash": "sha256:bffbd091272b1d6645d8eb3cb97f8f0842d9a30d906b937afe0fdd01ef484a05",
-      "hdHash": "sha256:9b06d51d31e1ea029a0a76e33edd1750816cb760b898cccbb37bde13a1f0c3f7",
+      "standardHash": "sha256:f3fb926411d63190dd5020d2c8134ce62b4b93740ea6f290d6e6abc22528ad50",
+      "hdHash": "sha256:d7c961294d5b062f1208a9e1b5f7540d13eabe19751cc4db3bedc4be068462b1",
       "clips": [
         "Charge dome"
       ],
@@ -10401,8 +10401,8 @@
       "label": "Default",
       "situation": "Ornate octagonal iron-and-glass botanical rotunda with ribbed dome, twin glazed wings, iron roof cresting, hinged entry door, and tilting crown vent.",
       "recipeHash": "sha256:573e7b3cbe1f17f7727027fdbc180637cf82978020790d9879455ae3622e6f91",
-      "standardHash": "sha256:8be435f00a2d6264853bee0b816922d80c86c3d052c260077f4911cb094e6f43",
-      "hdHash": "sha256:c8fc9f9bcdf7f1f4b44a0993fac3201101ffb01c104820c13d3a713432da2845",
+      "standardHash": "sha256:65975eafeba5da31c83905e4c4e036e48d14f9d0bd0c224c006fb6ecc6fada89",
+      "hdHash": "sha256:cf163c262787a03a8b4c0f9f7e652ee2c475db031c6c08bf05963ea6bad340f5",
       "clips": [
         "Ventilate conservatory",
         "Open entry door"
@@ -10599,8 +10599,8 @@
       "label": "Default",
       "situation": "1930s sweeping-fender roadster with chrome grille shell, side exhaust pipes, folding rumble deck, and spoked wheels.",
       "recipeHash": "sha256:50b119c8d49269280737c21da649d95b7e84aaf2388cea0ed00b1a80d49a5caf",
-      "standardHash": "sha256:c8c1c19b80b35e574d932195c3fca339b61d9c005ba8c902b72a7a19d65208ae",
-      "hdHash": "sha256:1d232a2297890792b4b8226fe2617ab0c2ef337dc3a6456f5aa3b5e186bf048a",
+      "standardHash": "sha256:a860e80fb6eaa70165d93b8c4c348eaf349c1da33645ff7ea573b30c03a61221",
+      "hdHash": "sha256:038d4f98159d2cb27e4414471809746089711ee7eb74c2af7ba0d30cf3b8d296",
       "clips": [
         "Grand tour"
       ],
@@ -10925,8 +10925,8 @@
       "label": "Default",
       "situation": "Farmhouse oak lever cheese press with perforated vat mold, turning leadscrew, and weighted fulcrum beam.",
       "recipeHash": "sha256:0b2d831054291e4e6b377917bd00f2cdaa28dfa35219f645054419d1cea026ae",
-      "standardHash": "sha256:e52e61c444aeb5d15112e1b3bb7bb94bd9125047cfdf4d9a865ed51846e7c504",
-      "hdHash": "sha256:a6f909cd5a85083ec50fc82d40c28413f3aa7f2914c6f925c3570f6235c80e0b",
+      "standardHash": "sha256:6e48d0642f8b0df070c147d55d31f005d5cc17cd247eb57f8a71f9f409faa97b",
+      "hdHash": "sha256:527dd959cd3708174fd1b6c1cc27c4da3bbde45a2f19109b39e68b2e04eebfc0",
       "clips": [
         "Press curd"
       ],
@@ -11030,8 +11030,8 @@
       "label": "Default",
       "situation": "Classic long-nose yellow school bus with ribbed roof, swing-out safety stop arm, and rolling axles.",
       "recipeHash": "sha256:ac999147ec696753dfe033ed1d7e378151948c78fa45ae4b579f5314694dc90d",
-      "standardHash": "sha256:7b6272f7b7923e35bc4d282fd2935a060e4247f9ab084e37b3d1a40c1e002efb",
-      "hdHash": "sha256:013b78acd69241ecf997089dbf4580027b06e682dfa0d057c26f99d211c2c487",
+      "standardHash": "sha256:d132919aba50a7f0722f84a4d1ff701a7707dfb8b5844e0832ef5ac02bc32217",
+      "hdHash": "sha256:a9e064072251cb42bc4e8eaa7ad35d389e9887ca60440f2ac7c70a1f5a397403",
       "clips": [
         "School stop"
       ],
@@ -11989,6 +11989,424 @@
       "toStandardHash": "sha256:846ba016e3769f7ffdfe5a452a8808e2f6317270062dcf63e9a1895485911b23",
       "fromHdHash": "sha256:0c557db331625b42d722e3a8b9eab1054e8565fff940b1507240fb5c4073794c",
       "toHdHash": "sha256:8292f78a26216c45da797cdaf9ff35391cfae7b7f94fea63a21544a4ab3194ee"
+    },
+    {
+      "key": "fire-watchtower@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:bad1bb385efb9c769f1768a91aeee7c585d986cf148ad9d6412db425d3a86d81",
+      "toRecipeHash": "sha256:bad1bb385efb9c769f1768a91aeee7c585d986cf148ad9d6412db425d3a86d81",
+      "fromStandardHash": "sha256:5adfef1bee88ff0bfe8245c58d18eafca285ed785d8d985e9089da8e34dd7e9e",
+      "toStandardHash": "sha256:3c856ceda73c9cf5faebef9408c23a4470f3f5a782d171c56cfdf0a371edb841",
+      "fromHdHash": "sha256:3621a040b396021fb16da0b2e7ca427785137c01473709ee070517e233624ec6",
+      "toHdHash": "sha256:48da583d3ec2e0c0c01925b5d2e8701e65061f0fd443f33a1d59cfd4fc77f3ff"
+    },
+    {
+      "key": "dome-observatory@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:470e9683445414158e8bb22a7b8d63b4370e79122a5cf6e8f5047e1287833f52",
+      "toRecipeHash": "sha256:470e9683445414158e8bb22a7b8d63b4370e79122a5cf6e8f5047e1287833f52",
+      "fromStandardHash": "sha256:6fad8f4fea2dd7edcfc9a4d2b2573637d589a4db7caba5456c24856931bb9938",
+      "toStandardHash": "sha256:c0b6122007ce9d3e664835499f2006d719b8956c8248f346b9dfe5845392b78b",
+      "fromHdHash": "sha256:b701f5a954b6f4b72eb257318f2452a8a28ec934aa4c6747afdb5dc4db74238e",
+      "toHdHash": "sha256:7b35e19ad006211cad84acf6831df64f67bd57b9f347d061e99e4bc5e6f0eefa"
+    },
+    {
+      "key": "geothermal-turbine@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:edb4e892dbd1bf5a0f8da6b79442147e3cd73f5cc69d4cdbe455788bec86cee1",
+      "toRecipeHash": "sha256:edb4e892dbd1bf5a0f8da6b79442147e3cd73f5cc69d4cdbe455788bec86cee1",
+      "fromStandardHash": "sha256:6e54c71c641a4d4cdc1bfcc095aa71a64cac68852dfb3512ed4fcf4dbc5e1efe",
+      "toStandardHash": "sha256:a30f68a613103c7d27de9038f209fa635e10bbd0385a4074ebb5d929164f1a00",
+      "fromHdHash": "sha256:e5aa397f38284a102d2bd9ff95db9af2009811e2de0b3d852af3b0a35146342b",
+      "toHdHash": "sha256:2690299bd4fc69ed863fbf4288c7f98ea38cdbe460307aa963f0b8ff54e012fc"
+    },
+    {
+      "key": "desert-radar-bunker@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:92c09145589e99d11b3fd6cad986d018fd0e981417529be11645d183a4f7a9b9",
+      "toRecipeHash": "sha256:92c09145589e99d11b3fd6cad986d018fd0e981417529be11645d183a4f7a9b9",
+      "fromStandardHash": "sha256:8cf7782a8d68a1efddbaf44fedb4541082779c9ff7ac906989b4f0c62b75aa84",
+      "toStandardHash": "sha256:6c6531c15c74c6651200253190917a5db4558478a94caa19c771304cb0419859",
+      "fromHdHash": "sha256:521b7961b76d4547d968f5e86f82a02697c74bd002cfc8af700f64150aee1d2a",
+      "toHdHash": "sha256:e95463830787e9e46114de660dbffe54919ad97dde22bbb552c573a4ff50e7fd"
+    },
+    {
+      "key": "farm-tractor@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
+      "toRecipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
+      "fromStandardHash": "sha256:d90cbf6642651376baad8b39f4ef786d0109ba1b7f689cafa481dc6a801ae9e3",
+      "toStandardHash": "sha256:be960da07fa3c31b78947e9bc9f2ac3c4c9dffd65c6d456420eb8fd6e6ac9976",
+      "fromHdHash": "sha256:d1bf1696e5c30df436012971617f77b6343b525d96767659aaad4fedb905e38b",
+      "toHdHash": "sha256:bfedf132e5047b72f94e81d45b2f353762547855e365743b1c18268442953350"
+    },
+    {
+      "key": "grandfather-clock@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:fa669828e4da7435e36ca922a95f0b5a4ca028daddedd466151ae64bec9861f6",
+      "toRecipeHash": "sha256:fa669828e4da7435e36ca922a95f0b5a4ca028daddedd466151ae64bec9861f6",
+      "fromStandardHash": "sha256:0a7c5db1f40deb63f551932ac8c95bb4e9df50a508f947d1fc09c913360cba8b",
+      "toStandardHash": "sha256:4f0fd29ce189b889c56194b245ae75942e4208459319b154e0a70d10d4c1971c",
+      "fromHdHash": "sha256:150135e6be30d81b5ba6bd1205973ba65902381186377e4cc78cf744833027f5",
+      "toHdHash": "sha256:c1277504e0d2dc8161f05573f7b1a5e5762ba541038abb2148facab1b9f0caef"
+    },
+    {
+      "key": "retro-arcade-cabinet@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
+      "toRecipeHash": "sha256:d8c62fc2a3e2ca3e8c3619041eb0959b4185b09a9b8482f3924d58d3382bb560",
+      "fromStandardHash": "sha256:07b749407eca69449474c125e727bf0cf24fdfe9f6e5cbd6bb4ee0cf20ae4c25",
+      "toStandardHash": "sha256:9bec22fe11984d92a927c57d330e5c9a4775fce795bdf8f7aa63e05c7d7b90e3",
+      "fromHdHash": "sha256:c95d9e1678b239a70a1707667d1fcdbf4b0e3806874fea0a5ecc2b5bd1241ac2",
+      "toHdHash": "sha256:9e2189ff88c5feb60dbff8f28ef576bfd19ae02ebfa423b0f8311d69d2fe852d"
+    },
+    {
+      "key": "railway-boom-gate@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:28779ac80d1e7fac40fe010b6803256b087604818e6ce5fae860ef71c2462bb0",
+      "toRecipeHash": "sha256:28779ac80d1e7fac40fe010b6803256b087604818e6ce5fae860ef71c2462bb0",
+      "fromStandardHash": "sha256:a32829261a2870445029b8a71559cf1fda1e06345a7d8188fc0991269f9fb511",
+      "toStandardHash": "sha256:c314ce8d1e380b7fe3461db69ee65aee1bcf664ca194c9ee7a78db4ded1a3644",
+      "fromHdHash": "sha256:ee05a9f2b576b44a51f902dc2be9bf9c3f2e8530737a40f080f07d071f7e99a2",
+      "toHdHash": "sha256:815b27e8a131b9c79912fdfdbcc8dcaa2ec7da850138998dc82c08721ca4ba07"
+    },
+    {
+      "key": "rolltop-desk@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:0f2c97a6edea78f3b3b7594397674ccd86848d178890cb90770b2495b0fde94e",
+      "toRecipeHash": "sha256:0f2c97a6edea78f3b3b7594397674ccd86848d178890cb90770b2495b0fde94e",
+      "fromStandardHash": "sha256:4b4ab36183cbf9acb95f0dee50afc01fcba180bf4208adf6a58ac59636403035",
+      "toStandardHash": "sha256:3f374c7bd70f6cad064c85820e385c9781b550d93995feb09aab73500bdb3737",
+      "fromHdHash": "sha256:8403524e3693290c4ed154a7d44295bc8f835fa9f842978aabd1011188e0695f",
+      "toHdHash": "sha256:b97a45a98286be8ee55716ea1b123b057bc95d5651e5784a9c65c8e08e6b2820"
+    },
+    {
+      "key": "tufted-leather-sofa@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:fec6bcf16c2b004d1c3b0776da81da7a3dc9812dcca94509f5eacb73cc4c4373",
+      "toRecipeHash": "sha256:fec6bcf16c2b004d1c3b0776da81da7a3dc9812dcca94509f5eacb73cc4c4373",
+      "fromStandardHash": "sha256:e486a033fa7fc48185453145aeb8baac1087bfbd434b79b7426741daec59118d",
+      "toStandardHash": "sha256:acd3934b8f2834ed7b849cba4e1210bdc425c34dc827d83a66a047fbcd731e78",
+      "fromHdHash": "sha256:42ed342e495c65da2011f93f2be2d785e6f6e8b2c05212f8e83fc415780323f0",
+      "toHdHash": "sha256:3fc08a63b68b9d43cf38a2e1ea8aa0c01413f672c665f9c1467aa2f15e8f718d"
+    },
+    {
+      "key": "planetary-stand-mixer@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:c8b422b35435cead60557783c35c26873bcec806ba040275e28c005623ec202b",
+      "toRecipeHash": "sha256:c8b422b35435cead60557783c35c26873bcec806ba040275e28c005623ec202b",
+      "fromStandardHash": "sha256:5e0519c796abbaae80e831d6b8dc1ecce750def1da47da3e4fd05f6a8a768d20",
+      "toStandardHash": "sha256:9bb34b8c00261c7006e3f1b75673e637d35a549e78767c9f32fc333c9fde6274",
+      "fromHdHash": "sha256:bd4d9d8930b224e8661ba01872769a52c1eebdb2817c8331be29f986976e072f",
+      "toHdHash": "sha256:acea0cacc78a159b7eb6873ef0cdfdea511a37571da68b541d92a19bf70cd180"
+    },
+    {
+      "key": "anvil-hammer-station@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:db6b4ae6d91e4cf306f28508851e9761c6812dd3a6905d83c976989af525e520",
+      "toRecipeHash": "sha256:db6b4ae6d91e4cf306f28508851e9761c6812dd3a6905d83c976989af525e520",
+      "fromStandardHash": "sha256:d64faa0d6a36d53a54393262bfc1f433b844580fc75f9893a5c372bea61a6932",
+      "toStandardHash": "sha256:11399914cc2c584cd6867ffdbcb493ea9b133920938f9bcad9acd88da768aa60",
+      "fromHdHash": "sha256:c15b7400f6218dc310afd32daa6f8173a0a20c90b41ffaa91aab7ae8a49c4687",
+      "toHdHash": "sha256:8f11f085381b813aed5e46b761c14780743f4f8733f9d07a3c90cad30a8c77ef"
+    },
+    {
+      "key": "mri-gantry-scanner@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:fff78742b484d4993e8e54be2d51d49925271ee415afd82bb2f6d6012a76ac05",
+      "toRecipeHash": "sha256:fff78742b484d4993e8e54be2d51d49925271ee415afd82bb2f6d6012a76ac05",
+      "fromStandardHash": "sha256:eaca19cb5da36bd3f50b3c2014f79b0c4f1620cc0aa0c04c8389dffa00e29b8e",
+      "toStandardHash": "sha256:22da2ebe8f1dd5cfadc403527d4f65327344bd63830b9385b31cdeee8a6346dd",
+      "fromHdHash": "sha256:c0e6f113c29446963e3a95f4c5f7b13638af04b3f0b124c30ad8bbf9749b7e76",
+      "toHdHash": "sha256:b0b5693ec511ef8dc018963823ab412d1be2dcf35f071762cc81c2c1e8309a2c"
+    },
+    {
+      "key": "van-de-graaff-generator@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:56d03b424706ed6a286d09bbe6c1a1cef116385cccbd2c43730b01f85b0f9556",
+      "toRecipeHash": "sha256:56d03b424706ed6a286d09bbe6c1a1cef116385cccbd2c43730b01f85b0f9556",
+      "fromStandardHash": "sha256:bffbd091272b1d6645d8eb3cb97f8f0842d9a30d906b937afe0fdd01ef484a05",
+      "toStandardHash": "sha256:f3fb926411d63190dd5020d2c8134ce62b4b93740ea6f290d6e6abc22528ad50",
+      "fromHdHash": "sha256:9b06d51d31e1ea029a0a76e33edd1750816cb760b898cccbb37bde13a1f0c3f7",
+      "toHdHash": "sha256:d7c961294d5b062f1208a9e1b5f7540d13eabe19751cc4db3bedc4be068462b1"
+    },
+    {
+      "key": "wooden-cheese-press@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:0b2d831054291e4e6b377917bd00f2cdaa28dfa35219f645054419d1cea026ae",
+      "toRecipeHash": "sha256:0b2d831054291e4e6b377917bd00f2cdaa28dfa35219f645054419d1cea026ae",
+      "fromStandardHash": "sha256:e52e61c444aeb5d15112e1b3bb7bb94bd9125047cfdf4d9a865ed51846e7c504",
+      "toStandardHash": "sha256:6e48d0642f8b0df070c147d55d31f005d5cc17cd247eb57f8a71f9f409faa97b",
+      "fromHdHash": "sha256:a6f909cd5a85083ec50fc82d40c28413f3aa7f2914c6f925c3570f6235c80e0b",
+      "toHdHash": "sha256:527dd959cd3708174fd1b6c1cc27c4da3bbde45a2f19109b39e68b2e04eebfc0"
+    },
+    {
+      "key": "british-telephone-box@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:8c1360f9e43b8539ad1fe4e5aad5d422668cc769d366a400aaf755645bde80b5",
+      "toRecipeHash": "sha256:8c1360f9e43b8539ad1fe4e5aad5d422668cc769d366a400aaf755645bde80b5",
+      "fromStandardHash": "sha256:948825cc8c5df04a8ef94548b187916882cfd90df490e6056dbf41fb9f993e2c",
+      "toStandardHash": "sha256:940f9bc1e4fd91ffe119599ee1a2ce502959ff68e87c853d4b046ade259b746e",
+      "fromHdHash": "sha256:5681e48cd556a15479ad84c8dc7c423d860c39f4aad2260d8ba141b0615af380",
+      "toHdHash": "sha256:24a7edf3c86ae8f7b2a55a579b842c7838b9c10bdde06847cc85f11ad16c23fa"
+    },
+    {
+      "key": "toothed-mimic-chest@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:1a3cbc7522cd8a4df08b4ecda43372a65b1cfeeeab72e0acc613b5743b9086c0",
+      "toRecipeHash": "sha256:1a3cbc7522cd8a4df08b4ecda43372a65b1cfeeeab72e0acc613b5743b9086c0",
+      "fromStandardHash": "sha256:ce53043f591394773aa60c6e5b84cae93918013fb4df7b5431e4cbaef17e0f05",
+      "toStandardHash": "sha256:80e52c078d33fa69ba5ccdac74ee24f4c3548220de579c507ba1aea4b3fa086d",
+      "fromHdHash": "sha256:a08e1b2e8585db0fcb72b87c1d2626e539f310801806a0bdb515192343440e8f",
+      "toHdHash": "sha256:455cb2060ab03f5c56b1bd9a866b3aa423a73aa918d0ff8a79b260560800b830"
+    },
+    {
+      "key": "dungeon-hanging-cage@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:6d8a7bd00c6e5b75e231200010f3e22ec7a59d2e655ebeea4c818ff4d2d74a21",
+      "toRecipeHash": "sha256:6d8a7bd00c6e5b75e231200010f3e22ec7a59d2e655ebeea4c818ff4d2d74a21",
+      "fromStandardHash": "sha256:9e7a54587edb82756bce2019c9d5c2dc762b0fa6bdb98dcd264947dd86d2e3ab",
+      "toStandardHash": "sha256:460c9e72d72b52a53f594748656b1b2ca1dfbb8e0c6a23e0a0bc118f82271dbc",
+      "fromHdHash": "sha256:5ba0e696c5cdf8d65b76a02ae487596aa388e36238dc520d5c8c35cbc9c1b02e",
+      "toHdHash": "sha256:809016596662f1312589350ff3e3643323a2b0f63b77b3f818ae1c5d2576a15b"
+    },
+    {
+      "key": "grimoire-bookshelf@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:53306ffb7852d9c8102880602f28a55cc8a0a0d1175da2ce196a769abb3105db",
+      "toRecipeHash": "sha256:53306ffb7852d9c8102880602f28a55cc8a0a0d1175da2ce196a769abb3105db",
+      "fromStandardHash": "sha256:935761a74b9f4d23acc7c05fcc79ff7999c930db9ae533f86e88b5b202946572",
+      "toStandardHash": "sha256:4e002a7d89a3104c896d6fc1c66253cd745a2bb3c436db156bd3e27f39a8e631",
+      "fromHdHash": "sha256:8a3e2e98e9f9dd1ed6fb8c52ed4471c1cf3a1bda48a6fe81fdfe4b3211ce69e1",
+      "toHdHash": "sha256:73168cc7edc6c3fdba6831f5215bee6de0518f35e60a041f2f510fc38f469b72"
+    },
+    {
+      "key": "necromancer-bone-throne@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:308d5b92141858d5d3b5c24dbd27bde865a3b222374af66854f45ec927fd8330",
+      "toRecipeHash": "sha256:308d5b92141858d5d3b5c24dbd27bde865a3b222374af66854f45ec927fd8330",
+      "fromStandardHash": "sha256:c3b9c44b51888d6b31037d669a4e82325ba19195d13a56f7af3f2bd0a469632e",
+      "toStandardHash": "sha256:3d552dd90c4badc0e8200a163c187be5bbeb2ca68bc0d2f76bc60dd88e9865ab",
+      "fromHdHash": "sha256:dfc77b40e4b7ae74084daa74e12712d5df2b087068eb438ddcd732a34a344922",
+      "toHdHash": "sha256:806b24c0cf60a1e61b9ef181c316311c2552315ca01e7f43cc82eb970d736bc7"
+    },
+    {
+      "key": "medbay-diagnostic-scanner@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:b8438d1edae06d47a984ae7cfa6a9979985f495b456f3fe27b550a908eb41caa",
+      "toRecipeHash": "sha256:b8438d1edae06d47a984ae7cfa6a9979985f495b456f3fe27b550a908eb41caa",
+      "fromStandardHash": "sha256:ad89cfd1ad2f99cb76d8f91134332cea8bddcc009ae0cdf7f3e43b29392ab75a",
+      "toStandardHash": "sha256:b73d8ae97b93ad09085942c6a4f65d1b38badde2d498790f2e38d15a8c8916dd",
+      "fromHdHash": "sha256:6391a7d6c86bee950247bb4ad951fadfb7d0fa6ff79fd0701cf6ec2d941e46d0",
+      "toHdHash": "sha256:e6e2e5752c4f40bab1edc44a9b9da313cc01f210b17bbc9b683d5fe359bbd536"
+    },
+    {
+      "key": "hexagonal-shield-emitter@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:81d3f0335f6161e48ceaa360cb05f18ca9cdde376493799aa919c81ad01d473c",
+      "toRecipeHash": "sha256:81d3f0335f6161e48ceaa360cb05f18ca9cdde376493799aa919c81ad01d473c",
+      "fromStandardHash": "sha256:3c451c658a53ab54c5c8f979073e098fd654949bdc10d8702639a43e06ad005d",
+      "toStandardHash": "sha256:15953546dc07e52cd14e002c2fd097272819e3da7c9988ee70480cedf7be748c",
+      "fromHdHash": "sha256:7ab96a336049494a2488f675eaf34de488b88fe46b492727362f1c5bd5034039",
+      "toHdHash": "sha256:2802271e817910691edee83d215664a8f733fa82cc51dbed64132270e196b1c0"
+    },
+    {
+      "key": "orbital-battery-turret@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:6389243822ca702eca8a925449da352a877a4dcfba03fc74ab24ead581796081",
+      "toRecipeHash": "sha256:6389243822ca702eca8a925449da352a877a4dcfba03fc74ab24ead581796081",
+      "fromStandardHash": "sha256:eb48a60309612b98fbb7118bca6140ddadd80a9cfe7bcfa4987665acd96e4bd1",
+      "toStandardHash": "sha256:cda34d64fdfd0b02f541cd38560f2a9100e5c85f34c142e82335dfb0473c500e",
+      "fromHdHash": "sha256:d32c8cced92b78035e48daf3923ab6b74e38de040f6d5b2a00b06a84d0ad8edd",
+      "toHdHash": "sha256:34c0757cb1d9365a5ee968610ca63ab3cbcfd09ac76ddbb2400e78e50f97a4b1"
+    },
+    {
+      "key": "neural-link-chair@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:d0007dfb5ece31cecd3aa45d469bba88ea0b27ec4676f757dbdf64e26c28a90a",
+      "toRecipeHash": "sha256:d0007dfb5ece31cecd3aa45d469bba88ea0b27ec4676f757dbdf64e26c28a90a",
+      "fromStandardHash": "sha256:9dadf6970b13a7f2349485b0918bbcfacf1da5c21cea70cf799f9a37381121b8",
+      "toStandardHash": "sha256:8d836119ba38fd0b47f39885a449826b89ac6fb08f3a947aaa3cc14c0d53a515",
+      "fromHdHash": "sha256:8c8c58df42609139eccf88707fd1569b3cc79f8db74b61877546193ea5ac94cb",
+      "toHdHash": "sha256:38b60ac0d07ed21367169f214d981157bf1755a36152a05b0f24ff1ee80fa331"
+    },
+    {
+      "key": "municipal-courthouse@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:44e7601027770f5738fcfeda64be3760a09735f5b8543b551f9130a60eff4e7e",
+      "toRecipeHash": "sha256:44e7601027770f5738fcfeda64be3760a09735f5b8543b551f9130a60eff4e7e",
+      "fromStandardHash": "sha256:23772b5e1e4df5118e5c2c12fd1f08f09bec700735bb4c4956f471e05a6c95a8",
+      "toStandardHash": "sha256:ab9a402ba6b6ea75fe48915bdca046e4034c5ca8d8d96e02d8a596bba54c07ca",
+      "fromHdHash": "sha256:37d14f0ed593c6a0d35259babd7597a5ce3a0f43c1aee0d191bb47ad10a3cb33",
+      "toHdHash": "sha256:c57dcdecf416702a420b26d58a619ed4ba554d323e96fc9d00ef7a149de7b9df"
+    },
+    {
+      "key": "timber-grain-silo@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:fff35acfad7c78cff7b1dfc344208d5ade95b942807de31aa98c4b584e483415",
+      "toRecipeHash": "sha256:fff35acfad7c78cff7b1dfc344208d5ade95b942807de31aa98c4b584e483415",
+      "fromStandardHash": "sha256:34e583075cec583fadc07d11a337eec427abae43180725b9a30cc388a2e5ecb3",
+      "toStandardHash": "sha256:a545d4ae41828fd519f866db43ce59060f7d7ca1460f73e6be8e9b7b1b8a8b5d",
+      "fromHdHash": "sha256:7269956ae686703066f7b6ec6c5e5dd84c119e7493adeadc52d0a64bdff81a4a",
+      "toHdHash": "sha256:87d6692407022e0163830841b356c3d01158638a88ba4232d70cb51b6d57de92"
+    },
+    {
+      "key": "victorian-conservatory@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:573e7b3cbe1f17f7727027fdbc180637cf82978020790d9879455ae3622e6f91",
+      "toRecipeHash": "sha256:573e7b3cbe1f17f7727027fdbc180637cf82978020790d9879455ae3622e6f91",
+      "fromStandardHash": "sha256:8be435f00a2d6264853bee0b816922d80c86c3d052c260077f4911cb094e6f43",
+      "toStandardHash": "sha256:65975eafeba5da31c83905e4c4e036e48d14f9d0bd0c224c006fb6ecc6fada89",
+      "fromHdHash": "sha256:c8fc9f9bcdf7f1f4b44a0993fac3201101ffb01c104820c13d3a713432da2845",
+      "toHdHash": "sha256:cf163c262787a03a8b4c0f9f7e652ee2c475db031c6c08bf05963ea6bad340f5"
+    },
+    {
+      "key": "lunar-mining-refinery@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:067203fca8a24f6d1d1d103604eaabc583fa264762800e12cb4d5bded113cae2",
+      "toRecipeHash": "sha256:067203fca8a24f6d1d1d103604eaabc583fa264762800e12cb4d5bded113cae2",
+      "fromStandardHash": "sha256:a7d9e5a3749c96133cfffba3052c6d1bdae96874654824ea08fba2336836ccaf",
+      "toStandardHash": "sha256:3a533f0ff79915ad5afb2b44eb1918d05d17155c41f60c26842770109604166e",
+      "fromHdHash": "sha256:bced7eab01aa28544105f56c32cd5ca0229c612b23cf1d93d80ae869b1138e3a",
+      "toHdHash": "sha256:c1bdbfec0de74a90942b429262013d35bc7b9077a3c4e4c33ab5db2a256cd72e"
+    },
+    {
+      "key": "giant-coastal-sequoia@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:64cce8c19feb293bcddfe13eb6610cadd8f6e23a9cf39dcad169f952fcc86a7e",
+      "toRecipeHash": "sha256:64cce8c19feb293bcddfe13eb6610cadd8f6e23a9cf39dcad169f952fcc86a7e",
+      "fromStandardHash": "sha256:812f8f43cc678597689fe98b592d9e5054b2366b3be0c26207367bd88eca4cb9",
+      "toStandardHash": "sha256:ff93df09400e6987895203fe4ef870fd73a8edd10190f8aecd8a69fb464bd51c",
+      "fromHdHash": "sha256:d93ae54ae941101cf81228d8b9cf7613769e796cca0a2057fccc87dfbdc01443",
+      "toHdHash": "sha256:97fd0b5f4c1fc8e8ec40bbd742d822b6d7486557407261e21f48b5eddd0a39dd"
+    },
+    {
+      "key": "swaying-bamboo-thicket@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:0d4c54b944b87f16628786941f553404846e36f5309e525f8fb1b9fc340182b3",
+      "toRecipeHash": "sha256:0d4c54b944b87f16628786941f553404846e36f5309e525f8fb1b9fc340182b3",
+      "fromStandardHash": "sha256:5415af70aa6c716f40e0c61a6b63ab0f81b831845d8d499d1c345fde961b04b0",
+      "toStandardHash": "sha256:7e3a5028e3d28beeab2ddfe195559dd2ec8605bfed9dbf4b267bc0ccad8ba146",
+      "fromHdHash": "sha256:de7838e46bb17378370b9d268887ffb79858f89d50fc46e9b3b058ce4dba2e45",
+      "toHdHash": "sha256:823004f1adfd5b017d003f9334cb58f34baa74f3849d6bda8d355b7dc6d30773"
+    },
+    {
+      "key": "yellow-school-bus@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:ac999147ec696753dfe033ed1d7e378151948c78fa45ae4b579f5314694dc90d",
+      "toRecipeHash": "sha256:ac999147ec696753dfe033ed1d7e378151948c78fa45ae4b579f5314694dc90d",
+      "fromStandardHash": "sha256:7b6272f7b7923e35bc4d282fd2935a060e4247f9ab084e37b3d1a40c1e002efb",
+      "toStandardHash": "sha256:d132919aba50a7f0722f84a4d1ff701a7707dfb8b5844e0832ef5ac02bc32217",
+      "fromHdHash": "sha256:013b78acd69241ecf997089dbf4580027b06e682dfa0d057c26f99d211c2c487",
+      "toHdHash": "sha256:a9e064072251cb42bc4e8eaa7ad35d389e9887ca60440f2ac7c70a1f5a397403"
+    },
+    {
+      "key": "vintage-roadster-coupe@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:50b119c8d49269280737c21da649d95b7e84aaf2388cea0ed00b1a80d49a5caf",
+      "toRecipeHash": "sha256:50b119c8d49269280737c21da649d95b7e84aaf2388cea0ed00b1a80d49a5caf",
+      "fromStandardHash": "sha256:c8c1c19b80b35e574d932195c3fca339b61d9c005ba8c902b72a7a19d65208ae",
+      "toStandardHash": "sha256:a860e80fb6eaa70165d93b8c4c348eaf349c1da33645ff7ea573b30c03a61221",
+      "fromHdHash": "sha256:1d232a2297890792b4b8226fe2617ab0c2ef337dc3a6456f5aa3b5e186bf048a",
+      "toHdHash": "sha256:038d4f98159d2cb27e4414471809746089711ee7eb74c2af7ba0d30cf3b8d296"
+    },
+    {
+      "key": "bank-armored-van@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:4928f361bcb25d5cba06631359315b3a5f37776c43a799594d8ee6de97d4f2df",
+      "toRecipeHash": "sha256:4928f361bcb25d5cba06631359315b3a5f37776c43a799594d8ee6de97d4f2df",
+      "fromStandardHash": "sha256:3174aa60b913e31fee00497fd87131e2db1fb742e23ed6bf89bb28d62763fa5b",
+      "toStandardHash": "sha256:d68f3e8f24d3a67cebd8617f558b4e986d7f0553746170b8d88682f27672e189",
+      "fromHdHash": "sha256:c3fd13bc11880a711487c36696e6a2bcb00c96fffd33d77506a78ffeb9b91f46",
+      "toHdHash": "sha256:ab91daee43dd3625056f3c2b07071fe633bcb7bf2d61c616afa01e98c81ed6ac"
+    },
+    {
+      "key": "mississippi-paddle-steamer@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:3561e592acfdc369245c1ae4482c41c6813404bdee7a4521d734a04bc930dff2",
+      "toRecipeHash": "sha256:3561e592acfdc369245c1ae4482c41c6813404bdee7a4521d734a04bc930dff2",
+      "fromStandardHash": "sha256:b9b5d0165f71a6e08ed5a8e1b985ee59c4bc6fbc69a07388e733beed8335c73c",
+      "toStandardHash": "sha256:4c20907fa0230e6bb676899d6e2d0785b980c06057220f9fae527ea489d549dc",
+      "fromHdHash": "sha256:c4aeb66e4e8fa8d91ca55a0b1dd37e1b498c56b4c7e41bc563820bf4fb7e14bf",
+      "toHdHash": "sha256:fd71f9f341ea41146842c968d7da8e189b2f60c14cb85ac00d9b18db93932d7d"
+    },
+    {
+      "key": "alpine-funicular-car@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:799702572c9250de69329781c9e68487499d5496478ee29b6d3a279f38c101eb",
+      "toRecipeHash": "sha256:799702572c9250de69329781c9e68487499d5496478ee29b6d3a279f38c101eb",
+      "fromStandardHash": "sha256:63f786f8f85340edebe3999e7794b43fc7348c556e828906b41bd9b73313eff0",
+      "toStandardHash": "sha256:68b3527997fbb23920c8b8081b1cfa995b33f9990fdfd8f9eb1c9775b2a6b822",
+      "fromHdHash": "sha256:548fac5db6031099a8cd468d31682de7f4cc9969c36042abe68084c1067d82e7",
+      "toHdHash": "sha256:4d2285fe6114d650fbdeed13b47d7f41a84917cb6e5f3800e86ed0da17914185"
+    },
+    {
+      "key": "delta-wing-starfighter@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:9e7accc997f08565133ef62af9a2aca24089952a60949a02ffbb7fab2f7e7870",
+      "toRecipeHash": "sha256:9e7accc997f08565133ef62af9a2aca24089952a60949a02ffbb7fab2f7e7870",
+      "fromStandardHash": "sha256:1bf091dd823ca35cca4006b013cdd0a93a444678b9d8510ebfde1e5831631bf9",
+      "toStandardHash": "sha256:f16c06d85d14c3ff9f411c8f066fddeaf87905a4c6d11232f745859f3514b144",
+      "fromHdHash": "sha256:4dfe9b01a7400296dc2b1964bc67d9a4319f2089faabb1644413c30489278b09",
+      "toHdHash": "sha256:aca9a3617230afee4498ee2100c8a58a555c215ec8f252fedf9791f15a02caf4"
+    },
+    {
+      "key": "giant-reef-octopus@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:af65f17e72e80aae3c984ebbed8fdfeb9845a90bb4eaf9707efce73d12d69730",
+      "toRecipeHash": "sha256:af65f17e72e80aae3c984ebbed8fdfeb9845a90bb4eaf9707efce73d12d69730",
+      "fromStandardHash": "sha256:129cf010ddae62b5c7ef35d970eb3492648c8f7b9adbc01cf07747cc4920b87a",
+      "toStandardHash": "sha256:ea67da6656120edc321fc50d500bc5c231a6dd2f3157b50b0ce32b218ee17631",
+      "fromHdHash": "sha256:1e7312bce7011719987a20b0f97997074ce5f6edb8b88e4cebeebbfd6f62feff",
+      "toHdHash": "sha256:62ec52a6f40bcda386b59f8305a29f256eaf24a96f321213463202b9a6b79ca6"
+    },
+    {
+      "key": "pointed-wizard-hat@default",
+      "date": "2026-11-28",
+      "reason": "Fix mid-motion solid self-collision",
+      "fromRecipeHash": "sha256:3f6d90fa6ab27014c6667610dce150f42e52a3759a2e6de53a7cf2e06d12ce58",
+      "toRecipeHash": "sha256:3f6d90fa6ab27014c6667610dce150f42e52a3759a2e6de53a7cf2e06d12ce58",
+      "fromStandardHash": "sha256:40e544c71850d31ecee0de852919f477b55ccec6ec550748c3629a6a26d357ea",
+      "toStandardHash": "sha256:ebc83f92487dc6d502cad227738cd874afb2311a11b9dca758bca4b48192b9b4",
+      "fromHdHash": "sha256:b8ea3a262af3e4b4c9213e3691d18987a7c2bda5c35078f8089993eb9e6c0d24",
+      "toHdHash": "sha256:7b068845a67d13fe42947c810db11a5f17686c7ac29345114430fc97fd121738"
     }
   ]
 }

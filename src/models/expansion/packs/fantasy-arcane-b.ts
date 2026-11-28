@@ -59,12 +59,12 @@ export function dungeonHangingCage(root: T.Group, p: Finish, detail: boolean): v
   kBox(frame, [-0.52, 1.44, 0], [0.24, 2.38, 0.24], p.primary, hd);
   for (const s of [-1, 1]) kStrut(frame, [-0.52, 0.24, s * 0.42], [-0.52, 0.92, s * 0.1], 0.055, m.woodDark, hd, 6);
   kStrut(frame, [-0.04, 0.22, 0], [-0.46, 0.86, 0], 0.055, m.woodDark, hd, 6);
-  kBox(frame, [-0.12, 2.58, 0], [1.14, 0.22, 0.22], p.primary, hd);
-  kStrut(frame, [-0.48, 1.96, 0], [0.06, 2.52, 0], 0.06, m.woodDark, hd, 6);
+  kBox(frame, [-0.04, 2.58, 0], [1.3, 0.22, 0.22], p.primary, hd);
+  kStrut(frame, [-0.48, 2.02, 0], [-0.04, 2.52, 0], 0.06, m.woodDark, hd, 6);
   kBox(frame, [-0.52, 2.58, 0], [0.28, 0.26, 0.26], p.accent, hd);
-  kBox(frame, [0.24, 2.58, 0], [0.16, 0.26, 0.26], p.accent, hd);
-  kTorus(frame, [0.24, 2.43, 0], 0.065, 0.02, m.iron, hd, 'z');
-  const cage = group(root, 'HangingCage', [0.24, 2.43, 0]);
+  kBox(frame, [0.4, 2.58, 0], [0.16, 0.26, 0.26], p.accent, hd);
+  kTorus(frame, [0.4, 2.43, 0], 0.065, 0.02, m.iron, hd, 'z');
+  const cage = group(root, 'HangingCage', [0.4, 2.43, 0]);
   kChain(cage, [0, 0, 0], [0, -0.54, 0], 0.052, 0.017, m.iron, hd);
   kCyl(cage, [0, -0.58, 0], 0.08, 0.11, 0.08, p.accent, hd, 'y', 8);
   for (const [ry, r] of [[-0.84, 0.36], [-1.26, 0.38], [-1.68, 0.36]] as const) kRing(cage, [0, ry, 0], r, 0.042, 0.055, p.accent, hd, 'y');
@@ -86,7 +86,7 @@ export function dungeonHangingCage(root: T.Group, p: Finish, detail: boolean): v
     for (const y of [0.88, 1.54]) kBox(frame, [-0.52, y, 0], [0.27, 0.07, 0.27], m.iron, hd);
     kChain(cage, [0, -1.72, 0], [0, -1.96, 0], 0.038, 0.012, m.iron, hd);
   }
-  root.animations = [new T.AnimationClip('Sway gibbet cage', 3.2, [rotationTrack('HangingCage', 'z', [0, 0.8, 1.6, 2.4, 3.2], [0, 0.34, 0, -0.34, 0])])];
+  root.animations = [new T.AnimationClip('Sway gibbet cage', 3.2, [rotationTrack('HangingCage', 'z', [0, 0.8, 1.6, 2.4, 3.2], [0, 0.2, 0, -0.2, 0])])];
 }
 
 export function goldenReliquaryAltar(root: T.Group, p: Finish, detail: boolean): void {
@@ -198,11 +198,11 @@ export function grimoireBookshelf(root: T.Group, p: Finish, detail: boolean): vo
     }
   }
   kCyl(caseG, [0.32, 0.66, -0.08], 0.045, 0.045, 0.28, m.rune, hd, 'x', 8);
-  const secret = group(root, 'SecretBookPanel', [0.54, 0.82, 0.18]);
-  kBox(secret, [-0.2, 0, -0.04], [0.4, 0.34, 0.04], m.woodDark, hd);
+  const secret = group(root, 'SecretBookPanel', [0.54, 0.82, 0.31]);
+  kBox(secret, [-0.2, 0, -0.14], [0.4, 0.34, 0.04], m.woodDark, hd);
   for (let i = 0; i < 4; i++) {
-    kBox(secret, [-0.34 + i * 0.095, -0.02, 0.03], [0.08, 0.28 + (i % 2) * 0.04, 0.12], i % 2 === 0 ? p.accent : m.cloth, hd);
-    kBox(secret, [-0.34 + i * 0.095, -0.02, 0.1], [0.055, 0.04, 0.02], m.brass, hd);
+    kBox(secret, [-0.34 + i * 0.095, -0.02, -0.06], [0.08, 0.28 + (i % 2) * 0.04, 0.12], i % 2 === 0 ? p.accent : m.cloth, hd);
+    kBox(secret, [-0.34 + i * 0.095, -0.02, 0.005], [0.055, 0.04, 0.02], m.brass, hd);
   }
   const curios = group(root, 'ShelfCurios', [0.22, 1.51, 0.04]);
   kOrb(curios, [-0.08, 0.14, 0], 0.1, m.bone, hd, [0.92, 1.05, 1.02]);
@@ -401,9 +401,9 @@ export function necromancerBoneThrone(root: T.Group, p: Finish, detail: boolean)
   kOrb(orb, [0, 0, 0], 0.13, m.vortex, hd);
   kTorus(orb, [0, 0, 0], 0.2, 0.022, p.accent, hd, 'z');
   for (const s of [-1, 1]) kStrut(orb, [s * 0.11, 0, 0], [s * 0.2, 0, 0], 0.016, m.iron, hd, 6);
-  const lid = group(root, 'SeatChestLid', [0, 0.76, -0.32]);
-  kBox(lid, [0, 0.03, 0.3], [0.84, 0.06, 0.66], p.primary, hd);
-  kShell(lid, [0, 0.09, 0.3], [0.74, 0.075, 0.56], m.cloth, hd, 0.2);
+  const lid = group(root, 'SeatChestLid', [0, 0.76, -0.22]);
+  kBox(lid, [0, 0.03, 0.25], [0.84, 0.06, 0.56], p.primary, hd);
+  kShell(lid, [0, 0.09, 0.25], [0.74, 0.075, 0.46], m.cloth, hd, 0.2);
   const braziers = group(root, 'DaisBraziers', [0, 0.14, 0.44]);
   for (const s of [-1, 1]) {
     kCyl(braziers, [s * 0.62, 0.16, 0], 0.1, 0.14, 0.32, m.stoneDark, hd, 'y', 6);
@@ -416,6 +416,6 @@ export function necromancerBoneThrone(root: T.Group, p: Finish, detail: boolean)
   }
   root.animations = [
     new T.AnimationClip('Spin throne orb', 3.4, [spinTrack('ThroneOrbFinial', 'y', 3.4, 1)]),
-    new T.AnimationClip('Open seat chest', 2.8, [rotationTrack('SeatChestLid', 'x', [0, 0.85, 2.0, 2.8], [0, -1.18, -1.18, 0])]),
+    new T.AnimationClip('Open seat chest', 2.8, [rotationTrack('SeatChestLid', 'x', [0, 0.85, 2.0, 2.8], [0, -0.95, -0.95, 0])]),
   ];
 }

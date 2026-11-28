@@ -412,9 +412,9 @@ function fireWatchtower(root: T.Group, p: Finish, detail: boolean) {
     }
   }
   box(b, [0.56, 2.16, 0.58], [0.42, 0.06, 0.42], p.inset);
-  const hatch = group(b, 'TrapHatch', [0.56, 2.19, 0.37]);
-  box(hatch, [0, 0.025, 0.21], [0.42, 0.05, 0.42], p.accent);
-  box(hatch, [0, 0.055, 0.35], [0.16, 0.025, 0.035], p.alloy);
+  const hatch = group(b, 'TrapHatch', [0.56, 2.19, 0.79]);
+  box(hatch, [0, 0.025, -0.21], [0.42, 0.05, 0.42], p.accent);
+  box(hatch, [0, 0.055, -0.35], [0.16, 0.025, 0.035], p.alloy);
   shell(b, [0, 2.42, 0], [1.06, 0.48, 1.06], p.primary, 0.08);
   box(b, [0, 2.9, 0], [1.0, 0.48, 1.0], p.optic);
   quad((sx, sz) => box(b, [sx * 0.51, 2.9, sz * 0.51], [0.075, 0.52, 0.075], p.primary));
@@ -435,7 +435,7 @@ function fireWatchtower(root: T.Group, p: Finish, detail: boolean) {
     quad((sx, sz) => strut(b, [sx * 0.52, 1.86, sz * 0.52], [sx * 0.86, 2.1, sz * 0.86], 0.028, p.dark, 10));
     ring(scope, [0, 0.1, 0.28], 0.072, 0.015, 0.03, p.alloy).rotation.x = Math.PI / 2;
   }
-  root.animations = [new T.AnimationClip('Horizon scan', 4, [swingTrack('SpotterScope', 'y', 4, 80, true)]), new T.AnimationClip('Open trap hatch', 3, [swingTrack('TrapHatch', 'x', 3, -80)])];
+  root.animations = [new T.AnimationClip('Horizon scan', 4, [swingTrack('SpotterScope', 'y', 4, 80, true)]), new T.AnimationClip('Open trap hatch', 3, [swingTrack('TrapHatch', 'x', 3, 80)])];
 }
 
 function entry(
@@ -463,5 +463,5 @@ export const buildingsTownA: readonly TownBuildingDef[] = [
   entry('country-train-depot', 'BT-07', 'Country Train Depot', '#a65c47', '#e0c790', 'Timber-eaved country railway depot with boarding platform, sliding freight door, and tilting trackside semaphore signal.',
     [slide('FreightDoor', 'Freight door', 'x', [0, 0.55], 'Slides the braced freight bay door along its overhead rail'), rot('SignalArm', 'Signal arm', 'z', [0, 45], 'Tilts the trackside semaphore signal arm')], [], countryTrainDepot),
   entry('fire-watchtower', 'BT-08', 'Fire Watchtower', '#b98956', '#c95a3e', 'Cross-braced forestry fire lookout tower with catwalk, glazed cab, hinged floor trap hatch, and rotating spotter scope.',
-    [rot('SpotterScope', 'Spotter scope', 'y', [-90, 90], 'Pans the catwalk-mounted horizon spotting scope'), rot('TrapHatch', 'Trap hatch', 'x', [0, -85], 'Lifts the catwalk stair access trap hatch upward')], [], fireWatchtower),
+    [rot('SpotterScope', 'Spotter scope', 'y', [-90, 90], 'Pans the catwalk-mounted horizon spotting scope'), rot('TrapHatch', 'Trap hatch', 'x', [0, 85], 'Lifts the catwalk stair access trap hatch upward')], [], fireWatchtower),
 ];

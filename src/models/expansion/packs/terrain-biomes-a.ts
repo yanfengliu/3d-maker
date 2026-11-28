@@ -225,12 +225,12 @@ function buildSequoia(root: T.Group, p: Finish, detail: boolean) {
   const scene = group(root, 'CoastalSequoia');
   mound(scene, p, [0, 0, 0], 1.5, 0.26, 1.44, duff);
 
-  cyl(scene, p, [0, 1.56, 0], 0.14, 0.44, 2.94, p.accent, [0, 0, 0], 12);
+  cyl(scene, p, [0, 0.88, 0], 0.24, 0.44, 1.56, p.accent, [0, 0, 0], 12);
   for (let i = 0; i < 7; i++) {
     const a = (i * Math.PI * 2) / 7;
     const sx = Math.sin(a);
     const sz = Math.cos(a);
-    cyl(scene, p, [sx * 0.28, 1.12, sz * 0.28], 0.07, 0.14, 1.98, p.accent, [0, a, 0], 6);
+    cyl(scene, p, [sx * 0.28, 0.88, sz * 0.28], 0.07, 0.14, 1.5, p.accent, [0, a, 0], 6);
     taperArc(
       scene,
       p,
@@ -243,7 +243,7 @@ function buildSequoia(root: T.Group, p: Finish, detail: boolean) {
   }
 
   const crown = group(scene, 'RedwoodCrown', [0, 1.54, 0]);
-  cyl(crown, p, [0, 0.92, 0], 0.06, 0.16, 1.92, p.accent, [0, 0, 0], 8);
+  cyl(crown, p, [0, 1.0, 0], 0.06, 0.22, 1.92, p.accent, [0, 0, 0], 8);
   const tiers: readonly [number, number, number, number][] = [
     [0.24, 0.96, 0.56, 6],
     [0.72, 0.84, 0.52, 6],
@@ -367,7 +367,7 @@ function buildBamboo(root: T.Group, p: Finish, detail: boolean) {
       frond(cluster, p, [Math.sin(a) * 0.35, 2.2 + (i % 2) * 0.35, Math.cos(a) * 0.35], 0.44, 0.08, 0.15, 0.07, leafDark, a);
     }
   }
-  root.animations = [new T.AnimationClip('Bamboo rustle', 3.6, [sway('BambooCluster', 'z', 3.6, -0.16, 0.16)])];
+  root.animations = [new T.AnimationClip('Bamboo rustle', 3.6, [sway('BambooCluster', 'z', 3.6, -0.1, 0.1)])];
 }
 
 export const terrainBiomesBuildersA: readonly BiomeBuilderDef[] = [
@@ -397,7 +397,7 @@ export const terrainBiomesBuildersA: readonly BiomeBuilderDef[] = [
   },
   {
     id: 'swaying-bamboo-thicket',
-    riggedParts: [{ name: 'BambooCluster', label: 'Bamboo culm thicket', type: 'rotate', axis: 'z', range: [-14, 14], describe: 'Sways the tall segmented bamboo culms and leaf clusters' }],
+    riggedParts: [{ name: 'BambooCluster', label: 'Bamboo culm thicket', type: 'rotate', axis: 'z', range: [-7, 7], describe: 'Sways the tall segmented bamboo culms and leaf clusters' }],
     detachableParts: [{ name: 'GardenRock', label: 'Mossy garden boulder', describe: 'Removable mossy garden rock nestled beside the bamboo patch' }],
     build: buildBamboo,
   },

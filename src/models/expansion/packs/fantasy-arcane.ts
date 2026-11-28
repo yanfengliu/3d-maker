@@ -44,7 +44,7 @@ const builders: Record<string, BuilderEntry> = {
     physicsBody: 'dynamic',
     riggedParts: [
       rig('MimicJaw', 'Mimic jaw', 'x', [0, -68], 'Snaps the fanged monster chest lid open and shut'),
-      rig('MimicTongue', 'Mimic tongue', 'x', [-18, 28], 'Lashes the curling crimson mimic tongue'),
+      rig('MimicTongue', 'Mimic tongue', 'x', [-24, 5], 'Lashes the curling crimson mimic tongue'),
     ],
     detachableParts: [det('SideChains', 'Side chains', 'Forged iron drop-ring shackles on the chest flanks')],
     build: toothedMimicChest,
@@ -100,7 +100,7 @@ const builders: Record<string, BuilderEntry> = {
   },
   'dungeon-hanging-cage': {
     physicsBody: 'static',
-    riggedParts: [rig('HangingCage', 'Hanging cage', 'z', [-22, 22], 'Swings the chained barred iron dungeon cage')],
+    riggedParts: [rig('HangingCage', 'Hanging cage', 'z', [-12, 12], 'Swings the chained barred iron dungeon cage')],
     detachableParts: [det('GibbetLantern', 'Gibbet lantern', 'Side iron watch lantern suspended from the gallows post')],
     build: dungeonHangingCage,
   },
@@ -156,7 +156,7 @@ const builders: Record<string, BuilderEntry> = {
     physicsBody: 'static',
     riggedParts: [
       rig('ThroneOrbFinial', 'Throne orb finial', 'y', [0, 360], 'Rotates the crowned necromantic orb above the backrest'),
-      rig('SeatChestLid', 'Seat chest lid', 'x', [0, -72], 'Lifts the hinged throne seat to expose the secret vault'),
+      rig('SeatChestLid', 'Seat chest lid', 'x', [0, -56], 'Lifts the hinged throne seat to expose the secret vault'),
     ],
     detachableParts: [det('DaisBraziers', 'Dais braziers', 'Twin obsidian-and-crystal braziers on the front dais corners')],
     build: necromancerBoneThrone,

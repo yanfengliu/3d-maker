@@ -308,13 +308,13 @@ function buildLunarMiningRefinery(root: T.Group, p: Finish, detail: boolean) {
     kstrut(b, [0.64, 1.18, sz], [0.24, 1.36, sz * 0.7], 0.055, p.accent, hd, 8);
   }
   // Inclined regolith conveyor belt & funnel intake hopper on left flank
-  const conv = group(b, 'Conveyor', [-1.06, 1.14, -0.06]);
+  const conv = group(b, 'Conveyor', [-1.14, 1.54, -0.06]);
   conv.rotation.z = 0.56;
-  kbox(conv, [0, 0, 0], [1.46, 0.14, 0.52], steel, hd);
-  kbox(conv, [0, 0.09, 0], [1.38, 0.06, 0.38], p.tire, hd);
-  for (const sz of [-0.26, 0.26]) kbox(conv, [0, 0.12, sz], [1.42, 0.1, 0.05], p.primary, hd);
-  kstrut(b, [-1.42, 0.16, -0.06], [-1.42, 0.78, -0.06], 0.06, steel, hd, 8);
-  kcyl(b, [-1.44, 0.96, -0.06], 0.38, 0.18, 0.38, p.primary, hd, 8);
+  kbox(conv, [0, 0, 0], [0.92, 0.14, 0.52], steel, hd);
+  kbox(conv, [0, 0.09, 0], [0.84, 0.06, 0.38], p.tire, hd);
+  for (const sz of [-0.26, 0.26]) kbox(conv, [0, 0.12, sz], [0.88, 0.1, 0.05], p.primary, hd);
+  kstrut(b, [-1.52, 0.16, -0.06], [-1.52, 1.18, -0.06], 0.06, steel, hd, 8);
+  kcyl(b, [-1.56, 1.24, -0.06], 0.38, 0.18, 0.38, p.primary, hd, 8);
   kcyl(b, [-0.32, 2.3, -0.06], 0.48, 0.24, 0.38, p.accent, hd, 8);
   // Exposed horizontal spinning rotary CrusherDrum (z) inside gantry frame
   const drum = group(b, 'CrusherDrum', [-0.12, 1.24, -0.03]);

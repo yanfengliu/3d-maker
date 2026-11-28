@@ -144,7 +144,7 @@ function grandfatherClock(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Tick pendulum', 2.4, [rotationTrack('ClockPendulum', 'z', [0, 0.6, 1.2, 1.8, 2.4], [0, 0.31, 0, -0.31, 0])]),
-    new T.AnimationClip('Open door', 3, [rotationTrack('GlassDoor', 'y', [0, 0.8, 2.1, 3], [0, 1.28, 1.28, 0])]),
+    new T.AnimationClip('Open door', 3, [rotationTrack('GlassDoor', 'y', [0, 0.8, 2.1, 3], [0, -1.28, -1.28, 0])]),
   ];
 }
 
@@ -325,7 +325,7 @@ function retroArcadeCabinet(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Play joystick', 2, [rotationTrack('Joystick', 'x', [0, 0.4, 1, 1.5, 2], [0, 0.42, -0.42, 0.34, 0])]),
-    new T.AnimationClip('Open coin door', 2.8, [rotationTrack('CoinDoor', 'y', [0, 0.75, 2, 2.8], [0, 1.28, 1.28, 0])]),
+    new T.AnimationClip('Open coin door', 2.8, [rotationTrack('CoinDoor', 'y', [0, 0.75, 2, 2.8], [0, -1.28, -1.28, 0])]),
   ];
 }
 
@@ -421,8 +421,8 @@ function railwayBoomGate(root: T.Group, p: Finish, detail: boolean) {
     cyl(lamp, [sx, 0, 0.095], 0.088, 0.088, 0.03, p.primary, 'z', 14);
     orb(lamp, [sx, 0, 0.1], 0.045, p.accent, p.hd);
   }
-  const boom = group(root, 'BoomArm', [-1.1, 1.02, 0.14]);
-  cyl(boom, [0, 0, -0.04], 0.12, 0.12, 0.2, p.edge, 'z', 12);
+  const boom = group(root, 'BoomArm', [-1.1, 1.02, 0.4]);
+  cyl(boom, [0, 0, -0.14], 0.12, 0.12, 0.32, p.edge, 'z', 12);
   strut(boom, [0, 0, 0], [-0.56, 0, 0], 0.045, p.edge, 10);
   cyl(boom, [-0.52, 0, 0], 0.18, 0.18, 0.16, p.dark, 'z', 14);
   for (let i = 0; i < 8; i++) shell(boom, [0.22 + i * 0.3, 0, 0], [0.31, 0.12, 0.075], i % 2 === 0 ? p.primary : p.accent, 0.12);
@@ -451,7 +451,7 @@ export const propsPack: readonly PropAssetDef[] = [
   propDef('treasure-chest', 'PR-01', 'Treasure Chest', '#8f5230', '#dfb147', 'Iron-bound timber treasure chest with a vaulted hinged lid and removable gold tray.', 'dynamic',
     [rig('ChestLid', 'Chest lid', 'x', [0, -95], 'Swings the vaulted lid open')], [det('GoldTray', 'Gold tray', 'Removable interior coin and gem tray')], treasureChest),
   propDef('grandfather-clock', 'PR-02', 'Grandfather Clock', '#73422b', '#d9b25f', 'Tall mahogany longcase clock with a swinging brass pendulum and opening glass cabinet door.', 'static',
-    [rig('ClockPendulum', 'Clock pendulum', 'z', [-20, 20], 'Swings the brass pendulum bob'), rig('GlassDoor', 'Glass door', 'y', [0, 85], 'Opens the front glass pendulum door')], [], grandfatherClock),
+    [rig('ClockPendulum', 'Clock pendulum', 'z', [-20, 20], 'Swings the brass pendulum bob'), rig('GlassDoor', 'Glass door', 'y', [0, -85], 'Opens the front glass pendulum door')], [], grandfatherClock),
   propDef('street-vending-unit', 'PR-03', 'Street Vending Unit', '#c9493b', '#f0dfba', 'Retro corner beverage vending machine with a hinged dispenser flap and removable stocked cans.', 'static',
     [rig('PickupFlap', 'Pickup flap', 'x', [0, -55], 'Pushes the dispenser flap inward')], [det('CanDisplay', 'Can display', 'Rows of chilled beverage cans inside the window')], streetVendingUnit),
   propDef('blacksmith-forge', 'PR-04', 'Blacksmith Forge', '#6d6661', '#e06c28', 'Stone hearth forge with hooded chimney, pumping bellows, and removable stump-mounted anvil.', 'static',
@@ -461,7 +461,7 @@ export const propsPack: readonly PropAssetDef[] = [
   propDef('siege-catapult', 'PR-06', 'Siege Catapult', '#7c5536', '#c84b31', 'Timber torsion catapult on heavy spoked wheels with a cocking throw arm and stone payload.', 'dynamic',
     [rig('ThrowArm', 'Throw arm', 'x', [0, -75], 'Cocks and releases the throwing arm'), rig('WheelL', 'Left wheel', 'x', [0, 360], 'Rolls the left siege wheel'), rig('WheelR', 'Right wheel', 'x', [0, 360], 'Rolls the right siege wheel')], [], siegeCatapult),
   propDef('retro-arcade-cabinet', 'PR-07', 'Retro Arcade Cabinet', '#3c4c9e', '#f0b429', 'Classic upright CRT arcade machine with a tilting ball-top joystick and hinged coin service door.', 'static',
-    [rig('Joystick', 'Joystick', 'x', [-25, 25], 'Tilts the player control joystick'), rig('CoinDoor', 'Coin door', 'y', [0, 85], 'Opens the front coin-box service door')], [], retroArcadeCabinet),
+    [rig('Joystick', 'Joystick', 'x', [-25, 25], 'Tilts the player control joystick'), rig('CoinDoor', 'Coin door', 'y', [0, -85], 'Opens the front coin-box service door')], [], retroArcadeCabinet),
   propDef('apothecary-cabinet', 'PR-08', 'Apothecary Cabinet', '#6b4731', '#4aa39a', 'Walnut herbalist chest with two sliding drawers and a removable collection of glass potion jars.', 'static',
     [rig('TopDrawer', 'Top drawer', 'z', [0, 0.32], 'Slides the upper herb drawer outward', 'slide'), rig('MidDrawer', 'Mid drawer', 'z', [0, 0.32], 'Slides the middle herb drawer outward', 'slide')], [det('PotionJars', 'Potion jars', 'Assorted glass vials and flasks on the hutch')], apothecaryCabinet),
   propDef('lantern-signpost', 'PR-09', 'Lantern Signpost', '#3d4c49', '#f0b84c', 'Wrought-iron street signpost with a swaying amber lantern and detachable hanging tavern sign.', 'static',

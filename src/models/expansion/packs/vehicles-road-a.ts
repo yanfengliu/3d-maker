@@ -175,8 +175,9 @@ function buildYellowSchoolBus(root: T.Group, p: Finish, detail: boolean) {
     }
     light(bus, [s * 0.42, 0.74, 1.76], [0.16, 0.14, 0.06], p);
   }
-  const stopArm = group(bus, 'StopSignArm', [-0.65, 1.02, 0.94]);
-  rbox(stopArm, p, [-0.04, 0, -0.14], [0.04, 0.08, 0.28], p.alloy);
+  const stopArm = group(bus, 'StopSignArm', [-0.64, 1.02, 0.94]);
+  cyl(stopArm, p, [0.01, 0, 0], 0.036, 0.036, 0.12, p.alloy, [0, 0, 0], 8);
+  rbox(stopArm, p, [-0.03, 0, -0.14], [0.05, 0.08, 0.28], p.alloy);
   cyl(stopArm, p, [-0.05, 0, -0.28], 0.16, 0.16, 0.045, redSign, [0, 0, Math.PI / 2], 8);
   axleWheels(bus, 0.6, 0.3, 1.18, 0.18, p, detail, p.accent, 6, ['FrontWheelL', 'FrontWheelR']);
   axleWheels(bus, 0.6, 0.3, -0.96, 0.2, p, detail, p.accent, 6);
@@ -191,7 +192,7 @@ function buildYellowSchoolBus(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('School stop', 3.0, [
-      rotationTrack('StopSignArm', 'y', [0, 0.8, 2.2, 3.0], [0, -1.45, -1.45, 0]),
+      rotationTrack('StopSignArm', 'y', [0, 0.8, 2.2, 3.0], [0, 1.45, 1.45, 0]),
       spinTrack('FrontWheelL', 'x', 3.0, 2),
       spinTrack('FrontWheelR', 'x', 3.0, 2),
     ]),
@@ -231,7 +232,7 @@ function buildVintageRoadster(root: T.Group, p: Finish, detail: boolean) {
     new T.AnimationClip('Grand tour', 2.8, [
       spinTrack('FrontWheelL', 'x', 2.8, 2),
       spinTrack('FrontWheelR', 'x', 2.8, 2),
-      rotationTrack('RumbleLid', 'x', [0, 0.8, 2.0, 2.8], [0, -0.85, -0.85, 0]),
+      rotationTrack('RumbleLid', 'x', [0, 0.8, 2.0, 2.8], [0, 0.85, 0.85, 0]),
     ]),
   ];
 }
@@ -350,7 +351,7 @@ export const vehiclesRoadA: readonly PackEntrySpec[] = [
     id: 'yellow-school-bus',
     physicsBody: 'dynamic',
     riggedParts: [
-      rp('StopSignArm', 'Stop sign arm', 'rotate', 'y', [-85, 0], 'Swings the octagonal school crossing stop sign outward'),
+      rp('StopSignArm', 'Stop sign arm', 'rotate', 'y', [0, 85], 'Swings the octagonal school crossing stop sign outward'),
       rp('FrontWheelL', 'Front-left wheel', 'rotate', 'x', [0, 360], 'Rolls the front-left school bus wheel'),
       rp('FrontWheelR', 'Front-right wheel', 'rotate', 'x', [0, 360], 'Rolls the front-right school bus wheel'),
     ],
@@ -360,7 +361,7 @@ export const vehiclesRoadA: readonly PackEntrySpec[] = [
     id: 'vintage-roadster-coupe',
     physicsBody: 'dynamic',
     riggedParts: [
-      rp('RumbleLid', 'Rumble deck lid', 'rotate', 'x', [-55, 0], 'Opens the rear rumble-seat deck lid'),
+      rp('RumbleLid', 'Rumble deck lid', 'rotate', 'x', [0, 55], 'Opens the rear rumble-seat deck lid'),
       rp('FrontWheelL', 'Front-left wheel', 'rotate', 'x', [0, 360], 'Spins the front-left wire-spoked roadster wheel'),
       rp('FrontWheelR', 'Front-right wheel', 'rotate', 'x', [0, 360], 'Spins the front-right wire-spoked roadster wheel'),
     ],

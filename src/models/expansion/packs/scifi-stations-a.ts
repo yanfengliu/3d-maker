@@ -359,7 +359,7 @@ export function buildMedbayDiagnosticScanner(root: T.Group, p: Finish, detail: b
   cyl(arm, [0, 0.12, 0], 0.048, 0.056, 0.28, p.alloy, p.hd);
   strut(arm, [0, 0.24, 0], [0.24, 0.34, 0.44], 0.028, p.alloy, p.hd ? 10 : 6);
   displayUnit(arm, [0.24, 0.34, 0.48], 0.44, 0.3, 0.06, p.dark, holo, -0.35, -0.15);
-  const tray = group(root, 'MedTray', [-0.46, 0.84, -0.28]);
+  const tray = group(root, 'MedTray', [-0.46, 0.84, -0.78]);
   strut(tray, [0.06, -0.06, 0], [-0.14, 0, 0], 0.024, p.alloy, p.hd ? 10 : 6);
   shell(tray, [-0.16, 0.02, 0], [0.28, 0.045, 0.42], p.alloy, 0.22);
   for (const vz of [-0.1, 0, 0.1]) cyl(tray, [-0.16, 0.09, vz], 0.026, 0.026, 0.11, p.accent, p.hd);

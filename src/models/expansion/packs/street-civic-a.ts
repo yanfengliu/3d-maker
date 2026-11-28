@@ -79,19 +79,19 @@ export function britishTelephoneBox(root: T.Group, p: Finish, detail: boolean): 
   kbox(ph, [0, 1.08, -0.2], [0.14, 0.1, 0.05], p.accent, p.hd);
   cyl(ph, [-0.15, 1.28, -0.24], 0.028, 0.028, 0.22, p.dark, p.hd, 'y', 8);
   for (const sy of [1.18, 1.38]) orb(ph, [-0.15, sy, -0.22], 0.036, p.dark, p.hd);
-  const door = group(root, 'PhoneDoor', [-0.38, 1.08, 0.42]);
-  kbox(door, [0.02, 0, 0], [0.08, 1.84, 0.07], p.primary, p.hd);
-  kbox(door, [0.74, 0, 0], [0.08, 1.84, 0.07], p.primary, p.hd);
-  kbox(door, [0.38, -0.68, 0], [0.72, 0.48, 0.07], p.primary, p.hd);
-  kbox(door, [0.38, 0.87, 0], [0.72, 0.12, 0.07], p.primary, p.hd);
-  pane(door, [0.38, 0.19, 0], [0.68, 1.28, 0.02], glass);
-  for (const mx of [0.24, 0.52]) kbox(door, [mx, 0.19, 0], [0.034, 1.28, 0.046], p.primary, p.hd);
-  for (const my of [-0.14, 0.19, 0.52]) kbox(door, [0.38, my, 0], [0.68, 0.034, 0.046], p.primary, p.hd);
-  cyl(door, [0.71, -0.04, 0.068], 0.018, 0.018, 0.24, p.accent, p.hd, 'y', 8);
-  for (const dy of [-0.14, 0.06]) kstrut(door, [0.71, dy, 0.02], [0.71, dy, 0.068], 0.014, p.accent, p.hd);
+  const door = group(root, 'PhoneDoor', [-0.35, 1.08, 0.46]);
+  kbox(door, [0.04, 0, 0], [0.08, 1.84, 0.07], p.primary, p.hd);
+  kbox(door, [0.66, 0, 0], [0.08, 1.84, 0.07], p.primary, p.hd);
+  kbox(door, [0.35, -0.68, 0], [0.68, 0.48, 0.07], p.primary, p.hd);
+  kbox(door, [0.35, 0.87, 0], [0.68, 0.12, 0.07], p.primary, p.hd);
+  pane(door, [0.35, 0.19, 0], [0.62, 1.28, 0.02], glass);
+  for (const mx of [0.22, 0.48]) kbox(door, [mx, 0.19, 0], [0.034, 1.28, 0.046], p.primary, p.hd);
+  for (const my of [-0.14, 0.19, 0.52]) kbox(door, [0.35, my, 0], [0.62, 0.034, 0.046], p.primary, p.hd);
+  cyl(door, [0.63, -0.04, 0.068], 0.018, 0.018, 0.24, p.accent, p.hd, 'y', 8);
+  for (const dy of [-0.14, 0.06]) kstrut(door, [0.63, dy, 0.02], [0.63, dy, 0.068], 0.014, p.accent, p.hd);
   if (detail) {
     for (const s of [-1, 1]) cyl(b, [s * 0.49, 2.24, 0], 0.058, 0.058, 0.028, p.accent, p.hd, 'x', 10);
-    for (const sy of [0.34, 1.84]) cyl(door, [-0.02, sy - 1.08, 0.035], 0.022, 0.022, 0.09, p.dark, p.hd, 'y', 8);
+    for (const sy of [0.34, 1.84]) cyl(door, [0, sy - 1.08, 0.035], 0.022, 0.022, 0.09, p.dark, p.hd, 'y', 8);
     if (p.hd) fastener(ph, [0.06, 1.34, -0.21], p, 0.022).rotation.x = HPI;
   }
   root.animations = [new AnimationClip('Open phone door', 3, [

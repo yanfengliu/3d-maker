@@ -231,15 +231,15 @@ function buildFarmTractor(root: T.Group, p: Finish, detail: boolean) {
     strut(tr, [s * 0.42, 1.16, -0.84], [s * 0.40, 1.94, -0.80], 0.036, p.dark, 10);
     strut(tr, [s * 0.40, 1.16, -0.18], [s * 0.38, 1.94, -0.24], 0.032, p.dark, 10);
     light(tr, [s * 0.28, 1.04, 1.04], [0.14, 0.12, 0.07], p);
-    strut(tr, [s * 0.46, 0.88, 0.12], [s * 0.48, 1.02, 0.94], 0.05, p.dark, 10);
-    strut(tr, [s * 0.48, 1.02, 0.94], [s * 0.50, 0.48, 1.32], 0.048, p.dark, 10);
+    strut(tr, [s * 0.46, 0.88, 0.12], [s * 0.48, 1.04, 0.94], 0.05, p.dark, 10);
+    strut(tr, [s * 0.48, 1.04, 0.94], [s * 0.50, 0.60, 1.32], 0.048, p.dark, 10);
   }
   shell(tr, [0, 1.96, -0.52], [0.96, 0.09, 0.86], p.accent, 0.36);
   tube(tr, [0, 0.56, -0.56], 0.075, 0.075, 1.32, p.dark, 10).rotation.z = Math.PI / 2;
   tube(tr, [0, 0.34, 0.78], 0.055, 0.055, 1.08, p.dark, 10).rotation.z = Math.PI / 2;
   wheelPair(tr, 0.66, 0.56, -0.56, 0.30, p, detail, p.accent, 12, ['RearWheelL', 'RearWheelR']);
   wheelPair(tr, 0.54, 0.34, 0.78, 0.18, p, detail, p.accent, 8, ['FrontWheelL', 'FrontWheelR']);
-  const bucket = group(tr, 'FrontBucket', [0, 0.48, 1.32]);
+  const bucket = group(tr, 'FrontBucket', [0, 0.60, 1.32]);
   shell(bucket, [0, -0.06, 0.06], [1.28, 0.48, 0.10], p.accent, 0.22);
   shell(bucket, [0, -0.28, 0.28], [1.28, 0.08, 0.52], p.edge, 0.2);
   shell(bucket, [0, 0.14, 0.20], [1.28, 0.08, 0.36], p.accent, 0.22);
@@ -249,16 +249,16 @@ function buildFarmTractor(root: T.Group, p: Finish, detail: boolean) {
     torus(tr, [0, 1.38, -0.34], 0.14, 0.024, p.tire, p.hd).rotation.x = 1.0;
     for (const s of [-1, 1]) {
       box(tr, [s * 0.35, 1.04, 0.42], [0.02, 0.09, 0.96], p.accent);
-      if (p.hd) fastener(tr, [s * 0.48, 1.02, 0.94], p, 0.032);
+      if (p.hd) fastener(tr, [s * 0.48, 1.04, 0.94], p, 0.032);
     }
   }
   root.animations = [
     new T.AnimationClip('Field work', 3.2, [
       spinTrack('RearWheelL', 'x', 3.2, 2), spinTrack('RearWheelR', 'x', 3.2, 2),
       spinTrack('FrontWheelL', 'x', 3.2, 3), spinTrack('FrontWheelR', 'x', 3.2, 3),
-      rotationTrack('FrontBucket', 'x', [0, 0.8, 2.2, 3.2], [0, -0.4, 0.72, 0]),
+      rotationTrack('FrontBucket', 'x', [0, 0.8, 2.2, 3.2], [0, -0.4, 0.52, 0]),
     ]),
-    new T.AnimationClip('Dump bucket', 2.4, [rotationTrack('FrontBucket', 'x', [0, 0.7, 1.6, 2.4], [0, 0.76, 0.76, 0])]),
+    new T.AnimationClip('Dump bucket', 2.4, [rotationTrack('FrontBucket', 'x', [0, 0.7, 1.6, 2.4], [0, 0.55, 0.55, 0])]),
   ];
 }
 
@@ -457,7 +457,7 @@ export const vehiclesB: readonly VehicleAssetDef[] = [
     [{ name: 'Sandbags', label: 'Ballast sandbags', describe: 'Removable ballast sandbags hung along the gondola rim' }], buildHotAirBalloon),
   asset('farm-tractor', 'VH-12', 'Farm Tractor', '#497d3b', '#e5b73b',
     'Utility farm tractor with heavy rear drive tires and a tilting front-end loader bucket.',
-    [rp('RearWheelL', 'Rear-left wheel', 'rotate', 'x', [0, 360], 'Rolls the oversized rear-left tractor tire'), rp('RearWheelR', 'Rear-right wheel', 'rotate', 'x', [0, 360], 'Rolls the oversized rear-right tractor tire'), rp('FrontBucket', 'Loader bucket', 'rotate', 'x', [-25, 45], 'Curls and dumps the front loader scoop bucket')],
+    [rp('RearWheelL', 'Rear-left wheel', 'rotate', 'x', [0, 360], 'Rolls the oversized rear-left tractor tire'), rp('RearWheelR', 'Rear-right wheel', 'rotate', 'x', [0, 360], 'Rolls the oversized rear-right tractor tire'), rp('FrontBucket', 'Loader bucket', 'rotate', 'x', [-25, 32], 'Curls and dumps the front loader scoop bucket')],
     [], buildFarmTractor),
   asset('arctic-snowcat', 'VH-13', 'Arctic Snowcat', '#da542e', '#e6e0cc',
     'Tracked polar expedition snowcat with a tilting snowplow, rotating beacon, and detachable roof rack.',

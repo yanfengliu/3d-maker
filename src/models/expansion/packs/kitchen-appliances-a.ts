@@ -104,13 +104,13 @@ export function planetaryStandMixer(root: T.Group, p: Finish, detail: boolean) {
   tube(mx, [0, 0.42, 0.14], 0.3, 0.21, 0.42, p.alloy, 16);
   ring(mx, [0, 0.62, 0.14], 0.31, 0.026, 0.04, p.accent);
   torus(mx, [0.32, 0.44, 0.14], 0.09, 0.022, p.alloy, p.hd).rotation.y = HPI;
-  const head = group(root, 'MixerHead', [0, 0.74, -0.34]);
-  cyl(head, [0, 0.12, 0.3], 0.19, 0.19, 0.88, p.primary, 'z', 16);
-  orb(head, [0, 0.12, 0.72], 0.19, p.primary, p.hd, [1, 1, 0.75]);
-  orb(head, [0, 0.12, -0.14], 0.19, p.primary, p.hd, [1, 1, 0.7]);
-  cyl(head, [0, 0.12, 0.86], 0.068, 0.072, 0.06, p.accent, 'z', 12);
-  box(head, [0, 0.14, 0.3], [0.41, 0.06, 0.64], p.accent);
-  const whisk = group(head, 'WireWhisk', [0, -0.06, 0.48]);
+  const head = group(root, 'MixerHead', [0, 0.78, -0.32]);
+  cyl(head, [0, 0.12, 0.28], 0.19, 0.19, 0.84, p.primary, 'z', 16);
+  orb(head, [0, 0.12, 0.7], 0.19, p.primary, p.hd, [1, 1, 0.75]);
+  orb(head, [0, 0.12, -0.08], 0.18, p.primary, p.hd, [1, 1, 0.65]);
+  cyl(head, [0, 0.12, 0.84], 0.068, 0.072, 0.06, p.accent, 'z', 12);
+  box(head, [0, 0.14, 0.28], [0.41, 0.06, 0.64], p.accent);
+  const whisk = group(head, 'WireWhisk', [0, -0.06, 0.46]);
   tube(whisk, [0, -0.06, 0], 0.036, 0.032, 0.14, p.alloy, 10);
   for (let i = 0; i < 4; i++) {
     const a = (i * Math.PI) / 4;
@@ -125,7 +125,7 @@ export function planetaryStandMixer(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Whip mix', 2.2, [spinTrack('WireWhisk', 'y', 2.2, 3)]),
-    new T.AnimationClip('Tilt head', 3, [rotationTrack('MixerHead', 'x', [0, 0.9, 2.1, 3], [0, -0.78, -0.78, 0])]),
+    new T.AnimationClip('Tilt head', 3, [rotationTrack('MixerHead', 'x', [0, 0.9, 2.1, 3], [0, -0.46, -0.46, 0])]),
   ];
 }
 

@@ -194,7 +194,7 @@ export function buildPointedWizardHat(root: T.Group, p: Finish, detail: boolean)
   orb(stand, [0, 0.62, 0], 0.24, p.edge, p.hd);
   lathe(stand, [0, 0.66, 0], [[0.22, -0.02], [0.58, -0.06], [0.59, -0.01], [0.3, 0.06], [0.26, 0.12]], p.primary, p.hd, 18);
   torus(stand, [0, 0.74, 0], 0.29, 0.044, p.accent, p.hd).rotation.x = HPI;
-  const spire = group(root, 'HatSpire', [0, 0.78, 0]);
+  const spire = group(root, 'HatSpire', [0, 0.8, 0]);
   tube(spire, [0, 0.24, -0.03], 0.14, 0.29, 0.48, p.primary, 16).rotation.x = -0.14;
   cone(spire, [0.05, 0.66, -0.15], 0.15, 0.46, p.primary, p.hd, 16).rotation.set(-0.48, 0, -0.2);
   if (detail) {
@@ -206,7 +206,7 @@ export function buildPointedWizardHat(root: T.Group, p: Finish, detail: boolean)
   const buckle = group(root, 'HatBuckle', [0, 0.75, 0.325]);
   box(buckle, [0, 0, 0], [0.15, 0.12, 0.04], p.accent);
   box(buckle, [0, 0, 0.022], [0.075, 0.06, 0.02], p.optic);
-  root.animations = [new T.AnimationClip('Sway hat spire', 2.8, [rotationTrack('HatSpire', 'z', [0, 0.7, 1.4, 2.1, 2.8], [0, 0.32, 0, -0.32, 0])])];
+  root.animations = [new T.AnimationClip('Sway hat spire', 2.8, [rotationTrack('HatSpire', 'z', [0, 0.7, 1.4, 2.1, 2.8], [0, 0.2, 0, -0.2, 0])])];
 }
 
 export function buildPlumedKnightHelm(root: T.Group, p: Finish, detail: boolean) {

@@ -155,7 +155,7 @@ const specsById: Record<string, BuilderSpec> = {
   'hexagonal-shield-emitter': {
     physicsBody: 'static',
     riggedParts: [
-      rig('ProjectorTilt', 'Projector tilt', 'x', [-35, 30], 'Tilts the shield projector yoke in elevation'),
+      rig('ProjectorTilt', 'Projector tilt', 'x', [-35, 10], 'Tilts the shield projector yoke in elevation'),
       rig('HexProjector', 'Hex projector', 'z', [0, 360], 'Spins the hexagonal phased-array energy projector face'),
     ],
     detachableParts: [det('RearCapacitor', 'Rear capacitor', 'Removable rear mast field-coil capacitor bank')],
@@ -183,7 +183,7 @@ const specsById: Record<string, BuilderSpec> = {
   'neural-link-chair': {
     physicsBody: 'static',
     riggedParts: [
-      rig('NeuralVisorArm', 'Neural visor arm', 'x', [0, 52], 'Lowers the overhead neural-visor helmet into place'),
+      rig('NeuralVisorArm', 'Neural visor arm', 'x', [0, 34], 'Lowers the overhead neural-visor helmet into place'),
       rig('ChairAssembly', 'Chair swivel', 'y', [-60, 60], 'Swivels the contoured neural-link seat on its pedestal'),
     ],
     detachableParts: [det('HeadrestPod', 'Headrest pod', 'Rear spine neural telemetry processor module')],

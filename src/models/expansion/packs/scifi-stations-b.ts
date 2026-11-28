@@ -123,15 +123,15 @@ export function buildHexagonalShieldEmitter(root: T.Group, p: Finish, detail: bo
   cyl(em, [0, 1.14, 0], 0.16, 0.2, 1.16, p.primary, p.hd, 'y', 8, 24);
   for (const [cy, idx] of [[0.78, 0], [1.02, 1], [1.26, 2], [1.5, 3]] as const) ringBand(em, [0, cy, 0], 0.27, 0.07, 0.09, idx % 2 === 0 ? p.accent : p.edge, p.hd);
   shell(em, [0, 1.72, 0], [0.46, 0.16, 0.38], p.dark, 0.24);
-  for (const s of [-1, 1]) shell(em, [s * 0.24, 1.88, 0], [0.1, 0.26, 0.24], p.edge, 0.2);
+  for (const s of [-1, 1]) shell(em, [s * 0.24, 1.94, 0], [0.1, 0.4, 0.24], p.edge, 0.2);
   const cap = group(root, 'RearCapacitor', [0, 1.12, -0.32]);
   box(cap, [0, 0, 0.12], [0.22, 0.44, 0.14], p.edge);
   cyl(cap, [0, 0, -0.02], 0.13, 0.13, 0.62, p.dark, p.hd);
   box(cap, [0, 0, -0.155], [0.06, 0.42, 0.03], aqua);
-  const tilt = group(root, 'ProjectorTilt', [0, 1.9, 0]);
+  const tilt = group(root, 'ProjectorTilt', [0, 2.04, 0]);
   cyl(tilt, [0, 0, 0], 0.065, 0.065, 0.56, p.alloy, p.hd, 'x');
-  cyl(tilt, [0, 0, -0.18], 0.2, 0.34, 0.36, p.dark, p.hd, 'z');
-  const hexHead = group(tilt, 'HexProjector', [0, 0, 0.08]);
+  cyl(tilt, [0, 0, 0.1], 0.2, 0.3, 0.48, p.dark, p.hd, 'z');
+  const hexHead = group(tilt, 'HexProjector', [0, 0, 0.42]);
   hexSlab(hexHead, [0, 0, 0], 0.66, 0.14, p.primary, p.hd).rotation.x = HPI;
   hexSlab(hexHead, [0, 0, 0], 0.54, 0.18, p.inset, p.hd).rotation.x = HPI;
   hexSlab(hexHead, [0, 0, 0.11], 0.32, 0.08, fieldHolo, p.hd).rotation.x = HPI;
@@ -144,7 +144,7 @@ export function buildHexagonalShieldEmitter(root: T.Group, p: Finish, detail: bo
   }
   root.animations = [new T.AnimationClip('Project shield array', 3.8, [
     spinTrack('HexProjector', 'z', 3.8, 2),
-    rotationTrack('ProjectorTilt', 'x', [0, 0.95, 2.85, 3.8], [0, deg(-28), deg(22), 0]),
+    rotationTrack('ProjectorTilt', 'x', [0, 0.95, 2.85, 3.8], [0, deg(-28), deg(10), 0]),
   ])];
 }
 
@@ -201,8 +201,8 @@ export function buildOrbitalBatteryTurret(root: T.Group, p: Finish, detail: bool
   cyl(bunker, [0, 0.38, 0], 0.72, 0.92, 0.24, p.primary, p.hd, 'y', 8, 24);
   radLoop(4, (a, sx, sz) => { shell(bunker, [sx * 0.84, 0.22, sz * 0.84], [0.4, 0.34, 0.24], p.edge, 0.24).rotation.y = a; }, Math.PI / 4);
   shell(bunker, [0, 0.22, -0.94], [0.46, 0.32, 0.14], p.edge, 0.2);
-  const turret = group(root, 'TurretHousing', [0, 0.5, 0]);
-  ringBand(turret, [0, 0.04, 0], 0.7, 0.1, 0.1, p.edge, p.hd);
+  const turret = group(root, 'TurretHousing', [0, 0.53, 0]);
+  ringBand(turret, [0, 0.02, 0], 0.7, 0.1, 0.1, p.edge, p.hd);
   shell(turret, [0, 0.4, -0.1], [1.26, 0.64, 1.38], p.primary, 0.3);
   shell(turret, [0, 0.76, -0.14], [0.96, 0.18, 1.06], p.dark, 0.28);
   cyl(turret, [-0.26, 0.92, -0.2], 0.18, 0.22, 0.16, p.edge, p.hd);
@@ -258,18 +258,18 @@ export function buildNeuralLinkChair(root: T.Group, p: Finish, detail: boolean) 
   box(pod, [0, 0.02, -0.18], [0.2, 0.1, 0.03], synGlow);
   const visor = group(chair, 'NeuralVisorArm', [0, 1.48, -0.34]);
   cyl(visor, [0, 0, 0], 0.075, 0.075, 0.28, p.alloy, p.hd, 'x');
-  strut(visor, [0, 0, 0], [0, 0.1, 0.36], 0.04, p.edge, p.hd ? 10 : 6);
-  strut(visor, [0, 0.1, 0.36], [0, -0.22, 0.46], 0.036, p.alloy, p.hd ? 10 : 6);
-  shell(visor, [0, -0.26, 0.42], [0.38, 0.22, 0.36], p.primary, 0.3);
-  for (const sx of [-0.21, 0.21]) cyl(visor, [sx, -0.28, 0.44], 0.055, 0.055, 0.07, p.accent, p.hd, 'x');
-  box(visor, [0, -0.3, 0.59], [0.34, 0.15, 0.06], visorHolo).castShadow = false;
+  strut(visor, [0, 0, 0], [0, 0.14, 0.42], 0.04, p.edge, p.hd ? 10 : 6);
+  strut(visor, [0, 0.14, 0.42], [0, -0.14, 0.56], 0.036, p.alloy, p.hd ? 10 : 6);
+  shell(visor, [0, -0.18, 0.54], [0.38, 0.22, 0.36], p.primary, 0.3);
+  for (const sx of [-0.21, 0.21]) cyl(visor, [sx, -0.2, 0.56], 0.055, 0.055, 0.07, p.accent, p.hd, 'x');
+  box(visor, [0, -0.22, 0.71], [0.34, 0.15, 0.06], visorHolo).castShadow = false;
   if (detail) {
     boltRing(ped, 0, 0.1, 0, 0.5, 5, p);
     hose(chair, [[-0.14, 0.74, -0.54], [-0.28, 0.58, -0.38], [-0.38, 0.38, -0.1]], 0.02, p.tire, p.hd);
     if (p.hd) for (const sx of [-0.24, 0.24]) fastener(chair, [sx, 0.15, 0.42], p, 0.024).rotation.x = HPI;
   }
   root.animations = [new T.AnimationClip('Engage neural link', 3.4, [
-    rotationTrack('NeuralVisorArm', 'x', [0, 0.9, 2.3, 3.4], [0, deg(46), deg(46), 0]),
+    rotationTrack('NeuralVisorArm', 'x', [0, 0.9, 2.3, 3.4], [0, deg(34), deg(34), 0]),
     rotationTrack('ChairAssembly', 'y', [0, 0.9, 2.3, 3.4], [0, deg(28), deg(-28), 0]),
   ])];
 }

@@ -144,7 +144,7 @@ export function toothedMimicChest(root: T.Group, p: Finish, detail: boolean): vo
   kBox(body, [0, 0.59, 0], [1.18, 0.07, 0.72], m.cloth, hd);
   for (let i = 0; i < 7; i++) kCyl(body, [-0.45 + i * 0.15, 0.68, 0.36], 0.008, 0.042, 0.14, m.bone, hd, 'y', 6);
   for (const sx of [-0.58, 0.58]) for (const sz of [-0.14, 0.14]) kCyl(body, [sx, 0.67, sz], 0.008, 0.036, 0.12, m.bone, hd, 'y', 6);
-  const tongue = group(root, 'MimicTongue', [0, 0.62, 0.1]);
+  const tongue = group(root, 'MimicTongue', [0, 0.66, 0.14]);
   for (const [tz, ty, r] of [[0.08, 0.02, 0.11], [0.24, 0.05, 0.095], [0.39, 0.02, 0.08], [0.51, -0.05, 0.065]] as const) {
     kOrb(tongue, [0, ty, tz], r, p.accent, hd, [1.25, 0.65, 1.3]);
   }
@@ -175,7 +175,7 @@ export function toothedMimicChest(root: T.Group, p: Finish, detail: boolean): vo
   }
   root.animations = [new T.AnimationClip('Snap mimic jaw', 2.6, [
     rotationTrack('MimicJaw', 'x', [0, 0.65, 1.3, 1.9, 2.6], [0, -0.95, -0.25, -1.05, 0]),
-    rotationTrack('MimicTongue', 'x', [0, 0.65, 1.3, 1.9, 2.6], [0, 0.36, -0.14, 0.4, 0]),
+    rotationTrack('MimicTongue', 'x', [0, 0.65, 1.3, 1.9, 2.6], [0, -0.32, 0.06, -0.38, 0]),
   ])];
 }
 

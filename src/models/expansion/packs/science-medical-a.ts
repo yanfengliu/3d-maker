@@ -81,7 +81,7 @@ export function mriGantryScanner(root: T.Group, p: Finish, detail: boolean) {
   shell(mri, [0, 1.78, -0.46], [1.96, 0.48, 1.12], p.primary, 0.24);
   shell(mri, [0, 0.24, -0.46], [1.86, 0.26, 1.12], p.primary, 0.22);
   ring(mri, [0, 1.06, -0.46], 0.82, 0.24, 1.14, p.primary).rotation.x = HPI;
-  const bore = group(root, 'BoreRing', [0, 1.06, 0.12]);
+  const bore = group(root, 'BoreRing', [0, 1.06, 0.14]);
   ring(bore, [0, 0, 0], 0.62, 0.045, 0.06, p.accent).rotation.x = HPI;
   for (let i = 0; i < 4; i++) {
     const a = i * HPI;
@@ -261,7 +261,7 @@ export function vanDeGraaffGenerator(root: T.Group, p: Finish, detail: boolean) 
   const roller = group(root, 'BeltRoller', [-0.14, 0.58, 0]);
   cyl(roller, [0, 0, 0], 0.072, 0.072, 0.16, p.accent, 'x', 14);
   box(roller, [0, 0.065, 0], [0.14, 0.02, 0.025], p.dark);
-  const wand = group(root, 'DischargeWand', [0.36, 0.28, 0]);
+  const wand = group(root, 'DischargeWand', [0.46, 0.28, 0]);
   tube(wand, [0, 0.56, 0], 0.028, 0.036, 1.12, p.primary, 10);
   orb(wand, [0, 1.24, 0], 0.14, p.accent, p.hd);
   if (detail) {
@@ -270,7 +270,7 @@ export function vanDeGraaffGenerator(root: T.Group, p: Finish, detail: boolean) 
   }
   root.animations = [new T.AnimationClip('Charge dome', 2.4, [
     spinTrack('BeltRoller', 'x', 2.4, 4),
-    rotationTrack('DischargeWand', 'z', [0, 0.7, 1.6, 2.4], [0, 0.32, 0.32, 0]),
+    rotationTrack('DischargeWand', 'z', [0, 0.7, 1.6, 2.4], [0, 0.11, 0.11, 0]),
   ])];
 }
 

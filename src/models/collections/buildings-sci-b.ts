@@ -289,7 +289,7 @@ function buildGeothermalTurbine(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Spin turbine', 3.0, [spinTrack('SteamRotor', 'y', 3.0, 2)]),
-    new T.AnimationClip('Vent steam', 3.2, [rotationTrack('VentLouver', 'x', [0, 1.1, 2.1, 3.2], [0, deg(45), deg(45), 0])]),
+    new T.AnimationClip('Vent steam', 3.2, [rotationTrack('VentLouver', 'x', [0, 1.1, 2.1, 3.2], [0, deg(-45), deg(-45), 0])]),
   ];
 }
 
@@ -304,9 +304,9 @@ function buildDesertRadarBunker(root: T.Group, p: Finish, detail: boolean) {
   // Front-right armored blast hatch vestibule
   shell(base, [0.58, 0.52, 0.84], [0.92, 0.72, 0.64], p.primary, 0.22);
   box(base, [0.58, 0.72, 0.9], [0.66, 0.28, 0.44], p.inset);
-  const hatch = group(base, 'BlastHatch', [0.58, 0.92, 0.58]);
-  shell(hatch, [0, -0.04, 0.32], [0.78, 0.12, 0.62], p.accent, 0.2);
-  box(hatch, [0, 0.02, 0.34], [0.52, 0.06, 0.14], p.dark);
+  const hatch = group(base, 'BlastHatch', [0.58, 0.92, 0.66]);
+  shell(hatch, [0, -0.04, 0.26], [0.78, 0.12, 0.54], p.accent, 0.2);
+  box(hatch, [0, 0.02, 0.28], [0.52, 0.06, 0.14], p.dark);
   // Rotating roof phased-array radar unit
   ring(base, [0, 1.36, -0.16], 0.52, 0.1, 0.14, p.dark);
   const radar = group(base, 'RadarArray', [0, 1.44, -0.16]);
@@ -334,7 +334,7 @@ function buildDesertRadarBunker(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Radar sweep', 4.8, [spinTrack('RadarArray', 'y', 4.8)]),
-    new T.AnimationClip('Open blast hatch', 3.2, [rotationTrack('BlastHatch', 'x', [0, 1.1, 2.1, 3.2], [0, deg(-85), deg(-85), 0])]),
+    new T.AnimationClip('Open blast hatch', 3.2, [rotationTrack('BlastHatch', 'x', [0, 1.1, 2.1, 3.2], [0, deg(-68), deg(-68), 0])]),
   ];
 }
 
@@ -432,7 +432,7 @@ export const buildingsSciB: readonly SciBuildingAsset[] = [
     'Industrial steam power generator with an exposed vertical turbine rotor and tilting exhaust louver.',
     [
       rig('SteamRotor', 'Steam rotor', 'rotate', 'y', [0, 360], 'Spins the six-blade vertical steam turbine rotor'),
-      rig('VentLouver', 'Vent louver', 'rotate', 'x', [0, 45], 'Tilts the condenser exhaust louver open'),
+      rig('VentLouver', 'Vent louver', 'rotate', 'x', [-45, 0], 'Tilts the condenser exhaust louver open'),
     ],
     [],
     buildGeothermalTurbine,
@@ -442,7 +442,7 @@ export const buildingsSciB: readonly SciBuildingAsset[] = [
     'Armored desert listening bunker with a rotating roof phased-array radar and hinged blast hatch.',
     [
       rig('RadarArray', 'Radar array', 'rotate', 'y', [0, 360], 'Rotates the rooftop tactical radar array'),
-      rig('BlastHatch', 'Blast hatch', 'rotate', 'x', [0, -85], 'Swings the armored entrance blast hatch upward'),
+      rig('BlastHatch', 'Blast hatch', 'rotate', 'x', [0, -68], 'Swings the armored entrance blast hatch upward'),
     ],
     [],
     buildDesertRadarBunker,

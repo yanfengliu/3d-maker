@@ -32,7 +32,7 @@ export const kitchenAppliancesPack: readonly ProceduralAssetDef[] = [
       rig('SteamWand', 'Steam wand', 'y', [0, 45], 'Swings the frothing steam wand outward')],
     [], commercialEspressoMachine),
   makeKitchenDef(metaAt(3), 'dynamic',
-    [rig('MixerHead', 'Mixer head', 'x', [-50, 0], 'Tilts back the planetary stand mixer head'),
+    [rig('MixerHead', 'Mixer head', 'x', [-28, 0], 'Tilts back the planetary stand mixer head'),
       rig('WireWhisk', 'Wire whisk', 'y', [0, 360], 'Spins the planetary balloon whisk')],
     [], planetaryStandMixer),
   makeKitchenDef(metaAt(4), 'static',

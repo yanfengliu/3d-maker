@@ -196,11 +196,11 @@ export function anvilHammerStation(root: T.Group, p: Finish, detail: boolean) {
   shell(st, [-0.26, 0.8, 0], [0.46, 0.16, 0.28], p.primary, 0.2);
   shell(st, [-0.26, 0.96, 0], [0.54, 0.14, 0.24], p.alloy, 0.16);
   tube(st, [-0.64, 0.98, 0], 0.028, 0.092, 0.28, p.alloy, 12).rotation.z = HPI;
-  shell(st, [0.46, 0.72, 0], [0.3, 1.24, 0.38], p.primary, 0.14);
-  ring(st, [0.46, 1.16, -0.24], 0.24, 0.036, 0.08, p.dark).rotation.x = HPI;
-  const ham = group(root, 'PowerHammer', [0.46, 1.26, 0]);
-  strut(ham, [0, 0, 0], [-0.72, -0.06, 0], 0.044, p.dark, 10);
-  shell(ham, [-0.72, -0.14, 0], [0.22, 0.24, 0.2], p.accent, 0.2);
+  shell(st, [0.46, 0.78, 0], [0.3, 1.36, 0.38], p.primary, 0.14);
+  ring(st, [0.46, 1.24, -0.24], 0.24, 0.036, 0.08, p.dark).rotation.x = HPI;
+  const ham = group(root, 'PowerHammer', [0.46, 1.38, 0]);
+  strut(ham, [0, 0, 0], [-0.72, -0.04, 0], 0.044, p.dark, 10);
+  shell(ham, [-0.72, -0.1, 0], [0.22, 0.22, 0.2], p.accent, 0.2);
   const rack = group(root, 'TongRack', [0.46, 0.62, 0.24]);
   box(rack, [0, 0, 0], [0.34, 0.055, 0.1], p.dark);
   for (const sx of [-0.1, 0, 0.1]) strut(rack, [sx, 0.04, 0.02], [sx, -0.4, 0.04], 0.016, p.alloy, 8);
@@ -208,7 +208,7 @@ export function anvilHammerStation(root: T.Group, p: Finish, detail: boolean) {
     box(st, [-0.26, 1.045, 0], [0.16, 0.036, 0.08], p.accent);
     if (p.hd) for (const sx of [-0.58, 0.58]) fastener(st, [sx, 0.15, 0.42], p, 0.026);
   }
-  root.animations = [new T.AnimationClip('Strike anvil', 1.8, [rotationTrack('PowerHammer', 'z', [0, 0.45, 0.9, 1.35, 1.8], [0, -0.28, 0.22, -0.28, 0])])];
+  root.animations = [new T.AnimationClip('Strike anvil', 1.8, [rotationTrack('PowerHammer', 'z', [0, 0.45, 0.9, 1.35, 1.8], [0, -0.34, 0.145, -0.34, 0])])];
 }
 
 export function electricPottersWheel(root: T.Group, p: Finish, detail: boolean) {

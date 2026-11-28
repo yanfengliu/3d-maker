@@ -44,7 +44,7 @@ export const attachmentsWearablesPack: readonly ProceduralAssetDef[] = [
     [rig('EvaSunVisor', 'Gold sun visor', 'x', [0, -58], 'Lifts the reflective gold EVA helmet sun shield')],
     [det('HelmCam', 'Helmet camera', 'Side-mounted orbital telemetry camera pod')], buildVisorAstronautHelmet),
   gearAsset(metaAt('pointed-wizard-hat'),
-    [rig('HatSpire', 'Crooked spire', 'z', [-18, 18], 'Sways the bent arcane wizard hat cone')],
+    [rig('HatSpire', 'Crooked spire', 'z', [-12, 12], 'Sways the bent arcane wizard hat cone')],
     [det('HatBuckle', 'Arcane buckle', 'Removable front brass and crystal hatband buckle')], buildPointedWizardHat),
   gearAsset(metaAt('plumed-knight-helm'),
     [rig('ArmetVisor', 'Armet visor', 'x', [0, -58], 'Raises the pointed steel knight visor plate')],

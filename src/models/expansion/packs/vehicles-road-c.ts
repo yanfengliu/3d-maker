@@ -103,8 +103,8 @@ function buildBankArmoredVan(root: T.Group, p: Finish, detail: boolean) {
   const vault = group(van, 'VaultDoor', [0.46, 1.12, -1.38]);
   shell(vault, [-0.46, 0, 0], [0.92, 1.08, 0.1], p.edge, 0.18);
   cyl(vault, p, [-0.74, 0, -0.07], 0.08, 0.08, 0.05, p.accent, [Math.PI / 2, 0, 0], 10);
-  const hatch = group(van, 'RoofHatch', [0, 1.84, 0.12]);
-  shell(hatch, [0, 0.04, 0], [0.56, 0.08, 0.56], p.accent, 0.28);
+  const hatch = group(van, 'RoofHatch', [0, 1.84, -0.16]);
+  shell(hatch, [0, 0.04, 0.28], [0.56, 0.08, 0.56], p.accent, 0.28);
   axleWheels(van, 0.64, 0.32, 0.96, 0.2, p, detail, p.edge, 6, ['FrontWheelL', 'FrontWheelR']);
   axleWheels(van, 0.64, 0.32, -0.86, 0.22, p, detail, p.edge, 6);
   if (detail) {

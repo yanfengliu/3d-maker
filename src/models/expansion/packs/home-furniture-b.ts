@@ -288,9 +288,9 @@ export function tuftedLeatherSofa(root: T.Group, p: Finish, detail: boolean) {
     shell(sofa, [s * 0.98, 0.6, 0], [0.22, 0.52, 0.88], p.primary, 0.22);
     cyl(sofa, [s * 1.02, 0.84, 0], 0.14, 0.14, 0.88, p.primary, 'z', 14);
   }
-  const foot = group(root, 'Footrest', [0, 0.24, 0.44]);
-  shell(foot, [0, 0, 0.04], [0.58, 0.22, 0.08], p.accent, 0.2);
-  for (const sx of [-0.22, 0.22]) strut(foot, [sx, 0, -0.02], [sx, 0, 0.04], 0.02, p.alloy, 8);
+  const foot = group(root, 'Footrest', [0, 0.34, 0.48]);
+  shell(foot, [0, -0.1, 0.04], [0.58, 0.22, 0.08], p.accent, 0.2);
+  for (const sx of [-0.22, 0.22]) strut(foot, [sx, -0.04, -0.04], [sx, -0.04, 0.04], 0.02, p.alloy, 8);
   const cushions = group(root, 'AccentCushions', [0, 0.62, -0.1]);
   for (const s of [-1, 1]) {
     const c = shell(cushions, [s * 0.72, 0.04, 0.04], [0.34, 0.34, 0.14], p.accent, 0.36);

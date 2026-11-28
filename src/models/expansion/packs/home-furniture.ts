@@ -29,7 +29,7 @@ export const homeFurniturePack: readonly ProceduralAssetDef[] = [
       rig('BottomDrawer', 'Bottom drawer', 'z', [0, 0.36], 'Slides open the base linen drawer', 'slide')],
     [], oakWardrobe),
   makeFurnitureDef(metaAt(3), 'static',
-    [rig('RolltopHood', 'Rolltop hood', 'x', [-60, 0], 'Rolls open the slatted tambour desk hood'),
+    [rig('RolltopHood', 'Rolltop hood', 'x', [-40, 0], 'Rolls open the slatted tambour desk hood'),
       rig('CenterDrawer', 'Center drawer', 'z', [0, 0.28], 'Slides out the center writing drawer', 'slide')],
     [], rolltopDesk),
   makeFurnitureDef(metaAt(4), 'static',

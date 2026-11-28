@@ -195,11 +195,11 @@ export function woodenCheesePress(root: T.Group, p: Finish, detail: boolean) {
   tube(screw, [0, -0.06, 0], 0.05, 0.05, 0.72, p.accent, 12);
   cyl(screw, [0, 0.28, 0], 0.024, 0.024, 0.46, p.accent, 'x', 10);
   const beam = group(root, 'WeightBeam', [-0.48, 1.24, 0.14]);
-  box(beam, [0.58, 0, 0], [1.34, 0.09, 0.09], p.primary);
-  strut(beam, [1.14, -0.04, 0], [1.14, -0.44, 0], 0.02, p.alloy, 8);
-  tube(beam, [1.14, -0.52, 0], 0.14, 0.16, 0.22, p.dark, 14);
+  box(beam, [0.62, 0, 0], [1.44, 0.09, 0.09], p.primary);
+  strut(beam, [1.24, -0.04, 0], [1.24, -0.22, 0], 0.02, p.alloy, 8);
+  tube(beam, [1.24, -0.3, 0], 0.14, 0.16, 0.22, p.dark, 14);
   if (detail) {
-    tube(cp, [0.52, 0.22, 0.16], 0.14, 0.11, 0.22, p.alloy, 12);
+    tube(cp, [0.18, 0.22, 0.28], 0.14, 0.11, 0.22, p.alloy, 12);
     if (p.hd) for (const sx of [-0.48, 0.34]) fastener(cp, [sx, 1.54, 0.12], p, 0.024).rotation.x = HPI;
   }
   root.animations = [new T.AnimationClip('Press curd', 3, [

@@ -4,6 +4,7 @@ import { inspectAsset } from '../capabilities/runtime'
 import { listVariations } from '../data/recipe'
 import { findAnimationDetachments } from './craft-animation'
 import { auditModelCraft } from './craft-invariants'
+import { findMidMotionSolidCollisions } from './craft-motion-collision'
 import { buildModel } from './index'
 
 // Explicit narrow allowlist ONLY for models with intentional levitating fantasy elements.
@@ -154,6 +155,46 @@ describe('craft-invariants synthetic defect detection', () => {
     const seated = makePress(0.56, 0.22)
     expect(findAnimationDetachments(seated)).toEqual([])
   })
+
+  it('catches a rotating power hammer plunging through an anvil while passing a hammer stopping cleanly atop the billet', () => {
+    const makeAnvilHammer = (pivotY: number, headOffsetY: number, strikeRad: number) => {
+      const root = new T.Group()
+      const station = new T.Group()
+      station.name = 'AnvilStation'
+      const anvil = new T.Mesh(new T.BoxGeometry(0.54, 0.14, 0.24), matA)
+      anvil.name = 'AnvilFace'
+      anvil.position.set(-0.26, 0.96, 0)
+      const column = new T.Mesh(new T.BoxGeometry(0.3, 1.4, 0.38), matA)
+      column.position.set(0.46, 0.72, 0)
+      station.add(anvil, column)
+
+      const hammer = new T.Group()
+      hammer.name = 'PowerHammer'
+      hammer.position.set(0.46, pivotY, 0)
+      const head = new T.Mesh(new T.BoxGeometry(0.22, 0.24, 0.2), matB)
+      head.name = 'HammerHead'
+      head.position.set(-0.72, headOffsetY, 0)
+      hammer.add(head)
+      root.add(station, hammer)
+      root.animations = [
+        new T.AnimationClip('Forge strike', 1.8, [
+          new T.NumberKeyframeTrack('PowerHammer.rotation[z]', [0, 0.45, 0.9, 1.35, 1.8], [0, -0.28, strikeRad, -0.28, 0]),
+        ]),
+      ]
+      return root
+    }
+
+    // Low pivot + deep +0.22 rad downstroke drives the hammer head straight through the solid steel anvil.
+    const crashing = makeAnvilHammer(1.26, -0.14, 0.22)
+    const collisions = findMidMotionSolidCollisions(crashing)
+    expect(collisions.length).toBe(1)
+    expect(collisions[0]?.part).toBe('PowerHammer')
+    expect(collisions[0]?.deltaContainment).toBeGreaterThan(0.4)
+
+    // Raised pivot + calibrated +0.14 rad strike meets the top of the workpiece with zero anvil penetration.
+    const clean = makeAnvilHammer(1.38, -0.1, 0.14)
+    expect(findMidMotionSolidCollisions(clean)).toEqual([])
+  })
 })
 
 describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
@@ -199,6 +240,10 @@ describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
   it('keeps every animated and rigged part attached throughout motion', () => {
     if (INTENTIONAL_FLOATING_KEYS.has(key)) return
     expect(findAnimationDetachments(getModel())).toEqual([])
+  })
+
+  it('has zero rotating mid-motion solid collisions', () => {
+    expect(findMidMotionSolidCollisions(getModel())).toEqual([])
   })
 
   it('stays connected and watertight when any detachable part is hidden', () => {

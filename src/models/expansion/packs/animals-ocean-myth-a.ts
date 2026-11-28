@@ -70,7 +70,7 @@ function buildOctopus(root: T.Group, p: Finish, detail: boolean) {
   const rock = tone(p, 'Seafloor rock', '#595f63', 0.86, 0.05);
   const body = group(root, 'OctopusBody');
   shell(body, [0, 0.1, 0], [1.38, 0.2, 1.38], rock, 0.56);
-  const mantle = group(body, 'OctoMantle', [0, 0.46, 0]);
+  const mantle = group(body, 'OctoMantle', [0, 0.52, 0]);
   orb(mantle, p, [0, 0.36, -0.14], [0.42, 0.52, 0.46], p.primary, 12).rotation.x = -0.25;
   orb(mantle, p, [0, 0.04, 0.08], [0.34, 0.24, 0.34], p.primary, 10);
   for (const s of [-1, 1]) {
@@ -101,7 +101,7 @@ function buildOctopus(root: T.Group, p: Finish, detail: boolean) {
     new T.AnimationClip('Tentacle wave', 3.0, [
       sway('TentacleL', 'x', 3.0, -0.45, 0.45),
       sway('TentacleR', 'x', 3.0, 0.45, -0.45),
-      sway('OctoMantle', 'x', 3.0, -0.22, 0.22),
+      sway('OctoMantle', 'x', 3.0, -0.18, 0.18),
     ]),
   ];
 }
@@ -250,7 +250,7 @@ export const animalsOceanMythA: readonly OceanMythSpec[] = [
     riggedParts: [
       rot('TentacleL', 'Left raised arm', 'x', [-35, 35], 'Waves the front-left suction-cupped tentacle'),
       rot('TentacleR', 'Right raised arm', 'x', [-35, 35], 'Waves the front-right suction-cupped tentacle'),
-      rot('OctoMantle', 'Mantle head', 'x', [-18, 18], 'Pulses and nods the bulbous octopus mantle'),
+      rot('OctoMantle', 'Mantle head', 'x', [-12, 12], 'Pulses and nods the bulbous octopus mantle'),
     ],
     build: buildOctopus,
   },

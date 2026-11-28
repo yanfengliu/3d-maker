@@ -52,7 +52,7 @@ export const scienceMedicalPack: readonly ProceduralAssetDef[] = [
     [], drumSeismograph),
   makeScienceDef(metaAt(8), 'static',
     [rig('BeltRoller', 'Belt roller', 'x', [0, 360], 'Drives the internal Van de Graaff charge belt'),
-      rig('DischargeWand', 'Discharge wand', 'z', [0, 25], 'Swings the grounded discharge sphere toward the dome')],
+      rig('DischargeWand', 'Discharge wand', 'z', [0, 7], 'Swings the grounded discharge sphere toward the dome')],
     [], vanDeGraaffGenerator),
   makeScienceDef(metaAt(9), 'static',
     [rig('IncubatorDoor', 'Incubator door', 'y', [-85, 0], 'Opens the insulated glazed bio-incubator door'),

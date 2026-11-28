@@ -7,7 +7,7 @@ import type { Finish, SeaAirSpec } from './vehicles-sea-air-kit';
 
 function buildPaddleSteamer(root: T.Group, p: Finish, detail: boolean) {
   const ship = group(root, 'PaddleSteamer');
-  wavePlinth(ship, p, 1.56, 3.36, 0.12);
+  wavePlinth(ship, p, 1.56, 3.9, 0.12);
   shell(ship, [0, 0.24, 0.1], [1.34, 0.28, 2.86], p.dark, 0.56);
   shell(ship, [0, 0.44, 0.16], [1.38, 0.18, 2.74], p.primary, 0.5);
   shell(ship, [0, 0.78, 0.18], [1.14, 0.52, 2.18], p.primary, 0.34);
@@ -20,12 +20,12 @@ function buildPaddleSteamer(root: T.Group, p: Finish, detail: boolean) {
   for (const s of [-1, 1]) {
     cyl(ship, p, [s * 0.34, 2.26, 0.92], 0.09, 0.11, 1.24, p.dark, [0, 0, 0], 12);
     ring(ship, [s * 0.34, 2.86, 0.92], 0.13, 0.032, 0.1, p.accent);
-    strut(ship, [s * 0.52, 0.48, -1.12], [s * 0.52, 0.56, -1.52], 0.045, p.dark, 8);
+    strut(ship, [s * 0.52, 0.48, -1.12], [s * 0.52, 0.56, -1.86], 0.045, p.dark, 8);
     for (let i = 0; i < 4; i++) {
       rbox(ship, p, [s * 0.59, 0.82, -0.52 + i * 0.48], [0.04, 0.26, 0.28], p.optic);
     }
   }
-  const wheel = group(ship, 'PaddleWheel', [0, 0.56, -1.48]);
+  const wheel = group(ship, 'PaddleWheel', [0, 0.56, -1.84]);
   cyl(wheel, p, [0, 0, 0], 0.07, 0.07, 1.08, p.alloy, [0, 0, Math.PI / 2], 10);
   for (const s of [-1, 1]) ring(wheel, [s * 0.44, 0, 0], 0.44, 0.04, 0.06, p.accent).rotation.z = Math.PI / 2;
   for (let i = 0; i < 8; i++) {

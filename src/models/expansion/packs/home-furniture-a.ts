@@ -113,19 +113,19 @@ export function rolltopDesk(root: T.Group, p: Finish, detail: boolean) {
   box(desk, [0, 1.16, -0.18], [1.46, 0.032, 0.2], p.dark);
   for (const sx of [-0.39, 0.39]) box(desk, [sx, 0.7, 0.02], [0.05, 0.14, 0.72], p.dark);
   drawerBox(root, 'CenterDrawer', [0, 0.7, 0.08], 0.74, 0.13, 0.6, p, detail);
-  const hood = group(root, 'RolltopHood', [0, 0.94, -0.04]);
-  for (let i = 0; i < 7; i++) {
-    const a = -0.12 + i * 0.22;
-    const slat = box(hood, [0, Math.sin(a) * 0.44, Math.cos(a) * 0.4], [1.5, 0.088, 0.036], i % 2 === 0 ? p.primary : p.accent);
+  const hood = group(root, 'RolltopHood', [0, 0.96, 0.08]);
+  for (let i = 0; i < 6; i++) {
+    const a = -0.06 + i * 0.19;
+    const slat = box(hood, [0, Math.sin(a) * 0.34, Math.cos(a) * 0.32], [1.5, 0.088, 0.036], i % 2 === 0 ? p.primary : p.accent);
     slat.rotation.x = -a;
   }
-  box(hood, [0, -0.04, 0.42], [0.34, 0.044, 0.045], p.accent);
+  box(hood, [0, -0.02, 0.34], [0.34, 0.044, 0.045], p.accent);
   if (detail) {
     for (const x of [-0.34, 0.34]) box(desk, [x, 0.94, -0.16], [0.22, 0.08, 0.16], p.stencil);
     if (p.hd) for (const sx of [-0.62, 0.62]) fastener(desk, [sx, 1.44, 0.1], p, 0.024).rotation.x = HPI;
   }
   root.animations = [
-    new T.AnimationClip('Roll hood', 3, [rotationTrack('RolltopHood', 'x', [0, 0.9, 2.1, 3], [0, -0.95, -0.95, 0])]),
+    new T.AnimationClip('Roll hood', 3, [rotationTrack('RolltopHood', 'x', [0, 0.9, 2.1, 3], [0, -0.68, -0.68, 0])]),
     new T.AnimationClip('Open drawer', 2.6, [slideTrack('CenterDrawer', [0, 0.7, 0.08], 2, [0, 0.8, 1.9, 2.6], [0, 0.28, 0.28, 0])]),
   ];
 }
