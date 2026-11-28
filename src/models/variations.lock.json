@@ -1003,8 +1003,8 @@
       "label": "Default",
       "situation": "Clinical benchtop centrifuge with digital display, hinged viewing lid, and spinning six-tube angled sample rotor.",
       "recipeHash": "sha256:2f8cc730c318022e794db0de753d6eb65d717cfe688c8cbe5ac843793d4c9e0a",
-      "standardHash": "sha256:afb8ae05f2af0766340e22d69dd662dfd86dfb0e10c37340962291add4914b47",
-      "hdHash": "sha256:7c9b696e82d57d9a8cfbb630d94b97f0a6f77b7bbd870113e1125c3868f665f4",
+      "standardHash": "sha256:cd312aae4ef4890c42929c7cfe1ac49cd1a20024925399ec6eb463ed15ab1cf7",
+      "hdHash": "sha256:07977e0435295c882bdd3745c55210f962cfd7329f04bdad08677ed8df12a84c",
       "clips": [
         "Spin samples",
         "Open lid"
@@ -1345,8 +1345,8 @@
       "label": "Default",
       "situation": "Leather-wrapped brass telescope on a tabletop cradle with a telescoping lens tube and hinged cap.",
       "recipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
-      "standardHash": "sha256:6a0f6f8b4b034c09cb88c44496236c8bd7dcd0c523b1ab4d05505798121abc21",
-      "hdHash": "sha256:11c2bd262799c5e7cf4840e1d91990b6316c1cc7e8542ed07f918def844e1333",
+      "standardHash": "sha256:76cacc425c0d5a653ec7cd1a271a026f7b17f63d7ebd331acc060e6415aff0be",
+      "hdHash": "sha256:4c24bb4c56bed15d2dc751e9fde45eafed27bd8066b8751adc545b79c5c1a62d",
       "clips": [
         "Extend spyglass",
         "Flip lens cap"
@@ -1600,8 +1600,8 @@
       "label": "Default",
       "situation": "Industrial rail-mounted A-frame gantry crane with a traversing trolley and lowering hoist hook.",
       "recipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
-      "standardHash": "sha256:1e9946feab305cdae1eb939fa8d54fb01ad9f60e2cc17514ee9ae7e074e5c142",
-      "hdHash": "sha256:8308ec6427f294418821c3c35cdfa909e1f18af047fdbfaf7e8aebd1bfce62b8",
+      "standardHash": "sha256:e4f46a426a17f7b14a4b0fb4af6613778f1cd214a3ac388ea76fc4ff3674693b",
+      "hdHash": "sha256:36ca35ae49870c49ed0057251d175b44cca49a5149cfce6315d9f563963198c6",
       "clips": [
         "Transfer cargo"
       ],
@@ -1740,8 +1740,8 @@
       "label": "Default",
       "situation": "Twin-tower fortified stone gatehouse with a rising iron portcullis and detachable fire braziers.",
       "recipeHash": "sha256:c2e9c82c96545539d1b6ed68955aa53a551bdd5e93e65cd77f2a10435d5e52fa",
-      "standardHash": "sha256:7876119f95d510306433fa0b0ca568dc479b35fd091861f4bf2f897a583fb53f",
-      "hdHash": "sha256:d0c2c48abf9289b2fc0e1940b142d8d63a45e89bc32aba3ff4867214133ca96f",
+      "standardHash": "sha256:785e3ac374e4d776aeddc678fb5f54c9ad146979cd36d1f936270f4a686c5c39",
+      "hdHash": "sha256:8789c7728c52ef7e8761cf64a9a95b4f96ae982aad348506b23b63f9b4df182f",
       "clips": [
         "Raise portcullis"
       ],
@@ -2410,8 +2410,8 @@
       "label": "Default",
       "situation": "A glowing reef jellyfish with a pulsing dome bell and swirling tentacle crown.",
       "recipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
-      "standardHash": "sha256:1de8b55bfce273a71dc5b8d857e2d6ed8ed057fb6368e0a89fd7a819c4e38235",
-      "hdHash": "sha256:a108e221fad4bf019ea79294bf012b148210ce856a9148b6ef6be52bf96f827a",
+      "standardHash": "sha256:cfbea243ce026d553ca68c45ef1e605fee0f013078f432ad0d83b3e79140b2c8",
+      "hdHash": "sha256:9ad01118a2ea8b4917084ec64f5344d7e0996befee81e46067ee5ca8ee4085da",
       "clips": [
         "Pulse drift"
       ],
@@ -2658,8 +2658,8 @@
       "label": "Default",
       "situation": "Mobile liquid-nitrogen cryogenic Dewar flask on a wheeled tubular dolly with pressure manifold and lifting neck plug.",
       "recipeHash": "sha256:cd598a2b3761e602496134fb796adb167805a7e24e26dca0d3c846947ace3fe8",
-      "standardHash": "sha256:6ce84925a65444c6375a05e5e57368b25665d756e5da112ac89dcdbe0d0f0cce",
-      "hdHash": "sha256:00bec9496a51bd388d4b80aff46a3ea9e6829c9f2c6387446a18efc4415abe3d",
+      "standardHash": "sha256:5dad2df80227dca73ed08b73b13f6f85bf0a6a321ebf788854f1d169cad4b05e",
+      "hdHash": "sha256:7df23d5420f188d0356cbd8fdc1264f5ebc1512fedcb67946ea82899d6f92956",
       "clips": [
         "Pull canister",
         "Roll dewar"
@@ -3179,8 +3179,8 @@
       "label": "Default",
       "situation": "Cantonese stainless dim-sum rolling push cart with stacked bamboo steamers, lifting lid, and rolling spoked wheels.",
       "recipeHash": "sha256:ac4e978d6ae7eb714ca05ddac30b19b8265986b6ddcee1399a2a49716802645d",
-      "standardHash": "sha256:9442dc50d4b85037b4d052cdc60df87e68df9fc74ba775d00b73a5b381037bda",
-      "hdHash": "sha256:1e17e90fb334a17939b4d9f2bb89efcc11de7d72ea12554d60442cd64849973c",
+      "standardHash": "sha256:c208ed016a6bf133a68c66c6ccad3c7ff3844aa0c14dfbc4a0abe7bf63c20058",
+      "hdHash": "sha256:258026500932d570e1b5a9cd05ad29dda8cf999d71bfd19f92ad6777aaf8a6f1",
       "clips": [
         "Lift steamer lid",
         "Roll cart"
@@ -3783,8 +3783,8 @@
       "label": "Default",
       "situation": "Utility farm tractor with heavy rear drive tires and a tilting front-end loader bucket.",
       "recipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
-      "standardHash": "sha256:6a26404860be00bd11bd6e3700c20228b19d893820620eb1510c60989792e8a7",
-      "hdHash": "sha256:4518fa40df742bb0099792258c831c52af590eeaef728bd2012292e175d6ac46",
+      "standardHash": "sha256:d90cbf6642651376baad8b39f4ef786d0109ba1b7f689cafa481dc6a801ae9e3",
+      "hdHash": "sha256:d1bf1696e5c30df436012971617f77b6343b525d96767659aaad4fedb905e38b",
       "clips": [
         "Field work",
         "Dump bucket"
@@ -4181,8 +4181,8 @@
       "label": "Default",
       "situation": "Turned timber four-poster bunk bed with side ladder, sliding trundle drawer, and removable canopy valance.",
       "recipeHash": "sha256:108a6d571f2e760f3424c9ef775cdbb05292767d147a61de64699672e536cde6",
-      "standardHash": "sha256:e3e71324c54f00af7f0f052d403f585fa7e5c4a088b29c928b26148553f1aff8",
-      "hdHash": "sha256:e67edf05b2d943fcb21d2c5f4d839889dfd7fac9905a6a11dc9abdb9c98c08ea",
+      "standardHash": "sha256:2d2aa83e5bffb0c7f88cf2eeb1c1ea894691af294e8336334d7df47fcc5c6c42",
+      "hdHash": "sha256:b6cce46f4c185af0e062bf4436d696f5a0c4c0cd25e32171423b36226cf9991c",
       "clips": [
         "Slide trundle"
       ],
@@ -5160,8 +5160,8 @@
       "label": "Default",
       "situation": "Twenty-ton steel H-frame hydraulic workshop press with pinned bolster bed, descending press ram, and pump handle.",
       "recipeHash": "sha256:8cd86e3fa968015fd6b427e5283dac82edfe8c49c1a8fddd58a3211adc7be215",
-      "standardHash": "sha256:a9005b0d02715d385e7360664fdde520497fcd3256b305c5570f8e8f4e9976e3",
-      "hdHash": "sha256:5e01ed3f810532c948e5294a05e1e6beb9d0fd6be67d48c5250eb572578ce0f4",
+      "standardHash": "sha256:bf1c2b5ab5e313db9e463080d42440a623bb3ee48178f33806ebb0fb893be83a",
+      "hdHash": "sha256:86d69143e701c2070a2b4f439749079abf7c6d3c2884b1ff08bea9c2176d13a0",
       "clips": [
         "Press stroke"
       ],
@@ -5713,8 +5713,8 @@
       "label": "Default",
       "situation": "Heavy end-grain maple chopping block table with sliding front cleaver drawer and detachable side knife rack.",
       "recipeHash": "sha256:91abc2bd13992226527c4a5af574869dd38bf1a68eef9ec7bfdf59f772fca2a0",
-      "standardHash": "sha256:f069bbe405a7e9b0914b901ec11d560eb3c0b896449c02d5e16a451cf6419a5a",
-      "hdHash": "sha256:261e1348f8d554595c8d08c2708b5fd611b541ad00f73b66f4df35e0fa0c2f3d",
+      "standardHash": "sha256:a570dbfa8971b4bdce0d9c747ac437c0cb248869fbb0c5fe0e096e383abe41b9",
+      "hdHash": "sha256:2a48507c1e99f73658e0803179cd8fee04919e3d7111b100e9301d79e3e368c2",
       "clips": [
         "Open cleaver drawer"
       ],
@@ -7603,8 +7603,8 @@
       "label": "Default",
       "situation": "Traditional cedar yatai ramen stall with hanging lanterns, swaying noren curtain, and lifting broth pot lid.",
       "recipeHash": "sha256:94f00df11b3031120077bb2097092acf052cdc283e1df303a76594b6ff12313c",
-      "standardHash": "sha256:84201f47762e9a88122fa54609c0ec46207ce430324e9a26fbb53553cc9c9874",
-      "hdHash": "sha256:b0cb3415f3bbf846b069111aac0c79084e47d9a59b734713e0a3ea2aacddc3ad",
+      "standardHash": "sha256:d0e5ea56c9684cad1915738cbbd267466a549feeef54fee9d5d146b855dd59ac",
+      "hdHash": "sha256:ffd25191cc8c2110c47676c0aa0e1cf70a54ba66fa244b933f24d60f8d4ea6f6",
       "clips": [
         "Breeze & simmer"
       ],
@@ -7936,8 +7936,8 @@
       "label": "Default",
       "situation": "Twin-pedestal study desk with pigeonhole gallery, pivoting tambour rolltop hood, and sliding center drawer.",
       "recipeHash": "sha256:0f2c97a6edea78f3b3b7594397674ccd86848d178890cb90770b2495b0fde94e",
-      "standardHash": "sha256:cf7445186e740058387df085852a75a3c0787459d45c71bb9ea60969c3749351",
-      "hdHash": "sha256:e127e96de73c633a451d14acdefb0f9ca745e8c65111fa400236118f83aa0ee3",
+      "standardHash": "sha256:4b4ab36183cbf9acb95f0dee50afc01fcba180bf4208adf6a58ac59636403035",
+      "hdHash": "sha256:8403524e3693290c4ed154a7d44295bc8f835fa9f842978aabd1011188e0695f",
       "clips": [
         "Roll hood",
         "Open drawer"
@@ -8042,8 +8042,8 @@
       "label": "Default",
       "situation": "Monorail indoor rowing machine with perforated front flywheel fan, gliding seat carriage, foot stretchers, and pulling handle.",
       "recipeHash": "sha256:2b0ffdbd76fb8f0c3e0bf080614ed67b9e9f0d135181691938b216c439b7dfcf",
-      "standardHash": "sha256:8e22606ea2d275c7fa74d7bda8cd6165ea6797cb54bff6deb0d2df5ecf8fd951",
-      "hdHash": "sha256:48841da9db8855f43e7f1d3442c68541e2ff8f9ac758f1732a56e5fcecaaaf41",
+      "standardHash": "sha256:191e3e6c5d1f90d5e395f614b2c5551b96b3878c7e6520637346a48017f2a5ad",
+      "hdHash": "sha256:44d0976f65d32b3bddc4ad6a4362c1765c566651e71b3737aed0eb38179132dd",
       "clips": [
         "Rowing stroke"
       ],
@@ -8563,8 +8563,8 @@
       "label": "Default",
       "situation": "Streamlined magnetic transit pod seated on a guideway rail plinth with rising gull-wing boarding doors.",
       "recipeHash": "sha256:632ff89bad30f3a4139e7185246602677c4895bfdd2a99db1baab04331b8199a",
-      "standardHash": "sha256:ebfdee940e700c249503cb35afa1f592f83f78ae664d769aaec3285b5d6fca6a",
-      "hdHash": "sha256:6da0f1720e125fe3a3ddc8c42d2d9445b7158efe77c9093e09eec5396a2b1829",
+      "standardHash": "sha256:c08f33a640bdf3ed5ad70a60c25beea8082eaf9e7a24702c0906ba913751bebb",
+      "hdHash": "sha256:fc8c744d01172e73b8e93a189ca92d859722595bd7f388957c54018866d6336a",
       "clips": [
         "Gullwing dock"
       ],
@@ -9105,8 +9105,8 @@
       "label": "Default",
       "situation": "Tapered coastal stone lighthouse with striped masonry bands, rotating Fresnel beacon, and hinged entry door.",
       "recipeHash": "sha256:df23f786ee82602e425b1293debbdc6152830452983353991d4e15721c3edb46",
-      "standardHash": "sha256:6b4815c25120f76281173f9c2655a9d0ad93f6839b6299c1889ccf83ecf474be",
-      "hdHash": "sha256:27fb5605f80548536301d4514eedd2bbfff2912f7aa9806f9d779c064258fe4d",
+      "standardHash": "sha256:eb73e490c6055716f912efedeada6d1f23ac1ae7e45e7c0c93a7a42b8da6744d",
+      "hdHash": "sha256:b1ca6a4bf70986bac002d62f31303b22af559b87f0bbdf1aaeaa41c3e39d472e",
       "clips": [
         "Beacon sweep",
         "Open entry door"
@@ -9482,8 +9482,8 @@
       "label": "Default",
       "situation": "Field communications manpack on a harness rack with rotary tuning dials, telescoping whip antenna mast, and detachable coiled handset.",
       "recipeHash": "sha256:5a879a77de1afe45d097b09cf2ae83efddda3c686a0aa2f82cbef7c1e93754af",
-      "standardHash": "sha256:e09474793dc1e3e117e3a33cdabe6c7097eab06f09b167afcb6de6bcf5d1843a",
-      "hdHash": "sha256:0c557db331625b42d722e3a8b9eab1054e8565fff940b1507240fb5c4073794c",
+      "standardHash": "sha256:846ba016e3769f7ffdfe5a452a8808e2f6317270062dcf63e9a1895485911b23",
+      "hdHash": "sha256:8292f78a26216c45da797cdaf9ff35391cfae7b7f94fea63a21544a4ab3194ee",
       "clips": [
         "Extend radio mast"
       ],
@@ -9536,8 +9536,8 @@
       "label": "Default",
       "situation": "Low lacquered chabudai tea table with sunken brazier hearth, lifting cast-iron kettle lid, and sliding tea drawer.",
       "recipeHash": "sha256:3a3955a8b537edc141bc4ee8dd0b8492b4a4ff8de6e9f744a64b3624303e7e13",
-      "standardHash": "sha256:18c6e6dad0cf6d71ffc0094726a7c404f6cc3a51562cd650f48e08ede85d420b",
-      "hdHash": "sha256:d3bffe1b738097905447ac419706de89cc3db14e8cb710ea51fa392bd7753675",
+      "standardHash": "sha256:0210d89015109cdbaa5d5701fdc97c4fbb614074712b5bda9d336aee175b4c5d",
+      "hdHash": "sha256:d0901e63312a9ab5c3787caa93f49263cb04c8999badf5aea7e03139f0fe6559",
       "clips": [
         "Serve tea"
       ],
@@ -9881,8 +9881,8 @@
       "label": "Default",
       "situation": "High-drive caterpillar bulldozer with enclosed safety cab, tilting front steel blade, and rear ripper shank.",
       "recipeHash": "sha256:3b9b72481ad7885d19ac75d8035a0a833cb1ff5b761fc6bce78d7abab4d8524e",
-      "standardHash": "sha256:5b7ecd3dba56ffa21030e2864966fe1cbcf1fd8cbb4ca61b0fb54f40007e5dc7",
-      "hdHash": "sha256:6e83bc9c8a6a3e29abfafc6652ee13ece16de47ecdc20fbe8daf1cbddd2ad5c8",
+      "standardHash": "sha256:9fe28f2369298ac425a0ff92efb82f4628474c992252fe6c9eb918b6c87a85a1",
+      "hdHash": "sha256:44677474e15b8d2c4aa423b6b0bb1a71803d831dc0552cf08d899ddba7a4e901",
       "clips": [
         "Earthwork"
       ],
@@ -10044,8 +10044,8 @@
       "label": "Default",
       "situation": "Floor-standing commercial deep fryer with flue riser and dual lifting mesh fry baskets with dipped handles.",
       "recipeHash": "sha256:2811307b0761c6ffb7937e800a017edf5f2a25d3e1bb58ec01ef2f8c10c3cef5",
-      "standardHash": "sha256:d1b28188a51d1fd120686d52cee5c3ed2af60016eae2f3b97d1e6993a5e756ef",
-      "hdHash": "sha256:506ecb9ef3b25079d2bf90316c351c2c4c5f7f79e02b58ab95a4e65f90c82918",
+      "standardHash": "sha256:101c129a0ff94c5e9735db77f5f1531e2d1e2338f3dd17a0f2279376fc0ef712",
+      "hdHash": "sha256:31505a3cdac9c0712a555cddb04745bfe654481e308deb100f8b77307c4c7675",
       "clips": [
         "Lift baskets"
       ],
@@ -10437,8 +10437,8 @@
       "label": "Default",
       "situation": "Clinker-built Norse longship with carved dragon prow, shield-lined gunwales, striped square sail, and sweeping oars.",
       "recipeHash": "sha256:40db4bbd3c0c8405a5b4bf8aeed122e3c142c17f3e1d19a88dbba97bc1c58595",
-      "standardHash": "sha256:e49fa3485cd27aabee3f3fead4687b708f267d424cf90f86d7cf29511e381d27",
-      "hdHash": "sha256:fe2cac59e776eaadc4b83a8b8e3156bcf8b2dfbbb22504c97129b595fc346a6b",
+      "standardHash": "sha256:16960417df7d8c741b2ffabaa85145fae63c714621dc8e3dee5d84b0a4f65466",
+      "hdHash": "sha256:b9269031691f9877871327c58d177a18c7d6ae33b22e3f88159054c7c50e0d8c",
       "clips": [
         "Viking row"
       ],
@@ -10580,8 +10580,8 @@
       "label": "Default",
       "situation": "Ornate fairground carnival popcorn wagon with tall spoked wheels, glazed cabinet, and tilting popping kettle.",
       "recipeHash": "sha256:3cb07c7d39c65777cfce67bd8777eb2e225e531f19b01452231f6b3bec95c8f7",
-      "standardHash": "sha256:3abf9590d05b16f5d770e0c1c5e8f09ad2ce17e9393df7ce4257a92ff6edc04c",
-      "hdHash": "sha256:938614e88c16f26f2680ce613da7bbacb3bf552a79fb9ea36e99343f2795b309",
+      "standardHash": "sha256:5c9556dc797792ee2e431e6026171df0faadc95e57dd186850fd5b01f28fd073",
+      "hdHash": "sha256:91d321fcfeb89e5e1224d3012612e9537aa38a7df47519067211e20743eb9d3d",
       "clips": [
         "Dump popcorn",
         "Roll wagon"
@@ -11747,6 +11747,248 @@
       "toStandardHash": "sha256:27eef3e015d005cf245abd0f7865366cc8f0121e3b5cb1437c36116fc4b0ce15",
       "fromHdHash": "sha256:cf20cc7ad4c7e024d9ebf2c2ea92855d0b10036be8f27964c3f7ad42585750a9",
       "toHdHash": "sha256:1e532882330940f42c52f634d445d5143f84628f0b20a7233ee07f42f194197d"
+    },
+    {
+      "key": "stone-lighthouse@default",
+      "date": "2026-11-28",
+      "reason": "Add central brass bearing pedestal under BeaconLens so rotating lantern stays mounted to floor",
+      "fromRecipeHash": "sha256:df23f786ee82602e425b1293debbdc6152830452983353991d4e15721c3edb46",
+      "toRecipeHash": "sha256:df23f786ee82602e425b1293debbdc6152830452983353991d4e15721c3edb46",
+      "fromStandardHash": "sha256:6b4815c25120f76281173f9c2655a9d0ad93f6839b6299c1889ccf83ecf474be",
+      "toStandardHash": "sha256:eb73e490c6055716f912efedeada6d1f23ac1ae7e45e7c0c93a7a42b8da6744d",
+      "fromHdHash": "sha256:27fb5605f80548536301d4514eedd2bbfff2912f7aa9806f9d779c064258fe4d",
+      "toHdHash": "sha256:b1ca6a4bf70986bac002d62f31303b22af559b87f0bbdf1aaeaa41c3e39d472e"
+    },
+    {
+      "key": "castle-gatehouse@default",
+      "date": "2026-11-28",
+      "reason": "Widen Portcullis crossbars into stone tower guide grooves so iron grate stays anchored while hoisting",
+      "fromRecipeHash": "sha256:c2e9c82c96545539d1b6ed68955aa53a551bdd5e93e65cd77f2a10435d5e52fa",
+      "toRecipeHash": "sha256:c2e9c82c96545539d1b6ed68955aa53a551bdd5e93e65cd77f2a10435d5e52fa",
+      "fromStandardHash": "sha256:7876119f95d510306433fa0b0ca568dc479b35fd091861f4bf2f897a583fb53f",
+      "toStandardHash": "sha256:785e3ac374e4d776aeddc678fb5f54c9ad146979cd36d1f936270f4a686c5c39",
+      "fromHdHash": "sha256:d0c2c48abf9289b2fc0e1940b142d8d63a45e89bc32aba3ff4867214133ca96f",
+      "toHdHash": "sha256:8789c7728c52ef7e8761cf64a9a95b4f96ae982aad348506b23b63f9b4df182f"
+    },
+    {
+      "key": "cargo-gantry-crane@default",
+      "date": "2026-11-28",
+      "reason": "Add trolley winch housing and extend hoist cables so HoistHook never detaches during lowering",
+      "fromRecipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
+      "toRecipeHash": "sha256:731a39448b69d80a6eecadbda4541e5aea8c94691eaa646d5e98c0720414a1ea",
+      "fromStandardHash": "sha256:1e9946feab305cdae1eb939fa8d54fb01ad9f60e2cc17514ee9ae7e074e5c142",
+      "toStandardHash": "sha256:e4f46a426a17f7b14a4b0fb4af6613778f1cd214a3ac388ea76fc4ff3674693b",
+      "fromHdHash": "sha256:8308ec6427f294418821c3c35cdfa909e1f18af047fdbfaf7e8aebd1bfce62b8",
+      "toHdHash": "sha256:36ca35ae49870c49ed0057251d175b44cca49a5149cfce6315d9f563963198c6"
+    },
+    {
+      "key": "farm-tractor@default",
+      "date": "2026-11-28",
+      "reason": "Add front/rear steel wheel axles, loader crossbar, and fender brackets so tractor assemblies stay attached",
+      "fromRecipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
+      "toRecipeHash": "sha256:0462abf99cb8d3ec7448a6ea79b83495cd006ae297bb9cbed2538e72e0967c56",
+      "fromStandardHash": "sha256:6a26404860be00bd11bd6e3700c20228b19d893820620eb1510c60989792e8a7",
+      "toStandardHash": "sha256:d90cbf6642651376baad8b39f4ef786d0109ba1b7f689cafa481dc6a801ae9e3",
+      "fromHdHash": "sha256:4518fa40df742bb0099792258c831c52af590eeaef728bd2012292e175d6ac46",
+      "toHdHash": "sha256:d1bf1696e5c30df436012971617f77b6343b525d96767659aaad4fedb905e38b"
+    },
+    {
+      "key": "coral-jellyfish@default",
+      "date": "2026-11-28",
+      "reason": "Extend central oral stalk inside bell cavity and tune pulse stroke so tentacles never separate from bell",
+      "fromRecipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
+      "toRecipeHash": "sha256:b5138ba0e50419452b2f33910e4ea90f59b8611f9ef4fc19edb4b40872982777",
+      "fromStandardHash": "sha256:1de8b55bfce273a71dc5b8d857e2d6ed8ed057fb6368e0a89fd7a819c4e38235",
+      "toStandardHash": "sha256:cfbea243ce026d553ca68c45ef1e605fee0f013078f432ad0d83b3e79140b2c8",
+      "fromHdHash": "sha256:a108e221fad4bf019ea79294bf012b148210ce856a9148b6ef6be52bf96f827a",
+      "toHdHash": "sha256:9ad01118a2ea8b4917084ec64f5344d7e0996befee81e46067ee5ca8ee4085da"
+    },
+    {
+      "key": "brass-spyglass@default",
+      "date": "2026-11-28",
+      "reason": "Extend inner telescoping drawtube and match extension range so LensTube stays seated in MainBarrel",
+      "fromRecipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
+      "toRecipeHash": "sha256:0aa9cb5dedb7a4774e7301daaa08ddbd5f343457f4e92ef9974199e615cb22d4",
+      "fromStandardHash": "sha256:6a0f6f8b4b034c09cb88c44496236c8bd7dcd0c523b1ab4d05505798121abc21",
+      "toStandardHash": "sha256:76cacc425c0d5a653ec7cd1a271a026f7b17f63d7ebd331acc060e6415aff0be",
+      "fromHdHash": "sha256:11c2bd262799c5e7cf4840e1d91990b6316c1cc7e8542ed07f918def844e1333",
+      "toHdHash": "sha256:4c24bb4c56bed15d2dc751e9fde45eafed27bd8066b8751adc545b79c5c1a62d"
+    },
+    {
+      "key": "four-poster-bunk-bed@default",
+      "date": "2026-11-28",
+      "reason": "Add trundle casters and under-bunk side cleats so TrundleDrawer stays anchored throughout slide",
+      "fromRecipeHash": "sha256:108a6d571f2e760f3424c9ef775cdbb05292767d147a61de64699672e536cde6",
+      "toRecipeHash": "sha256:108a6d571f2e760f3424c9ef775cdbb05292767d147a61de64699672e536cde6",
+      "fromStandardHash": "sha256:e3e71324c54f00af7f0f052d403f585fa7e5c4a088b29c928b26148553f1aff8",
+      "toStandardHash": "sha256:2d2aa83e5bffb0c7f88cf2eeb1c1ea894691af294e8336334d7df47fcc5c6c42",
+      "fromHdHash": "sha256:e67edf05b2d943fcb21d2c5f4d839889dfd7fac9905a6a11dc9abdb9c98c08ea",
+      "toHdHash": "sha256:b6cce46f4c185af0e062bf4436d696f5a0c4c0cd25e32171423b36226cf9991c"
+    },
+    {
+      "key": "rolltop-desk@default",
+      "date": "2026-11-28",
+      "reason": "Add under-desk drawer runners and deeper drawer box so CenterDrawer stays engaged throughout slide",
+      "fromRecipeHash": "sha256:0f2c97a6edea78f3b3b7594397674ccd86848d178890cb90770b2495b0fde94e",
+      "toRecipeHash": "sha256:0f2c97a6edea78f3b3b7594397674ccd86848d178890cb90770b2495b0fde94e",
+      "fromStandardHash": "sha256:cf7445186e740058387df085852a75a3c0787459d45c71bb9ea60969c3749351",
+      "toStandardHash": "sha256:4b4ab36183cbf9acb95f0dee50afc01fcba180bf4208adf6a58ac59636403035",
+      "fromHdHash": "sha256:e127e96de73c633a451d14acdefb0f9ca745e8c65111fa400236118f83aa0ee3",
+      "toHdHash": "sha256:8403524e3693290c4ed154a7d44295bc8f835fa9f842978aabd1011188e0695f"
+    },
+    {
+      "key": "twin-basket-fryer@default",
+      "date": "2026-11-28",
+      "reason": "Add backsplash vertical lift guide rails and rear basket slide shoes so baskets ride attached while lifting",
+      "fromRecipeHash": "sha256:2811307b0761c6ffb7937e800a017edf5f2a25d3e1bb58ec01ef2f8c10c3cef5",
+      "toRecipeHash": "sha256:2811307b0761c6ffb7937e800a017edf5f2a25d3e1bb58ec01ef2f8c10c3cef5",
+      "fromStandardHash": "sha256:d1b28188a51d1fd120686d52cee5c3ed2af60016eae2f3b97d1e6993a5e756ef",
+      "toStandardHash": "sha256:101c129a0ff94c5e9735db77f5f1531e2d1e2338f3dd17a0f2279376fc0ef712",
+      "fromHdHash": "sha256:506ecb9ef3b25079d2bf90316c351c2c4c5f7f79e02b58ab95a4e65f90c82918",
+      "toHdHash": "sha256:31505a3cdac9c0712a555cddb04745bfe654481e308deb100f8b77307c4c7675"
+    },
+    {
+      "key": "hydraulic-shop-press@default",
+      "date": "2026-11-28",
+      "reason": "Extend PressRam piston rod and clamp stroke so ram stays seated inside hydraulic cylinder throughout animation",
+      "fromRecipeHash": "sha256:8cd86e3fa968015fd6b427e5283dac82edfe8c49c1a8fddd58a3211adc7be215",
+      "toRecipeHash": "sha256:8cd86e3fa968015fd6b427e5283dac82edfe8c49c1a8fddd58a3211adc7be215",
+      "fromStandardHash": "sha256:a9005b0d02715d385e7360664fdde520497fcd3256b305c5570f8e8f4e9976e3",
+      "toStandardHash": "sha256:bf1c2b5ab5e313db9e463080d42440a623bb3ee48178f33806ebb0fb893be83a",
+      "fromHdHash": "sha256:5e01ed3f810532c948e5294a05e1e6beb9d0fd6be67d48c5250eb572578ce0f4",
+      "toHdHash": "sha256:86d69143e701c2070a2b4f439749079abf7c6d3c2884b1ff08bea9c2176d13a0"
+    },
+    {
+      "key": "benchtop-centrifuge@default",
+      "date": "2026-11-28",
+      "reason": "Lower lid pivot and add rear alloy hinge knuckles so CentrifugeLid stays physically hinged when opened",
+      "fromRecipeHash": "sha256:2f8cc730c318022e794db0de753d6eb65d717cfe688c8cbe5ac843793d4c9e0a",
+      "toRecipeHash": "sha256:2f8cc730c318022e794db0de753d6eb65d717cfe688c8cbe5ac843793d4c9e0a",
+      "fromStandardHash": "sha256:afb8ae05f2af0766340e22d69dd662dfd86dfb0e10c37340962291add4914b47",
+      "toStandardHash": "sha256:cd312aae4ef4890c42929c7cfe1ac49cd1a20024925399ec6eb463ed15ab1cf7",
+      "fromHdHash": "sha256:7c9b696e82d57d9a8cfbb630d94b97f0a6f77b7bbd870113e1125c3868f665f4",
+      "toHdHash": "sha256:07977e0435295c882bdd3745c55210f962cfd7329f04bdad08677ed8df12a84c"
+    },
+    {
+      "key": "cryogenic-dewar-cart@default",
+      "date": "2026-11-28",
+      "reason": "Add front/rear foot stems and full-width caster axle so DewarCart wheels and feet stay solidly attached",
+      "fromRecipeHash": "sha256:cd598a2b3761e602496134fb796adb167805a7e24e26dca0d3c846947ace3fe8",
+      "toRecipeHash": "sha256:cd598a2b3761e602496134fb796adb167805a7e24e26dca0d3c846947ace3fe8",
+      "fromStandardHash": "sha256:6ce84925a65444c6375a05e5e57368b25665d756e5da112ac89dcdbe0d0f0cce",
+      "toStandardHash": "sha256:5dad2df80227dca73ed08b73b13f6f85bf0a6a321ebf788854f1d169cad4b05e",
+      "fromHdHash": "sha256:00bec9496a51bd388d4b80aff46a3ea9e6829c9f2c6387446a18efc4415abe3d",
+      "toHdHash": "sha256:7df23d5420f188d0356cbd8fdc1264f5ebc1512fedcb67946ea82899d6f92956"
+    },
+    {
+      "key": "ramen-noodle-stall@default",
+      "date": "2026-11-28",
+      "reason": "Hinge BrothPotLid on rear pot rim instead of levitating vertically into mid-air",
+      "fromRecipeHash": "sha256:94f00df11b3031120077bb2097092acf052cdc283e1df303a76594b6ff12313c",
+      "toRecipeHash": "sha256:94f00df11b3031120077bb2097092acf052cdc283e1df303a76594b6ff12313c",
+      "fromStandardHash": "sha256:84201f47762e9a88122fa54609c0ec46207ce430324e9a26fbb53553cc9c9874",
+      "toStandardHash": "sha256:d0e5ea56c9684cad1915738cbbd267466a549feeef54fee9d5d146b855dd59ac",
+      "fromHdHash": "sha256:b0cb3415f3bbf846b069111aac0c79084e47d9a59b734713e0a3ea2aacddc3ad",
+      "toHdHash": "sha256:ffd25191cc8c2110c47676c0aa0e1cf70a54ba66fa244b933f24d60f8d4ea6f6"
+    },
+    {
+      "key": "maple-butcher-block@default",
+      "date": "2026-11-28",
+      "reason": "Add under-block wooden runner apron and drawer walls so CleaverDrawer stays supported throughout slide",
+      "fromRecipeHash": "sha256:91abc2bd13992226527c4a5af574869dd38bf1a68eef9ec7bfdf59f772fca2a0",
+      "toRecipeHash": "sha256:91abc2bd13992226527c4a5af574869dd38bf1a68eef9ec7bfdf59f772fca2a0",
+      "fromStandardHash": "sha256:f069bbe405a7e9b0914b901ec11d560eb3c0b896449c02d5e16a451cf6419a5a",
+      "toStandardHash": "sha256:a570dbfa8971b4bdce0d9c747ac437c0cb248869fbb0c5fe0e096e383abe41b9",
+      "fromHdHash": "sha256:261e1348f8d554595c8d08c2708b5fd611b541ad00f73b66f4df35e0fa0c2f3d",
+      "toHdHash": "sha256:2a48507c1e99f73658e0803179cd8fee04919e3d7111b100e9301d79e3e368c2"
+    },
+    {
+      "key": "tea-ceremony-table@default",
+      "date": "2026-11-28",
+      "reason": "Hinge KettleLid on rear kettle rim instead of floating vertically off the pot",
+      "fromRecipeHash": "sha256:3a3955a8b537edc141bc4ee8dd0b8492b4a4ff8de6e9f744a64b3624303e7e13",
+      "toRecipeHash": "sha256:3a3955a8b537edc141bc4ee8dd0b8492b4a4ff8de6e9f744a64b3624303e7e13",
+      "fromStandardHash": "sha256:18c6e6dad0cf6d71ffc0094726a7c404f6cc3a51562cd650f48e08ede85d420b",
+      "toStandardHash": "sha256:0210d89015109cdbaa5d5701fdc97c4fbb614074712b5bda9d336aee175b4c5d",
+      "fromHdHash": "sha256:d3bffe1b738097905447ac419706de89cc3db14e8cb710ea51fa392bd7753675",
+      "toHdHash": "sha256:d0901e63312a9ab5c3787caa93f49263cb04c8999badf5aea7e03139f0fe6559"
+    },
+    {
+      "key": "vintage-popcorn-wagon@default",
+      "date": "2026-11-28",
+      "reason": "Move ceiling hanger rods onto stationary wagon frame so PopcornKettle pivots on fixed trunnions",
+      "fromRecipeHash": "sha256:3cb07c7d39c65777cfce67bd8777eb2e225e531f19b01452231f6b3bec95c8f7",
+      "toRecipeHash": "sha256:3cb07c7d39c65777cfce67bd8777eb2e225e531f19b01452231f6b3bec95c8f7",
+      "fromStandardHash": "sha256:3abf9590d05b16f5d770e0c1c5e8f09ad2ce17e9393df7ce4257a92ff6edc04c",
+      "toStandardHash": "sha256:5c9556dc797792ee2e431e6026171df0faadc95e57dd186850fd5b01f28fd073",
+      "fromHdHash": "sha256:938614e88c16f26f2680ce613da7bbacb3bf552a79fb9ea36e99343f2795b309",
+      "toHdHash": "sha256:91d321fcfeb89e5e1224d3012612e9537aa38a7df47519067211e20743eb9d3d"
+    },
+    {
+      "key": "dim-sum-steamer-cart@default",
+      "date": "2026-11-28",
+      "reason": "Hinge BambooSteamerLid on rear basket rim strap instead of floating vertically into mid-air",
+      "fromRecipeHash": "sha256:ac4e978d6ae7eb714ca05ddac30b19b8265986b6ddcee1399a2a49716802645d",
+      "toRecipeHash": "sha256:ac4e978d6ae7eb714ca05ddac30b19b8265986b6ddcee1399a2a49716802645d",
+      "fromStandardHash": "sha256:9442dc50d4b85037b4d052cdc60df87e68df9fc74ba775d00b73a5b381037bda",
+      "toStandardHash": "sha256:c208ed016a6bf133a68c66c6ccad3c7ff3844aa0c14dfbc4a0abe7bf63c20058",
+      "fromHdHash": "sha256:1e17e90fb334a17939b4d9f2bb89efcc11de7d72ea12554d60442cd64849973c",
+      "toHdHash": "sha256:258026500932d570e1b5a9cd05ad29dda8cf999d71bfd19f92ad6777aaf8a6f1"
+    },
+    {
+      "key": "rowing-ergometer@default",
+      "date": "2026-11-28",
+      "reason": "Seat PullHandle chain rod inside flywheel housing across full rowing stroke with zero detachment",
+      "fromRecipeHash": "sha256:2b0ffdbd76fb8f0c3e0bf080614ed67b9e9f0d135181691938b216c439b7dfcf",
+      "toRecipeHash": "sha256:2b0ffdbd76fb8f0c3e0bf080614ed67b9e9f0d135181691938b216c439b7dfcf",
+      "fromStandardHash": "sha256:8e22606ea2d275c7fa74d7bda8cd6165ea6797cb54bff6deb0d2df5ecf8fd951",
+      "toStandardHash": "sha256:191e3e6c5d1f90d5e395f614b2c5551b96b3878c7e6520637346a48017f2a5ad",
+      "fromHdHash": "sha256:48841da9db8855f43e7f1d3442c68541e2ff8f9ac758f1732a56e5fcecaaaf41",
+      "toHdHash": "sha256:44d0976f65d32b3bddc4ad6a4362c1765c566651e71b3737aed0eb38179132dd"
+    },
+    {
+      "key": "tracked-bulldozer@default",
+      "date": "2026-11-28",
+      "reason": "Add rear ripper mounting beams and link arms connecting RearRipper solidly to bulldozer chassis",
+      "fromRecipeHash": "sha256:3b9b72481ad7885d19ac75d8035a0a833cb1ff5b761fc6bce78d7abab4d8524e",
+      "toRecipeHash": "sha256:3b9b72481ad7885d19ac75d8035a0a833cb1ff5b761fc6bce78d7abab4d8524e",
+      "fromStandardHash": "sha256:5b7ecd3dba56ffa21030e2864966fe1cbcf1fd8cbb4ca61b0fb54f40007e5dc7",
+      "toStandardHash": "sha256:9fe28f2369298ac425a0ff92efb82f4628474c992252fe6c9eb918b6c87a85a1",
+      "fromHdHash": "sha256:6e83bc9c8a6a3e29abfafc6652ee13ece16de47ecdc20fbe8daf1cbddd2ad5c8",
+      "toHdHash": "sha256:44677474e15b8d2c4aa423b6b0bb1a71803d831dc0552cf08d899ddba7a4e901"
+    },
+    {
+      "key": "viking-dragon-longship@default",
+      "date": "2026-11-28",
+      "reason": "Extend oars through hull gunwale and row around Z axis so oars never swing detached from oarports",
+      "fromRecipeHash": "sha256:40db4bbd3c0c8405a5b4bf8aeed122e3c142c17f3e1d19a88dbba97bc1c58595",
+      "toRecipeHash": "sha256:40db4bbd3c0c8405a5b4bf8aeed122e3c142c17f3e1d19a88dbba97bc1c58595",
+      "fromStandardHash": "sha256:e49fa3485cd27aabee3f3fead4687b708f267d424cf90f86d7cf29511e381d27",
+      "toStandardHash": "sha256:16960417df7d8c741b2ffabaa85145fae63c714621dc8e3dee5d84b0a4f65466",
+      "fromHdHash": "sha256:fe2cac59e776eaadc4b83a8b8e3156bcf8b2dfbbb22504c97129b595fc346a6b",
+      "toHdHash": "sha256:b9269031691f9877871327c58d177a18c7d6ae33b22e3f88159054c7c50e0d8c"
+    },
+    {
+      "key": "sleek-maglev-pod@default",
+      "date": "2026-11-28",
+      "reason": "Add gullwing roof hinge bosses and door arms so GullDoorL/R stay connected to roof when opening",
+      "fromRecipeHash": "sha256:632ff89bad30f3a4139e7185246602677c4895bfdd2a99db1baab04331b8199a",
+      "toRecipeHash": "sha256:632ff89bad30f3a4139e7185246602677c4895bfdd2a99db1baab04331b8199a",
+      "fromStandardHash": "sha256:ebfdee940e700c249503cb35afa1f592f83f78ae664d769aaec3285b5d6fca6a",
+      "toStandardHash": "sha256:c08f33a640bdf3ed5ad70a60c25beea8082eaf9e7a24702c0906ba913751bebb",
+      "fromHdHash": "sha256:6da0f1720e125fe3a3ddc8c42d2d9445b7158efe77c9093e09eec5396a2b1829",
+      "toHdHash": "sha256:fc8c744d01172e73b8e93a189ca92d859722595bd7f388957c54018866d6336a"
+    },
+    {
+      "key": "tactical-radio-pack@default",
+      "date": "2026-11-28",
+      "reason": "Mount fixed antenna collar on pack and extend whip shaft inside body so RadioMast stays seated",
+      "fromRecipeHash": "sha256:5a879a77de1afe45d097b09cf2ae83efddda3c686a0aa2f82cbef7c1e93754af",
+      "toRecipeHash": "sha256:5a879a77de1afe45d097b09cf2ae83efddda3c686a0aa2f82cbef7c1e93754af",
+      "fromStandardHash": "sha256:e09474793dc1e3e117e3a33cdabe6c7097eab06f09b167afcb6de6bcf5d1843a",
+      "toStandardHash": "sha256:846ba016e3769f7ffdfe5a452a8808e2f6317270062dcf63e9a1895485911b23",
+      "fromHdHash": "sha256:0c557db331625b42d722e3a8b9eab1054e8565fff940b1507240fb5c4073794c",
+      "toHdHash": "sha256:8292f78a26216c45da797cdaf9ff35391cfae7b7f94fea63a21544a4ab3194ee"
     }
   ]
 }

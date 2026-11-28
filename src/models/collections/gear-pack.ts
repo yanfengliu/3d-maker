@@ -74,7 +74,7 @@ function brassSpyglass(root: T.Group, p: Finish, detail: boolean) {
   cyl(barrel, [0, 0, -0.52], 0.092, 0.12, 0.22, p.edge, 'z', 14);
   cyl(barrel, [0, 0, -0.63], 0.068, 0.068, 0.035, p.optic, 'z', 14);
   const lt = group(root, 'LensTube', [0, 0.58, 0.24]);
-  cyl(lt, [0, 0, 0.14], 0.118, 0.128, 0.34, p.primary, 'z', 16);
+  cyl(lt, [0, 0, -0.02], 0.118, 0.128, 0.66, p.primary, 'z', 16);
   cyl(lt, [0, 0, 0.36], 0.148, 0.125, 0.2, p.primary, 'z', 16);
   band(lt, [0, 0, 0.46], 0.158, 0.028, 0.055, p.alloy, 'z');
   cyl(lt, [0, 0, 0.45], 0.128, 0.128, 0.04, p.optic, 'z', 16);
@@ -87,7 +87,7 @@ function brassSpyglass(root: T.Group, p: Finish, detail: boolean) {
     if (p.hd) for (const sx of [-0.28, 0.28]) fastener(stand, [sx, 0.125, 0.34], p, 0.024);
   }
   root.animations = [
-    new T.AnimationClip('Extend spyglass', 2.6, [slideTrack('LensTube', [0, 0.58, 0.24], 2, [0, 0.8, 1.8, 2.6], [0, 0.42, 0.42, 0])]),
+    new T.AnimationClip('Extend spyglass', 2.6, [slideTrack('LensTube', [0, 0.58, 0.24], 2, [0, 0.8, 1.8, 2.6], [0, 0.36, 0.36, 0])]),
     new T.AnimationClip('Flip lens cap', 2.4, [rotationTrack('LensCap', 'x', [0, 0.7, 1.7, 2.4], [0, -1.75, -1.75, 0])]),
   ];
 }
@@ -411,7 +411,7 @@ const gearDef = (
 
 export const gearPack: readonly GearAssetDef[] = [
   gearDef('brass-spyglass', 'HI-01', 'ultra', 'Brass Spyglass', '#c9973e', '#6e3c25', 'Leather-wrapped brass telescope on a tabletop cradle with a telescoping lens tube and hinged cap.',
-    [rig('LensTube', 'Lens tube', 'z', [0, 0.45], 'Extends the telescoping objective drawtube', 'slide'), rig('LensCap', 'Lens cap', 'x', [0, -110], 'Flips open the brass front lens cap')], [], brassSpyglass),
+    [rig('LensTube', 'Lens tube', 'z', [0, 0.36], 'Extends the telescoping objective drawtube', 'slide'), rig('LensCap', 'Lens cap', 'x', [0, -110], 'Flips open the brass front lens cap')], [], brassSpyglass),
   gearDef('plasma-wrench', 'HI-02', 'ultra', 'Plasma Wrench', '#3f6e8c', '#f08728', 'Powered sci-fi engineering wrench in a charging dock with a sliding jaw and spinning energy core.',
     [rig('JawSlide', 'Jaw slide', 'x', [0, 0.22], 'Slides the adjustable jaw open and shut', 'slide'), rig('PowerCore', 'Power core', 'z', [0, 360], 'Spins the magnetic plasma drive core')], [], plasmaWrench),
   gearDef('runic-lantern-staff', 'HI-03', 'ultra', 'Runic Lantern Staff', '#6b4932', '#3fd1c4', 'Carved wooden lantern staff in a rune plinth with a rotating crystal cage and swaying charm ring.',

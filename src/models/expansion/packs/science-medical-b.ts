@@ -226,7 +226,11 @@ export function cryogenicDewarCart(root: T.Group, p: Finish, detail: boolean) {
   const dw = group(root, 'DewarCart');
   ring(dw, [0, 0.2, 0], 0.42, 0.045, 0.08, p.dark);
   tube(dw, [0, 0.19, 0], 0.38, 0.38, 0.045, p.dark, 14);
-  for (const sz of [-0.36, 0.36]) tube(dw, [0, 0.06, sz], 0.055, 0.055, 0.12, p.tire, 10);
+  for (const sz of [-0.36, 0.36]) {
+    tube(dw, [0, 0.06, sz], 0.055, 0.055, 0.12, p.tire, 10);
+    tube(dw, [0, 0.13, sz], 0.028, 0.032, 0.14, p.alloy, 10);
+  }
+  cyl(dw, [0, 0.18, 0], 0.028, 0.028, 0.94, p.alloy, 'x', 10);
   medCaster(dw, 'CasterL', [-0.46, 0.18, 0], 0.18, 0.06, p);
   medCaster(dw, 'CasterR', [0.46, 0.18, 0], 0.18, 0.06, p);
   tube(dw, [0, 0.72, 0], 0.34, 0.34, 0.98, p.primary, 18);

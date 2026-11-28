@@ -185,9 +185,11 @@ function buildMaglevPod(root: T.Group, p: Finish, detail: boolean) {
     rbox(pod, p, [s * 0.64, 0.54, 0], [0.04, 0.12, 2.48], p.accent);
   }
   for (const [side, name] of [[1, 'GullDoorL'], [-1, 'GullDoorR']] as const) {
-    const door = group(pod, name, [side * 0.44, 1.12, 0]);
-    shell(door, [side * 0.18, -0.24, 0], [0.1, 0.56, 1.12], p.accent, 0.32);
-    rbox(door, p, [side * 0.24, -0.18, 0], [0.03, 0.32, 0.94], p.optic);
+    for (const sz of [-0.36, 0.36]) rbox(pod, p, [side * 0.4, 1.07, sz], [0.12, 0.08, 0.12], p.dark);
+    const door = group(pod, name, [side * 0.42, 1.08, 0]);
+    for (const sz of [-0.36, 0.36]) strut(door, [0, 0, sz], [side * 0.18, -0.02, sz], 0.032, p.alloy, 8);
+    shell(door, [side * 0.2, -0.2, 0], [0.1, 0.56, 1.12], p.accent, 0.32);
+    rbox(door, p, [side * 0.26, -0.14, 0], [0.03, 0.32, 0.94], p.optic);
   }
   if (detail) {
     for (const s of [-1, 1]) {

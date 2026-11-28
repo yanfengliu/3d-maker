@@ -224,7 +224,9 @@ function buildFarmTractor(root: T.Group, p: Finish, detail: boolean) {
   tube(tr, [0.36, 1.44, 0.56], 0.048, 0.055, 0.62, p.edge, 12);
   shell(tr, [0, 1.18, -0.56], [0.82, 0.24, 0.72], p.primary, 0.34);
   shell(tr, [0, 1.34, -0.58], [0.46, 0.28, 0.40], p.tire, 0.36);
+  strut(tr, [-0.46, 0.88, 0.12], [0.46, 0.88, 0.12], 0.055, p.dark, 10);
   for (const s of [-1, 1]) {
+    box(tr, [s * 0.48, 1.12, -0.56], [0.22, 0.08, 0.56], p.primary);
     shell(tr, [s * 0.62, 1.08, -0.56], [0.36, 0.12, 0.88], p.primary, 0.42);
     strut(tr, [s * 0.42, 1.16, -0.84], [s * 0.40, 1.94, -0.80], 0.036, p.dark, 10);
     strut(tr, [s * 0.40, 1.16, -0.18], [s * 0.38, 1.94, -0.24], 0.032, p.dark, 10);
@@ -233,6 +235,8 @@ function buildFarmTractor(root: T.Group, p: Finish, detail: boolean) {
     strut(tr, [s * 0.48, 1.02, 0.94], [s * 0.50, 0.48, 1.32], 0.048, p.dark, 10);
   }
   shell(tr, [0, 1.96, -0.52], [0.96, 0.09, 0.86], p.accent, 0.36);
+  tube(tr, [0, 0.56, -0.56], 0.075, 0.075, 1.32, p.dark, 10).rotation.z = Math.PI / 2;
+  tube(tr, [0, 0.34, 0.78], 0.055, 0.055, 1.08, p.dark, 10).rotation.z = Math.PI / 2;
   wheelPair(tr, 0.66, 0.56, -0.56, 0.30, p, detail, p.accent, 12, ['RearWheelL', 'RearWheelR']);
   wheelPair(tr, 0.54, 0.34, 0.78, 0.18, p, detail, p.accent, 8, ['FrontWheelL', 'FrontWheelR']);
   const bucket = group(tr, 'FrontBucket', [0, 0.48, 1.32]);

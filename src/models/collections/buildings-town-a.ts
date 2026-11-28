@@ -134,6 +134,7 @@ function stoneLighthouse(root: T.Group, p: Finish, detail: boolean) {
     if (detail) strut(b, [Math.sin(a) * 0.52, 2.92, Math.cos(a) * 0.52], [Math.sin(a) * 0.52, 3.1, Math.cos(a) * 0.52], 0.018, p.alloy, 10);
   }
   const beacon = group(b, 'BeaconLens', [0, 3.29, 0]);
+  tube(beacon, [0, -0.14, 0], 0.09, 0.11, 0.22, p.alloy, 12);
   tube(beacon, [0, 0, 0], 0.12, 0.14, 0.26, p.alloy, 12);
   for (const s of [-1, 1]) {
     tube(beacon, [0, 0, s * 0.16], 0.12, 0.14, 0.09, p.optic, 14).rotation.x = Math.PI / 2;

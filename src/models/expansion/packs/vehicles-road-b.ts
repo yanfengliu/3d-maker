@@ -115,7 +115,9 @@ function buildTrackedBulldozer(root: T.Group, p: Finish, detail: boolean) {
   shell(blade, [0, 0.1, 0.14], [2.04, 0.74, 0.18], p.primary, 0.2);
   rbox(blade, p, [0, -0.26, 0.2], [2.08, 0.09, 0.14], p.edge);
   for (const s of [-1, 1]) rbox(blade, p, [s * 0.96, 0.1, 0.24], [0.1, 0.72, 0.2], p.accent);
+  for (const sx of [-0.34, 0.34]) rbox(dozer, p, [sx, 0.62, -0.78], [0.12, 0.2, 0.6], p.dark);
   const ripper = group(dozer, 'RearRipper', [0, 0.62, -1.04]);
+  for (const sx of [-0.34, 0.34]) rbox(ripper, p, [sx, 0, -0.09], [0.1, 0.14, 0.2], p.dark);
   rbox(ripper, p, [0, 0, -0.18], [0.92, 0.22, 0.26], p.dark);
   for (const x of [-0.26, 0.26]) {
     strut(ripper, [x, -0.04, -0.24], [x, -0.46, -0.34], 0.055, p.accent, 8);

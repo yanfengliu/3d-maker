@@ -304,7 +304,7 @@ function buildCastleGatehouse(root: T.Group, p: Finish, detail: boolean) {
     box(portcullis, [x, 0, 0], [0.06, 1.2, 0.06], p.dark);
     tube(portcullis, [x, -0.64, 0], 0.032, 0.004, 0.12, p.alloy, 8);
   }
-  for (const y of [-0.46, -0.1, 0.26, 0.56]) box(portcullis, [0, y, 0], [1.02, 0.065, 0.075], p.edge);
+  for (const y of [-0.46, -0.1, 0.26, 0.56]) box(portcullis, [0, y, 0], [1.22, 0.065, 0.075], p.edge);
   // Detachable twin gate braziers
   const braziers = group(base, 'BrazierPair');
   for (const sx of [-1, 1]) {
@@ -399,10 +399,11 @@ function buildCargoGantryCrane(root: T.Group, p: Finish, detail: boolean) {
   const trolleyPos: Point = [0, 2.48, 0];
   const trolley = group(base, 'CraneTrolley', trolleyPos);
   shell(trolley, [0, 0.06, 0], [0.66, 0.26, 0.78], p.accent, 0.2);
+  shell(trolley, [0, 0.29, 0], [0.46, 0.32, 0.54], p.dark, 0.16);
   tube(trolley, [0, 0.12, 0], 0.14, 0.14, 0.52, p.dark, 12).rotation.x = Math.PI / 2;
   const hookPos: Point = [0, -1.06, 0];
   const hook = group(trolley, 'HoistHook', hookPos);
-  for (const sx of [-0.1, 0.1]) strut(hook, [sx, 0.24, 0], [sx, 1.02, 0], 0.018, p.alloy, 8);
+  for (const sx of [-0.1, 0.1]) strut(hook, [sx, 0.24, 0], [sx, 1.46, 0], 0.018, p.alloy, 8);
   shell(hook, [0, 0.12, 0], [0.36, 0.28, 0.22], p.primary, 0.24);
   box(hook, [0, 0.12, 0.1], [0.28, 0.09, 0.05], p.dark);
   tube(hook, [0, -0.09, 0], 0.042, 0.042, 0.16, p.alloy, 10);
@@ -419,7 +420,7 @@ function buildCargoGantryCrane(root: T.Group, p: Finish, detail: boolean) {
   root.animations = [
     new T.AnimationClip('Transfer cargo', 4.4, [
       slideTrack('CraneTrolley', trolleyPos, 'x', [0, 1.1, 3.3, 4.4], [0, -0.85, 0.85, 0]),
-      slideTrack('HoistHook', hookPos, 'y', [0, 1.4, 2.8, 4.4], [0, -0.58, -0.2, 0]),
+      slideTrack('HoistHook', hookPos, 'y', [0, 1.4, 2.8, 4.4], [0, -0.36, -0.14, 0]),
     ]),
   ];
 }
@@ -467,6 +468,6 @@ export const buildingsSciA: readonly SciBuildingAsset[] = [
     'Industrial rail-mounted A-frame gantry crane with a traversing trolley and lowering hoist hook.',
     [
       rig('CraneTrolley', 'Crane trolley', 'slide', 'x', [-0.85, 0.85], 'Traverses the hoist trolley across the overhead bridge'),
-      rig('HoistHook', 'Hoist hook', 'slide', 'y', [0, -0.6], 'Lowers and raises the cargo hook block'),
+      rig('HoistHook', 'Hoist hook', 'slide', 'y', [0, -0.36], 'Lowers and raises the cargo hook block'),
     ], [], buildCargoGantryCrane),
 ];

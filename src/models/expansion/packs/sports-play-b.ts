@@ -210,8 +210,8 @@ export function rowingErgometer(root: T.Group, p: Finish, detail: boolean): void
   blk(seat, [0, -0.05, 0], [0.16, 0.08, 0.22], p.dark, hd);
   slab(seat, [0, 0.035, 0], [0.34, 0.07, 0.28], p.primary, hd, 0.28);
   blk(seat, [0, 0.074, -0.04], [0.24, 0.018, 0.14], p.accent, hd);
-  const handle = group(root, 'PullHandle', [0, 0.56, 0.42]);
-  rod(handle, [0, 0, 0], [0, 0, 0.44], 0.014, p.alloy, hd, 6);
+  const handle = group(root, 'PullHandle', [0, 0.56, 0.54]);
+  rod(handle, [0, 0, 0], [0, 0, 0.56], 0.014, p.alloy, hd, 6);
   blk(handle, [0, 0, 0], [0.08, 0.048, 0.048], p.accent, hd);
   cyl(handle, [0, 0, 0], 0.022, 0.022, 0.44, p.tire, hd, 'x', 8);
   const mon = group(root, 'MonitorArm', [0, 0.64, 0.64]);
@@ -224,7 +224,7 @@ export function rowingErgometer(root: T.Group, p: Finish, detail: boolean): void
   }
   root.animations = [new T.AnimationClip('Rowing stroke', 2.4, [
     slideTrack('SeatCarriage', [0, 0.42, -0.22], 2, [0, 0.7, 1.4, 2.4], [0, -0.4, 0.28, 0]),
-    slideTrack('PullHandle', [0, 0.56, 0.42], 2, [0, 0.7, 1.4, 2.4], [0, -0.42, 0.18, 0]),
+    slideTrack('PullHandle', [0, 0.56, 0.54], 2, [0, 0.7, 1.4, 2.4], [0, -0.38, -0.06, 0]),
     spinTrack('FlywheelFan', 'x', 2.4, 3),
   ])];
 }

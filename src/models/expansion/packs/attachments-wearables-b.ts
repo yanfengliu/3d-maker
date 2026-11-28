@@ -63,10 +63,10 @@ export function buildTacticalRadioPack(root: T.Group, p: Finish, detail: boolean
   for (let i = 0; i < (detail ? 5 : 3); i++) {
     box(rad, [0, 0.46 + i * 0.055, 0.235], [0.46, 0.024, 0.024], p.edge);
   }
+  tube(rad, [-0.22, 1.16, 0], 0.048, 0.058, 0.16, p.accent, 12);
   const mast = group(root, 'RadioMast', [-0.22, 1.12, 0]);
-  tube(mast, [0, 0.08, 0], 0.048, 0.058, 0.16, p.accent, 12);
-  tube(mast, [0, 0.48, 0], 0.014, 0.026, 0.72, p.alloy, 10);
-  orb(mast, [0, 0.85, 0], 0.028, p.accent, p.hd);
+  tube(mast, [0, 0.24, 0], 0.014, 0.026, 1.08, p.alloy, 10);
+  orb(mast, [0, 0.79, 0], 0.028, p.accent, p.hd);
   const hs = group(root, 'RadioHandset', [0.39, 0.76, 0.04]);
   shell(hs, [0, 0, 0], [0.1, 0.34, 0.1], p.dark, 0.32);
   for (const sy of [-0.14, 0.14]) cyl(hs, [0.05, sy, 0], 0.055, 0.055, 0.07, p.tire, 'x', 12);

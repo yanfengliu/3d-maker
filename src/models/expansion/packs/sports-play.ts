@@ -160,7 +160,7 @@ const builders: Readonly<Record<string, BuilderEntry>> = {
     physicsBody: 'dynamic',
     riggedParts: [
       rig('SeatCarriage', 'Seat carriage', 'z', [-0.45, 0.32], 'Slides the molded rowing seat along the monorail', 'slide'),
-      rig('PullHandle', 'Pull handle', 'z', [0, -0.45], 'Draws the rowing T-bar handle through a stroke', 'slide'),
+      rig('PullHandle', 'Pull handle', 'z', [0, -0.38], 'Draws the rowing T-bar handle through a stroke', 'slide'),
       rig('FlywheelFan', 'Flywheel fan', 'x', [0, 360], 'Spins the front perforated air-resistance turbine'),
     ],
     detachableParts: [det('MonitorArm', 'Performance monitor', 'Articulating split-time display on the front neck')],

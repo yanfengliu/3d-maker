@@ -2,6 +2,7 @@ import * as T from 'three'
 import { afterAll, describe, expect, it } from 'vitest'
 import { inspectAsset } from '../capabilities/runtime'
 import { listVariations } from '../data/recipe'
+import { findAnimationDetachments } from './craft-animation'
 import { auditModelCraft } from './craft-invariants'
 import { buildModel } from './index'
 
@@ -108,6 +109,51 @@ describe('craft-invariants synthetic defect detection', () => {
     const cleanAudit = auditModelCraft(clean, new Set(['KettleLid']))
     expect(cleanAudit.rotatingRigOverlaps).toEqual([])
   })
+
+  it('catches animated parts that detach from their mechanism mid-stroke while passing seated pistons', () => {
+    const makePress = (rodHeight: number, rodOffsetY: number) => {
+      const root = new T.Group()
+      const frame = new T.Group()
+      frame.name = 'PressFrame'
+      const pillarL = new T.Mesh(new T.BoxGeometry(0.12, 2, 0.2), matA)
+      pillarL.position.set(-0.5, 1, 0)
+      const pillarR = new T.Mesh(new T.BoxGeometry(0.12, 2, 0.2), matA)
+      pillarR.position.set(0.5, 1, 0)
+      const topBeam = new T.Mesh(new T.BoxGeometry(1.2, 0.16, 0.24), matA)
+      topBeam.position.set(0, 1.96, 0)
+      const cylinder = new T.Mesh(new T.CylinderGeometry(0.11, 0.11, 0.36, 12), matA)
+      cylinder.position.set(0, 1.76, 0)
+      const bolster = new T.Mesh(new T.BoxGeometry(1.1, 0.14, 0.26), matA)
+      bolster.position.set(0, 0.96, 0)
+      frame.add(pillarL, pillarR, topBeam, cylinder, bolster)
+
+      const ram = new T.Group()
+      ram.name = 'PressRam'
+      ram.position.set(0, 1.46, 0)
+      const rod = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, rodHeight, 10), matB)
+      rod.position.set(0, rodOffsetY, 0)
+      const shoe = new T.Mesh(new T.BoxGeometry(0.24, 0.09, 0.22), matB)
+      shoe.position.set(0, -0.09, 0)
+      ram.add(rod, shoe)
+      root.add(frame, ram)
+      root.animations = [
+        new T.AnimationClip('Press stroke', 2, [
+          new T.VectorKeyframeTrack('PressRam.position', [0, 1, 2], [0, 1.46, 0, 0, 1.16, 0, 0, 1.46, 0]),
+        ]),
+      ]
+      return root
+    }
+
+    // Short 0.30m rod pulls completely out of the upper cylinder mid-stroke and floats in mid-air.
+    const broken = makePress(0.3, 0.08)
+    const brokenIssues = findAnimationDetachments(broken)
+    expect(brokenIssues.length).toBeGreaterThan(0)
+    expect(brokenIssues.some(i => i.kind === 'floating-clip' || i.kind === 'lost-anchor-clip')).toBe(true)
+
+    // Full 0.56m rod remains seated inside the hydraulic cylinder throughout the entire stroke.
+    const seated = makePress(0.56, 0.22)
+    expect(findAnimationDetachments(seated)).toEqual([])
+  })
 })
 
 describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
@@ -148,6 +194,11 @@ describe.each(listVariations())('craft invariants: $key', ({ key, recipe }) => {
 
   it('has zero rotating rigged solids buried inside stationary bodies', () => {
     expect(getAudit().rotatingRigOverlaps).toEqual([])
+  })
+
+  it('keeps every animated and rigged part attached throughout motion', () => {
+    if (INTENTIONAL_FLOATING_KEYS.has(key)) return
+    expect(findAnimationDetachments(getModel())).toEqual([])
   })
 
   it('stays connected and watertight when any detachable part is hidden', () => {

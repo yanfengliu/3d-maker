@@ -172,7 +172,7 @@ export function hydraulicShopPress(root: T.Group, p: Finish, detail: boolean) {
   tube(hp, [0, 1.78, 0], 0.11, 0.11, 0.38, p.dark, 14);
   cyl(hp, [0.22, 1.96, 0.16], 0.08, 0.08, 0.045, p.stencil, 'z', 14);
   const ram = group(root, 'PressRam', [0, 1.46, 0]);
-  tube(ram, [0, 0.1, 0], 0.052, 0.052, 0.34, p.alloy, 12);
+  tube(ram, [0, 0.22, 0], 0.052, 0.052, 0.56, p.alloy, 12);
   shell(ram, [0, -0.09, 0], [0.24, 0.09, 0.22], p.accent, 0.16);
   const pump = group(root, 'PumpHandle', [0.57, 1.38, 0.08]);
   shell(pump, [0.06, 0, 0], [0.16, 0.22, 0.16], p.dark, 0.18);
@@ -182,7 +182,7 @@ export function hydraulicShopPress(root: T.Group, p: Finish, detail: boolean) {
     if (p.hd) for (const sx of [-0.52, 0.52]) fastener(hp, [sx, 1.98, 0.16], p, 0.026).rotation.x = HPI;
   }
   root.animations = [new T.AnimationClip('Press stroke', 2.8, [
-    slideTrack('PressRam', [0, 1.46, 0], 1, [0, 0.9, 2, 2.8], [0, -0.34, -0.34, 0]),
+    slideTrack('PressRam', [0, 1.46, 0], 1, [0, 0.9, 2, 2.8], [0, -0.28, -0.28, 0]),
     rotationTrack('PumpHandle', 'z', [0, 0.5, 1.0, 1.6, 2.2, 2.8], [0, -0.55, 0.05, -0.55, 0.05, 0]),
   ])];
 }

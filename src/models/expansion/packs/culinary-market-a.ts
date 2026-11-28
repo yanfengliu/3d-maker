@@ -57,9 +57,11 @@ export function ramenNoodleStall(root: T.Group, p: Finish, detail: boolean) {
   }
   box(st, [0, 2.38, 0], [2.08, 0.1, 0.14], p.accent);
   tube(st, [-0.42, 1.12, -0.06], 0.24, 0.22, 0.26, p.alloy, 14);
-  const lid = group(root, 'BrothPotLid', [-0.42, 1.26, -0.06]);
-  tube(lid, [0, 0.025, 0], 0.25, 0.26, 0.05, p.alloy, 14);
-  orb(lid, [0, 0.08, 0], 0.045, p.accent, p.hd);
+  box(st, [-0.42, 1.24, -0.3], [0.08, 0.07, 0.05], p.dark);
+  const lid = group(root, 'BrothPotLid', [-0.42, 1.25, -0.29]);
+  box(lid, [0, 0.015, 0.02], [0.06, 0.04, 0.06], p.dark);
+  tube(lid, [0, 0.025, 0.23], 0.25, 0.26, 0.05, p.alloy, 14);
+  orb(lid, [0, 0.08, 0.23], 0.045, p.accent, p.hd);
   for (const x of [0.16, 0.52]) tube(st, [x, 1.06, 0.24], 0.13, 0.08, 0.11, p.stencil, 12);
   const noren = group(root, 'NorenCurtain', [0, 2.02, 0.44]);
   cyl(noren, [0, 0, 0], 0.022, 0.022, 1.68, p.dark, 'x', 10);
@@ -78,7 +80,7 @@ export function ramenNoodleStall(root: T.Group, p: Finish, detail: boolean) {
   root.animations = [
     new T.AnimationClip('Breeze & simmer', 2.8, [
       rotationTrack('NorenCurtain', 'x', [0, 0.7, 1.4, 2.1, 2.8], [0, 0.24, 0.04, -0.18, 0]),
-      slideTrack('BrothPotLid', [-0.42, 1.26, -0.06], 1, [0, 0.8, 1.9, 2.8], [0, 0.22, 0.22, 0]),
+      rotationTrack('BrothPotLid', 'x', [0, 0.8, 1.9, 2.8], [0, -1.05, -1.05, 0]),
     ]),
   ];
 }
@@ -300,9 +302,13 @@ export function mapleButcherBlock(root: T.Group, p: Finish, detail: boolean) {
   for (let i = 0; i < 5; i++) box(bb, [-0.42 + i * 0.21, 1.02, 0], [0.09, 0.018, 0.76], i % 2 === 0 ? p.dark : p.accent);
   cyl(bb, [-0.66, 0.84, 0], 0.02, 0.02, 0.62, p.alloy, 'z', 10);
   for (const sz of [-0.26, 0.26]) strut(bb, [-0.58, 0.84, sz], [-0.66, 0.84, sz], 0.018, p.alloy, 8);
+  for (const sx of [-0.4, 0.4]) box(bb, [sx, 0.68, 0], [0.06, 0.16, 0.72], p.dark);
+  box(bb, [0, 0.68, -0.34], [0.84, 0.16, 0.05], p.dark);
   const drawer = group(root, 'CleaverDrawer', [0, 0.66, 0.12]);
   shell(drawer, [0, 0, 0.28], [0.76, 0.16, 0.055], p.primary, 0.14);
   box(drawer, [0, -0.05, 0], [0.7, 0.036, 0.52], p.dark);
+  for (const sx of [-0.35, 0.35]) box(drawer, [sx, -0.01, 0], [0.04, 0.11, 0.54], p.primary);
+  box(drawer, [0, -0.01, -0.25], [0.72, 0.11, 0.04], p.primary);
   box(drawer, [0, 0, 0.32], [0.24, 0.035, 0.035], p.accent);
   const rack = group(root, 'KnifeRack', [0.62, 0.88, 0]);
   box(rack, [0, 0, 0], [0.06, 0.14, 0.66], p.dark);
@@ -314,5 +320,5 @@ export function mapleButcherBlock(root: T.Group, p: Finish, detail: boolean) {
     tube(bb, [0.28, 1.1, -0.18], 0.075, 0.085, 0.14, p.stencil, 12);
     if (p.hd) for (const sx of [-0.48, 0.48]) fastener(bb, [sx, 0.88, 0.44], p, 0.024).rotation.x = HPI;
   }
-  root.animations = [new T.AnimationClip('Open cleaver drawer', 2.8, [slideTrack('CleaverDrawer', [0, 0.66, 0.12], 2, [0, 0.8, 2, 2.8], [0, 0.32, 0.32, 0])])];
+  root.animations = [new T.AnimationClip('Open cleaver drawer', 2.8, [slideTrack('CleaverDrawer', [0, 0.66, 0.12], 2, [0, 0.8, 2, 2.8], [0, 0.26, 0.26, 0])])];
 }

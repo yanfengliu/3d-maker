@@ -369,7 +369,7 @@ function buildJellyfish(root: T.Group, p: Finish, detail: boolean) {
     if (detail) orb(bell, p, [Math.sin(a) * 0.38, 1.62, Math.cos(a) * 0.38], [0.055, 0.032, 0.055], glow, 6)
   }
   const tendrils = group(core, 'TendrilRing', [0, 0, 0])
-  cyl(tendrils, p, [0, 1.12, 0], 0.16, 0.12, 0.36, p.accent)
+  cyl(tendrils, p, [0, 1.24, 0], 0.16, 0.12, 0.56, p.accent)
   for (let i = 0; i < 4; i++) {
     const a = (i * Math.PI) / 2 + 0.35, s = Math.sin(a), c = Math.cos(a)
     arc(tendrils, p, [[s * 0.14, 1.18, c * 0.14], [s * 0.22, 0.78, c * 0.22], [s * 0.12, 0.38, c * 0.12], [s * 0.2, 0.04, c * 0.2]], 0.052, p.primary, 12, 6)
@@ -379,7 +379,7 @@ function buildJellyfish(root: T.Group, p: Finish, detail: boolean) {
     arc(tendrils, p, [[s * 0.44, 1.16, c * 0.44], [s2 * 0.48, 0.72, c2 * 0.48], [s * 0.38, 0.32, c * 0.38], [s2 * 0.42, 0.025, c2 * 0.42]], 0.025, i % 2 ? p.accent : glow, 12, 5)
     if (detail) orb(tendrils, p, [s2 * 0.42, 0.035, c2 * 0.42], [0.036, 0.036, 0.036], p.primary, 6)
   }
-  root.animations = [new T.AnimationClip('Pulse drift', 3.4, [motion('JellyBell', 3.4, [0, 0.28, 0.04, 0.24, 0]), spinTrack('TendrilRing', 'y', 3.4, 1)])]
+  root.animations = [new T.AnimationClip('Pulse drift', 3.4, [motion('JellyBell', 3.4, [0, 0.22, 0.04, 0.19, 0]), spinTrack('TendrilRing', 'y', 3.4, 1)])]
 }
 
 function buildDragon(root: T.Group, p: Finish, detail: boolean) {
@@ -466,7 +466,7 @@ export const animalsPack: readonly AnimalAssetDef[] = [
   animal('emperor-penguin', 'AN-08', 'Emperor Penguin', '#263447', '#f0a738', 'An upright Antarctic emperor penguin with golden ear patches and flapping flippers.',
     [rot('FlipperL', 'Left flipper', 'z', [0, 45], 'Flaps the left penguin flipper upward'), rot('FlipperR', 'Right flipper', 'z', [0, -45], 'Flaps the right penguin flipper upward'), rot('PenguinHead', 'Penguin head', 'y', [-35, 35], 'Turns the penguin head left and right')], [], buildPenguin),
   animal('coral-jellyfish', 'AN-09', 'Coral Jellyfish', '#eb6c85', '#5ce0d2', 'A glowing reef jellyfish with a pulsing dome bell and swirling tentacle crown.',
-    [slide('JellyBell', 'Jellyfish bell', 'y', [0, 0.3], 'Pulses the jellyfish dome upward and downward'), rot('TendrilRing', 'Tendril ring', 'y', [0, 360], 'Spins the trailing ring of oral arms and tendrils')], [], buildJellyfish),
+    [slide('JellyBell', 'Jellyfish bell', 'y', [0, 0.22], 'Pulses the jellyfish dome upward and downward'), rot('TendrilRing', 'Tendril ring', 'y', [0, 360], 'Spins the trailing ring of oral arms and tendrils')], [], buildJellyfish),
   animal('pocket-dragon', 'AN-10', 'Pocket Dragon', '#3c8c64', '#e6b13c', 'A tabletop companion dragon with golden wings, swept horns, and a hinged roaring jaw.',
     [rot('DragonWingL', 'Left dragon wing', 'z', [0, 55], 'Flaps the left dragon wing upward'), rot('DragonWingR', 'Right dragon wing', 'z', [0, -55], 'Flaps the right dragon wing upward'), rot('DragonJaw', 'Dragon jaw', 'x', [0, 35], 'Opens the hinged lower jaw in a mini roar')], [], buildDragon),
 ]

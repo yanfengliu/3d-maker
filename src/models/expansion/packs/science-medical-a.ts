@@ -58,7 +58,9 @@ export function benchtopCentrifuge(root: T.Group, p: Finish, detail: boolean) {
     vial.rotation.z = -Math.sin(a) * 0.35;
     vial.rotation.x = Math.cos(a) * 0.35;
   }
-  const lid = group(root, 'CentrifugeLid', [0, 0.74, -0.44]);
+  for (const sx of [-0.26, 0.26]) box(cf, [sx, 0.69, -0.45], [0.09, 0.1, 0.07], p.alloy);
+  const lid = group(root, 'CentrifugeLid', [0, 0.71, -0.44]);
+  for (const sx of [-0.26, 0.26]) box(lid, [sx, 0.02, 0], [0.07, 0.08, 0.07], p.alloy);
   shell(lid, [0, 0.08, 0.4], [0.84, 0.16, 0.8], p.primary, 0.28);
   labGlass(lid, [0, 0.165, 0.4], [0.42, 0.028, 0.42]);
   box(lid, [0, 0.08, 0.81], [0.24, 0.045, 0.04], p.accent);

@@ -13,9 +13,11 @@ export function teaCeremonyTable(root: T.Group, p: Finish, detail: boolean) {
   box(tt, [-0.12, 0.54, 0], [0.46, 0.05, 0.46], p.inset);
   orb(tt, [-0.12, 0.66, 0], 0.16, p.dark, p.hd, [1, 0.78, 1]);
   torus(tt, [-0.12, 0.78, 0], 0.13, 0.016, p.dark, p.hd);
-  const lid = group(root, 'KettleLid', [-0.12, 0.77, 0]);
-  tube(lid, [0, 0.02, 0], 0.085, 0.095, 0.04, p.dark, 12);
-  orb(lid, [0, 0.06, 0], 0.032, p.accent, p.hd);
+  box(tt, [-0.12, 0.76, -0.095], [0.045, 0.04, 0.035], p.dark);
+  const lid = group(root, 'KettleLid', [-0.12, 0.77, -0.09]);
+  box(lid, [0, 0.01, 0.01], [0.04, 0.03, 0.04], p.dark);
+  tube(lid, [0, 0.02, 0.09], 0.085, 0.095, 0.04, p.dark, 12);
+  orb(lid, [0, 0.06, 0.09], 0.032, p.accent, p.hd);
   for (const [cx, cz] of [[0.34, -0.18], [0.34, 0.18], [0.48, 0]] as const) {
     tube(tt, [cx, 0.59, cz], 0.068, 0.048, 0.1, p.accent, 12);
   }
@@ -29,7 +31,7 @@ export function teaCeremonyTable(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Serve tea', 3, [
-      slideTrack('KettleLid', [-0.12, 0.77, 0], 1, [0, 0.8, 2, 3], [0, 0.18, 0.18, 0]),
+      rotationTrack('KettleLid', 'x', [0, 0.8, 2, 3], [0, -1.1, -1.1, 0]),
       slideTrack('TeaDrawer', [0.34, 0.42, 0.18], 2, [0, 0.9, 2.1, 3], [0, 0.26, 0.26, 0]),
     ]),
   ];
@@ -51,9 +53,9 @@ export function vintagePopcornWagon(root: T.Group, p: Finish, detail: boolean) {
   for (const [cx, cz, r] of [[-0.24, 0.04, 0.16], [0, -0.04, 0.18], [0.24, 0.06, 0.15]] as const) orb(pw, [cx, 0.88, cz], r, corn, p.hd, [1.2, 0.65, 1.1]);
   shell(pw, [0, 1.9, 0], [1.4, 0.18, 0.96], p.primary, 0.18);
   shell(pw, [0, 2.04, 0], [1.14, 0.12, 0.74], p.accent, 0.24);
+  for (const sx of [-0.22, 0.22]) strut(pw, [sx, 1.84, 0], [sx, 1.56, 0], 0.018, p.alloy, 8);
   const kettle = group(root, 'PopcornKettle', [0, 1.56, 0]);
-  strut(kettle, [-0.22, 0.28, 0], [-0.22, 0, 0], 0.018, p.alloy, 8);
-  strut(kettle, [0.22, 0.28, 0], [0.22, 0, 0], 0.018, p.alloy, 8);
+  for (const sx of [-0.2, 0.2]) box(kettle, [sx, 0, 0], [0.06, 0.05, 0.05], p.dark);
   tube(kettle, [0, -0.06, 0], 0.18, 0.15, 0.2, p.alloy, 14);
   tube(kettle, [0, 0.05, 0], 0.19, 0.19, 0.04, p.accent, 14);
   if (detail) {
@@ -288,15 +290,17 @@ export function dimSumSteamerCart(root: T.Group, p: Finish, detail: boolean) {
   }
   for (const [dx, dz] of [[-0.08, 0.06], [0.08, 0.06], [0, -0.07]] as const) orb(ds, [-0.32 + dx, 1.35, dz], 0.062, bao, p.hd, [1.1, 0.72, 1.1]);
   tube(ds, [0.32, 1.36, 0], 0.22, 0.22, 0.05, p.accent, 16);
-  const lid = group(root, 'BambooSteamerLid', [-0.32, 1.36, 0]);
-  tube(lid, [0, 0.03, 0], 0.22, 0.22, 0.06, p.accent, 16);
-  torus(lid, [0, 0.07, 0], 0.055, 0.015, p.dark, p.hd);
+  box(ds, [-0.32, 1.35, -0.22], [0.07, 0.06, 0.04], p.dark);
+  const lid = group(root, 'BambooSteamerLid', [-0.32, 1.36, -0.21]);
+  box(lid, [0, 0.02, 0.015], [0.06, 0.04, 0.05], p.dark);
+  tube(lid, [0, 0.03, 0.21], 0.22, 0.22, 0.06, p.accent, 16);
+  torus(lid, [0, 0.07, 0.21], 0.055, 0.015, p.dark, p.hd);
   if (detail) {
     box(ds, [0, 0.56, 0.425], [0.84, 0.3, 0.026], p.stencil);
     if (p.hd) for (const sx of [-0.52, 0.52]) fastener(ds, [sx, 0.86, 0.45], p, 0.024).rotation.x = HPI;
   }
   root.animations = [
-    new T.AnimationClip('Lift steamer lid', 2.8, [slideTrack('BambooSteamerLid', [-0.32, 1.36, 0], 1, [0, 0.8, 2, 2.8], [0, 0.26, 0.26, 0])]),
+    new T.AnimationClip('Lift steamer lid', 2.8, [rotationTrack('BambooSteamerLid', 'x', [0, 0.8, 2, 2.8], [0, -1.15, -1.15, 0])]),
     new T.AnimationClip('Roll cart', 2.8, [spinTrack('CartWheelL', 'x', 2.8, 2), spinTrack('CartWheelR', 'x', 2.8, 2)]),
   ];
 }

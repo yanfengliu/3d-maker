@@ -271,12 +271,14 @@ export function twinBasketFryer(root: T.Group, p: Finish, detail: boolean) {
   shell(fr, [0, 0.56, 0], [0.88, 0.84, 0.86], p.primary, 0.1);
   box(fr, [0, 0.5, 0.445], [0.74, 0.62, 0.03], p.alloy);
   box(fr, [0, 1.24, -0.34], [0.86, 0.56, 0.18], p.alloy);
+  for (const sx of [-0.18, 0.18]) box(fr, [sx, 1.24, -0.22], [0.055, 0.56, 0.08], p.alloy);
   box(fr, [0, 0.96, 0.06], [0.76, 0.08, 0.6], p.inset);
   for (const [name, sx] of [['FryBasketL', -0.18], ['FryBasketR', 0.18]] as const) {
     const bk = group(root, name, [sx, 1.0, 0.08]);
     shell(bk, [0, 0.06, 0], [0.28, 0.18, 0.44], p.alloy, 0.12);
     box(bk, [0, 0.12, 0], [0.24, 0.08, 0.38], p.accent);
     strut(bk, [0, 0.12, 0.22], [0, 0.24, 0.46], 0.022, p.accent, 10);
+    box(bk, [0, 0.14, -0.26], [0.08, 0.09, 0.12], p.alloy);
     torus(bk, [0, 0.18, -0.22], 0.042, 0.014, p.alloy, p.hd);
   }
   if (detail) {

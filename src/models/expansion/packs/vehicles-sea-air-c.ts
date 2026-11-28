@@ -170,7 +170,7 @@ function buildVikingLongship(root: T.Group, p: Finish, detail: boolean) {
   for (const [side, name] of [[1, 'OarBankL'], [-1, 'OarBankR']] as const) {
     const bank = group(ship, name, [side * 0.52, 0.44, 0]);
     for (const z of [-0.64, -0.22, 0.2, 0.62]) {
-      strut(bank, [0, 0, z], [side * 0.64, -0.22, z - 0.14], 0.022, p.accent, 6);
+      strut(bank, [-side * 0.16, 0.06, z], [side * 0.64, -0.22, z - 0.14], 0.022, p.accent, 6);
       cyl(ship, p, [side * 0.56, 0.52, z], 0.15, 0.15, 0.05, z > 0 ? p.accent : p.stencil, [0, 0, Math.PI / 2], 10);
     }
   }
@@ -183,8 +183,8 @@ function buildVikingLongship(root: T.Group, p: Finish, detail: boolean) {
   }
   root.animations = [
     new T.AnimationClip('Viking row', 2.8, [
-      sway('OarBankL', 'y', 2.8, -0.35, 0.35),
-      sway('OarBankR', 'y', 2.8, 0.35, -0.35),
+      sway('OarBankL', 'z', 2.8, -0.28, 0.28),
+      sway('OarBankR', 'z', 2.8, 0.28, -0.28),
     ]),
   ];
 }
@@ -263,8 +263,8 @@ export const vehiclesSeaAirC: readonly SeaAirSpec[] = [
     id: 'viking-dragon-longship',
     physicsBody: 'dynamic',
     riggedParts: [
-      rp('OarBankL', 'Port oar bank', 'rotate', 'y', [-25, 25], 'Sweeps the port bank of Norse rowing oars'),
-      rp('OarBankR', 'Starboard oar bank', 'rotate', 'y', [-25, 25], 'Sweeps the starboard bank of Norse rowing oars'),
+      rp('OarBankL', 'Port oar bank', 'rotate', 'z', [-20, 20], 'Rows the port bank of Norse rowing oars'),
+      rp('OarBankR', 'Starboard oar bank', 'rotate', 'z', [-20, 20], 'Rows the starboard bank of Norse rowing oars'),
     ],
     build: buildVikingLongship,
   },

@@ -38,7 +38,7 @@ export const workshopMachineryPack: readonly ProceduralAssetDef[] = [
       rig('BuildPlate', 'Build plate', 'y', [0, 0.3], 'Raises and lowers the heated print build plate', 'slide')],
     [], corexy3dPrinter),
   makeMachineryDef(metaAt(5), 'static',
-    [rig('PressRam', 'Press ram', 'y', [-0.36, 0], 'Drives the hydraulic shop press ram downward', 'slide'),
+    [rig('PressRam', 'Press ram', 'y', [-0.28, 0], 'Drives the hydraulic shop press ram downward', 'slide'),
       rig('PumpHandle', 'Pump handle', 'z', [-35, 10], 'Pumps the side hydraulic jack handle')],
     [], hydraulicShopPress),
   makeMachineryDef(metaAt(6), 'static',
